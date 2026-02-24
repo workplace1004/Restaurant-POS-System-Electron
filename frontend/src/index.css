@@ -2,15 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Optimized for 15-inch screen (1366×768 typical) */
 @layer base {
   * {
     @apply box-border;
   }
+  html {
+    font-size: 15px;
+  }
   body {
-    @apply m-0 font-sans bg-pos-bg text-pos-text h-screen overflow-hidden;
+    @apply m-0 font-sans bg-pos-bg text-pos-text overflow-hidden;
+    width: 100vw;
+    min-width: 1366px;
+    min-height: 768px;
+    height: 100vh;
   }
   #root {
-    @apply h-full;
+    @apply h-full w-full;
+    min-width: 1366px;
+    min-height: 768px;
   }
   button {
     @apply cursor-pointer;
