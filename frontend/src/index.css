@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+  body {
+    @apply m-0 font-sans bg-pos-bg text-pos-text h-screen overflow-hidden;
+  }
+  #root {
+    @apply h-full;
+  }
+  button {
+    @apply cursor-pointer;
+    font-family: inherit;
+  }
+  input, select, textarea {
+    font-family: inherit;
+  }
+}
