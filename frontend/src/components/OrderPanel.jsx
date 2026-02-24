@@ -8,21 +8,23 @@ const KEYPAD = [
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', icon: '€' },
-  { id: 'bancontact', label: 'Bancontact €', icon: 'card' },
+  { id: 'bancontact', label: 'Bancontact', icon: 'card' },
   { id: 'visa', label: 'Visa', icon: 'visa' }
 ];
 
-export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCreateOrder, onRemoveAllOrders, tables }) {
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables }) {
   const [customAmount, setCustomAmount] = useState('');
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
   const [paymentAmounts, setPaymentAmounts] = useState({ cash: 0, bancontact: 0, visa: 0 });
-  const [selectedPayment, setSelectedPayment] = useState('cash');
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const [payModalKeypadInput, setPayModalKeypadInput] = useState('');
+  const [payModalKeypadLocked, setPayModalKeypadLocked] = useState(false);
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
+  const selectedItem = selectedItemId != null ? items.find((i) => i.id === selectedItemId) : null;
 
   const handleKeypad = (key) => {
     if (key === 'C') {
@@ -34,41 +36,60 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
 
   const openPayDifferentlyModal = () => {
     setShowPayDifferentlyModal(true);
-    setPaymentAmounts({ cash: total, bancontact: 0, visa: 0 });
-    setSelectedPayment('cash');
-    setPayModalKeypadInput('');
+    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+    setSelectedPayment(null);
+    setPayModalKeypadInput(total.toFixed(2));
+    setPayModalKeypadLocked(false);
   };
 
   const payModalTotalAssigned = paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa;
   const payModalRemaining = Math.max(0, total - payModalTotalAssigned);
 
   const handlePayModalKeypad = (key) => {
+    if (payModalKeypadLocked) return;
     if (key === 'C') {
       setPayModalKeypadInput('');
       return;
     }
-    setPayModalKeypadInput((prev) => prev + key);
+    setPayModalKeypadInput((prev) => {
+      if (prev === total.toFixed(2)) return key;
+      return prev + key;
+    });
   };
 
   const assignPayModalInput = () => {
+    if (selectedPayment == null) return;
     const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
     setPaymentAmounts((prev) => ({
       ...prev,
       [selectedPayment]: prev[selectedPayment] + value
     }));
     setPayModalKeypadInput('');
+    setPayModalKeypadLocked(true);
+  };
+
+  const handlePaymentCardClick = (methodId) => {
+    const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
+    setPaymentAmounts((prev) => ({ ...prev, [methodId]: prev[methodId] + value }));
+    setPayModalKeypadInput('');
+    setSelectedPayment(methodId);
+    setPayModalKeypadLocked(true);
   };
 
   const handlePayHalfAmount = () => {
+    if (selectedPayment == null || payModalKeypadLocked) return;
     const half = total / 2;
     setPaymentAmounts((prev) => ({ ...prev, [selectedPayment]: prev[selectedPayment] + half }));
   };
   const handlePayRemaining = () => {
+    if (selectedPayment == null || payModalKeypadLocked) return;
     setPaymentAmounts((prev) => ({ ...prev, [selectedPayment]: prev[selectedPayment] + payModalRemaining }));
   };
   const handlePayReset = () => {
-    setPaymentAmounts((prev) => ({ ...prev, [selectedPayment]: 0 }));
-    setPayModalKeypadInput('');
+    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+    setPayModalKeypadInput(total.toFixed(2));
+    setSelectedPayment(null);
+    setPayModalKeypadLocked(false);
   };
 
   return (
@@ -90,13 +111,29 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
           ))}
         </div>
         <div className="flex items-center gap-2 py-2 px-2 border-t border-black/10 text-2xl">
-          <button type="button" className="w-12 h-12 p-0 flex items-center justify-center bg-black/10 border-none rounded text-3xl">
+          <button
+            type="button"
+            disabled={selectedItemId === null}
+            className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${
+              selectedItemId === null ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+            }`}
+            onClick={() => {
+              if (selectedItemId !== null && order && selectedItem) {
+                onUpdateItemQuantity?.(order.id, selectedItemId, selectedItem.quantity + 1);
+              }
+            }}
+          >
             <svg width="30px" height="30px" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
+              <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" />
+            </svg>
           </button>
           <button
             type="button"
-            className="flex-1 py-2 text-white border-none rounded text-2xl hover:bg-gray-600"
+            className={`flex-1 py-2 border-none rounded text-2xl ${
+              selectedItemId === null
+                ? 'text-gray-400 cursor-not-allowed opacity-70'
+                : 'text-white hover:bg-gray-600'
+            }`}
             onClick={() => {
               if (selectedItemId !== null && order) {
                 onRemoveItem(order.id, selectedItemId);
@@ -114,9 +151,21 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
           >
             Again
           </button>
-          <button type="button" className="w-12 h-12 p-0 flex items-center justify-center bg-black/10 border-none rounded text-3xl">
+          <button
+            type="button"
+            disabled={selectedItemId === null || (selectedItem?.quantity ?? 0) <= 1}
+            className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${
+              selectedItemId === null || (selectedItem?.quantity ?? 0) <= 1 ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+            }`}
+            onClick={() => {
+              if (selectedItemId !== null && order && selectedItem && selectedItem.quantity > 1) {
+                onUpdateItemQuantity?.(order.id, selectedItemId, selectedItem.quantity - 1);
+              }
+            }}
+          >
             <svg width="30" height="30" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
+              <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" />
+            </svg>
           </button>
         </div>
       </div>
@@ -126,10 +175,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
         <div>
           <input
             readOnly
-            className='w-[180px] h-full py-4 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover outline-none cursor-default'
+            tabIndex={0}
+            className='w-[180px] h-full py-4 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover outline-none cursor-pointer'
             type='text'
-            placeholder='Enter amount'
             value={customAmount}
+            placeholder='Enter amount'
             aria-label='Enter amount (use keypad)'
           />
         </div>
@@ -159,8 +209,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
       </div>
 
       {showPayDifferentlyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="pay-differently-title">
-          <div className="flex flex-col h-[60vh] bg-gray-100 rounded-xl shadow-2xl max-w-[1800px] w-full overflow-auto text-gray-800">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pay-differently-title"
+          onClick={() => setShowPayDifferentlyModal(false)}
+        >
+          <div
+            className="flex flex-col h-[60vh] bg-gray-100 rounded-xl shadow-2xl max-w-[1800px] w-full overflow-auto text-gray-800"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Left: Total + payment methods + Cancel */}
             <div className="flex items-center justify-center">
               <div className="p-10 min-w-[46%] w-full h-full flex flex-col">
@@ -173,12 +232,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
                       <button
                         type="button"
                         key={method.id}
-                        onClick={() => setSelectedPayment(method.id)}
+                        onClick={() => (payModalKeypadLocked ? setSelectedPayment(method.id) : handlePaymentCardClick(method.id))}
                         className={`flex flex-col h-[200px] items-center justify-center p-4 rounded-lg border-2 min-w-[220px] transition-colors ${isSelected ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 hover:border-gray-400'
                           }`}
                       >
                         {method.icon === '€' && <span className="text-6xl mb-1">
-                          <svg width="60" height="60" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                          <svg width="60" height="60" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
                             <path fill="#444" d="M10.89 3c1.166 0.009 2.244 0.383 3.127 1.011l-0.017-2.321c-0.918-0.433-1.994-0.686-3.129-0.686-3.606 0-6.616 2.551-7.323 5.947l-1.548 0.049v1h1.41c0 0.17 0 0.33 0 0.5-0.005 0.075-0.008 0.162-0.008 0.25s0.003 0.175 0.008 0.262l-1.411-0.012v1h1.54c0.882 3.353 3.805 5.818 7.331 5.999 1.149-0.002 2.218-0.256 3.175-0.708l-0.045-2.291c-0.866 0.617-1.944 0.991-3.108 1-2.461-0.128-4.512-1.744-5.28-3.959l6.388-0.041v-1h-6.59c-0.006-0.075-0.009-0.162-0.009-0.25s0.003-0.175 0.010-0.261c-0.001-0.159-0.001-0.319-0.001-0.489h6.59v-1h-6.4c0.678-2.325 2.788-3.996 5.29-4z"></path>
                           </svg>
                         </span>}
@@ -212,7 +271,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
                   <input
                     readOnly
                     className="w-[200px] py-3 px-4 bg-gray-200 rounded-lg text-xl mb-4 outline-none cursor-default"
-                    placeholder="Amount"
                     value={payModalKeypadInput}
                     aria-label="Amount (use keypad)"
                   />
@@ -226,7 +284,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
                           <button
                             key={key}
                             type="button"
-                            className="py-9 bg-gray-300 rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
+                            disabled={payModalKeypadLocked}
+                            className={`py-9 rounded-lg text-3xl font-medium ${
+                              payModalKeypadLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                            }`}
                             onClick={() => handlePayModalKeypad(key)}
                           >
                             {key}
@@ -240,21 +301,27 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
               <div className="min-w-[24%] flex flex-col items-center justify-center gap-10">
                 <button
                   type="button"
-                  className="py-3 px-3 bg-gray-300 w-[300px] rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
+                  disabled={payModalKeypadLocked}
+                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${
+                    payModalKeypadLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                  }`}
                   onClick={handlePayHalfAmount}
                 >
                   Half amount
                 </button>
                 <button
                   type="button"
-                  className="py-3 px-3 bg-gray-300  w-[300px] rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
+                  disabled={payModalKeypadLocked}
+                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${
+                    payModalKeypadLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                  }`}
                   onClick={handlePayRemaining}
                 >
                   Remaining amount
                 </button>
                 <button
                   type="button"
-                  className="py-3 px-3 bg-gray-300  w-[300px] rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
+                  className="py-3 px-3 bg-gray-300 w-[300px] rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
                   onClick={handlePayReset}
                 >
                   Reset
@@ -271,9 +338,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
               </button>
               <button
                 type="button"
-                className="mt-4 py-3 w-[230px] px-6 bg-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-400"
+                disabled={selectedPayment == null}
+                className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${
+                  selectedPayment == null
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                }`}
                 onClick={() => {
-                  if (payModalKeypadInput) assignPayModalInput();
+                  if (selectedPayment != null && payModalKeypadInput && !payModalKeypadLocked) assignPayModalInput();
                   setShowPayDifferentlyModal(false);
                 }}
               >
@@ -285,8 +357,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onStatusChange, onCrea
       )}
 
       {showDeleteAllModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="delete-all-title">
-          <div className="bg-pos-panel rounded-lg shadow-xl px-16 py-8 max-w-3xl w-full mx-4 border border-pos-border">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-all-title"
+          onClick={() => setShowDeleteAllModal(false)}
+        >
+          <div
+            className="bg-pos-panel rounded-lg shadow-xl px-16 py-8 max-w-3xl w-full mx-4 border border-pos-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 id="delete-all-title" className="text-3xl mb-10 font-semibold flex justify-center w-full text-pos-text">
               <div className='flex'>
                 Are you sure you want to clear the list?

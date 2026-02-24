@@ -118,6 +118,24 @@ app.post('/api/orders/:id/items', async (req, res) => {
   res.json(updated);
 });
 
+// REST: update order item quantity
+app.patch('/api/orders/:id/items/:itemId', async (req, res) => {
+  const quantity = Math.max(1, Math.floor(Number(req.body.quantity)) || 1);
+  await prisma.orderItem.update({
+    where: { id: req.params.itemId },
+    data: { quantity }
+  });
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { items: { include: { product: true } }, table: true }
+  });
+  const total = order?.items?.reduce((s, i) => s + i.price * i.quantity, 0) ?? 0;
+  await prisma.order.update({ where: { id: req.params.id }, data: { total } });
+  const updated = { ...order, total };
+  io.emit('order:updated', updated);
+  res.json(updated);
+});
+
 // REST: remove order item
 app.delete('/api/orders/:id/items/:itemId', async (req, res) => {
   await prisma.orderItem.delete({ where: { id: req.params.itemId } });

@@ -27,6 +27,7 @@ export default function App() {
     loading,
     addItemToOrder,
     removeOrderItem,
+    updateOrderItemQuantity,
     setOrderStatus,
     createOrder,
     removeAllOrders,
@@ -96,6 +97,7 @@ export default function App() {
         order={currentOrder}
         orders={orders}
         onRemoveItem={removeOrderItem}
+        onUpdateItemQuantity={updateOrderItemQuantity}
         onStatusChange={setOrderStatus}
         onCreateOrder={createOrder}
         onRemoveAllOrders={removeAllOrders}

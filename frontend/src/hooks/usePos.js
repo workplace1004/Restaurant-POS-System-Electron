@@ -104,6 +104,20 @@ export function usePos(API, socket) {
     [API]
   );
 
+  const updateOrderItemQuantity = useCallback(
+    async (orderId, itemId, quantity) => {
+      await fetch(`${API}/orders/${orderId}/items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity })
+      });
+      const res = await fetch(`${API}/orders`);
+      const list = await res.json();
+      setOrders(list);
+    },
+    [API]
+  );
+
   const setOrderStatus = useCallback(
     async (orderId, status) => {
       await fetch(`${API}/orders/${orderId}`, {
@@ -149,6 +163,7 @@ export function usePos(API, socket) {
     loading,
     addItemToOrder,
     removeOrderItem,
+    updateOrderItemQuantity,
     setOrderStatus,
     createOrder,
     removeAllOrders,
