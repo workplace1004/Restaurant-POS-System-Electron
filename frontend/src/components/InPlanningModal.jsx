@@ -1,13 +1,23 @@
 import React, { useRef, useState } from 'react';
+import { CalendarModal } from './CalendarModal';
 
 const SortIcon = () => (
   <span className="ml-0.5 align-middle" aria-hidden>^</span>
 );
 
+const toDateOnly = (d) => {
+  const x = new Date(d);
+  return new Date(x.getFullYear(), x.getMonth(), x.getDate());
+};
+
 export function InPlanningModal({ open, onClose, orders = [] }) {
   const leftListRef = useRef(null);
   const rightListRef = useRef(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const today = toDateOnly(new Date());
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
+  const [calendarFor, setCalendarFor] = useState(null);
 
   if (!open) return null;
 
@@ -31,8 +41,6 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const customerName = (o) => (o?.customer ? (o.customer.companyName || o.customer.name) : '–');
   const orderNo = (id) => (id ? id.slice(-6) : '–');
 
-  const todayStr = formatDate(new Date());
-
   const scroll = (ref, dir) => {
     const el = ref?.current;
     if (el) el.scrollTop += dir * 60;
@@ -44,10 +52,16 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const numPad = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={() => (calendarFor !== null ? setCalendarFor(null) : onClose())}
+    >
       <div
         className="bg-pos-panel rounded-lg shadow-xl flex flex-col w-full max-w-[1400px] h-[1000px] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (calendarFor !== null) setCalendarFor(null);
+        }}
       >
         <div className="flex w-full overflow-hidden">
           {/* Left panel: table */}
@@ -58,8 +72,20 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 <div className="text-green-400 font-semibold text-3xl">Date</div>
                 <div className="text-white text-xl">Full list</div>
               </div>
-              <div className="text-3xl font-medium text-white">{todayStr}</div>
-              <div className="text-3xl font-medium text-white">{todayStr}</div>
+              <button
+                type="button"
+                className="text-3xl font-medium text-white hover:underline cursor-pointer"
+                onClick={() => setCalendarFor('from')}
+              >
+                {formatDate(fromDate)}
+              </button>
+              <button
+                type="button"
+                className="text-3xl font-medium text-white hover:underline cursor-pointer"
+                onClick={() => setCalendarFor('to')}
+              >
+                {formatDate(toDate)}
+              </button>
               <div className="flex gap-2">
                 <button type="button" className="px-3 py-1.5 rounded text-white text-3xl font-medium">
                   History
@@ -224,6 +250,18 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
           </div>
         </div>
       </div>
+
+      <CalendarModal
+        open={calendarFor !== null}
+        onClose={() => setCalendarFor(null)}
+        value={calendarFor === 'from' ? fromDate : toDate}
+        onChange={(date) => {
+          const d = toDateOnly(date);
+          if (calendarFor === 'from') setFromDate(d);
+          else if (calendarFor === 'to') setToDate(d);
+          setCalendarFor(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,0 +1,113 @@
+import React, { useState, useMemo } from 'react';
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+export function CalendarModal({ open, onClose, value, onChange }) {
+  const initial = value ? new Date(value) : new Date();
+  const [viewYear, setViewYear] = useState(initial.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initial.getMonth());
+
+  const monthName = useMemo(() => {
+    return new Date(viewYear, viewMonth, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  }, [viewYear, viewMonth]);
+
+  const grid = useMemo(() => {
+    const first = new Date(viewYear, viewMonth, 1);
+    const last = new Date(viewYear, viewMonth + 1, 0);
+    const startDay = first.getDay();
+    const monFirst = startDay === 0 ? 6 : startDay - 1;
+    const prevMonth = new Date(viewYear, viewMonth, 0);
+    const prevCount = prevMonth.getDate();
+    const rows = [];
+    let dayCount = 1 - monFirst;
+    const totalDays = last.getDate();
+    for (let row = 0; row < 6; row++) {
+      const week = [];
+      for (let col = 0; col < 7; col++) {
+        if (dayCount < 1) {
+          week.push({ type: 'prev', day: prevCount + dayCount, date: new Date(viewYear, viewMonth - 1, prevCount + dayCount) });
+        } else if (dayCount > totalDays) {
+          week.push({ type: 'next', day: dayCount - totalDays, date: new Date(viewYear, viewMonth + 1, dayCount - totalDays) });
+        } else {
+          week.push({ type: 'current', day: dayCount, date: new Date(viewYear, viewMonth, dayCount) });
+        }
+        dayCount++;
+      }
+      rows.push(week);
+    }
+    return rows;
+  }, [viewYear, viewMonth]);
+
+  const today = new Date();
+  const isToday = (d) => d && d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+
+  const goPrev = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
+  };
+  const goNext = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
+  };
+
+  const handleSelect = (cell) => {
+    if (cell.type === 'current' || cell.type === 'prev' || cell.type === 'next') {
+      onChange?.(cell.date);
+      onClose?.();
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose?.();
+      }}
+    >
+      <div className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[800px]" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-pos-bg px-4 py-7 flex items-center justify-between">
+          <button type="button" className="text-white p-1 hover:opacity-80" onClick={goPrev} aria-label="Previous month">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <span className="text-white text-5xl font-medium capitalize">{monthName}</span>
+          <button type="button" className="text-white p-1 hover:opacity-80" onClick={goNext} aria-label="Next month">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+          </button>
+        </div>
+        <div className="p-3">
+          <div className="grid grid-cols-7 gap-0.5 text-center text-gray-500 text-3xl mb-2">
+            {DAYS.map((d) => (
+              <div key={d} className="py-1">{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {grid.flat().map((cell, i) => {
+              const grey = cell.type !== 'current';
+              const todayCell = cell.type === 'current' && isToday(cell.date);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`py-7 rounded flex flex-col items-center justify-center text-5xl ${
+                    grey ? 'text-gray-400 hover:bg-gray-100' : 'text-gray-800 hover:bg-gray-100'
+                  } ${todayCell ? 'bg-pos-bg text-white hover:bg-pos-bg hover:opacity-90' : ''}`}
+                  onClick={() => handleSelect(cell)}
+                >
+                  {todayCell && <span className="absolute -mt-[72px] text-[20px] font-medium text-white leading-tight">Today</span>}
+                  <span>{cell.day}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
