@@ -39,7 +39,14 @@ export function CalendarModal({ open, onClose, value, onChange }) {
   }, [viewYear, viewMonth]);
 
   const today = new Date();
+  const valueDate = value ? new Date(value) : null;
   const isToday = (d) => d && d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  const isSelected = (d) =>
+    valueDate &&
+    d &&
+    d.getFullYear() === valueDate.getFullYear() &&
+    d.getMonth() === valueDate.getMonth() &&
+    d.getDate() === valueDate.getDate();
 
   const goPrev = () => {
     if (viewMonth === 0) {
@@ -91,13 +98,16 @@ export function CalendarModal({ open, onClose, value, onChange }) {
             {grid.flat().map((cell, i) => {
               const grey = cell.type !== 'current';
               const todayCell = cell.type === 'current' && isToday(cell.date);
+              const selectedCell = (cell.type === 'current' || cell.type === 'prev' || cell.type === 'next') && isSelected(cell.date);
               return (
                 <button
                   key={i}
                   type="button"
-                  className={`py-7 rounded flex flex-col items-center justify-center text-5xl ${
+                  className={`py-7 rounded flex flex-col items-center justify-center text-5xl relative ${
                     grey ? 'text-gray-400 hover:bg-gray-100' : 'text-gray-800 hover:bg-gray-100'
-                  } ${todayCell ? 'bg-pos-bg text-white hover:bg-pos-bg hover:opacity-90' : ''}`}
+                  } ${todayCell ? 'bg-pos-bg text-white hover:bg-pos-bg hover:opacity-90' : ''} ${
+                    selectedCell && !todayCell ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
+                  } ${selectedCell && todayCell ? 'ring-2 ring-blue-400 ring-offset-2' : ''}`}
                   onClick={() => handleSelect(cell)}
                 >
                   {todayCell && <span className="absolute -mt-[72px] text-[20px] font-medium text-white leading-tight">Today</span>}

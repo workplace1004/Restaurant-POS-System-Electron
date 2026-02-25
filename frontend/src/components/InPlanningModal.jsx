@@ -18,6 +18,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
   const [calendarFor, setCalendarFor] = useState(null);
+  const [showPrintOptionsModal, setShowPrintOptionsModal] = useState(false);
 
   if (!open) return null;
 
@@ -72,20 +73,19 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 <div className="text-green-400 font-semibold text-3xl">Date</div>
                 <div className="text-white text-xl">Full list</div>
               </div>
-              <button
-                type="button"
-                className="text-3xl font-medium text-white hover:underline cursor-pointer"
+              <input
+                type="text"
+                readOnly
+                value={formatDate(fromDate)}
+                className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
                 onClick={() => setCalendarFor('from')}
-              >
-                {formatDate(fromDate)}
-              </button>
-              <button
-                type="button"
-                className="text-3xl font-medium text-white hover:underline cursor-pointer"
-                onClick={() => setCalendarFor('to')}
-              >
-                {formatDate(toDate)}
-              </button>
+                aria-label="From date"
+              />
+              <input
+                type="text"
+                className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
+                aria-label="To date"
+              />
               <div className="flex gap-2">
                 <button type="button" className="px-3 py-1.5 rounded text-white text-3xl font-medium">
                   History
@@ -171,9 +171,10 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
               )}
             </div>
             <div className="flex justify-around w-full gap-2 py-5">
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700" onClick={() => scroll(rightListRef, -1)} aria-label="Scroll up">
-                <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>              </button>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700" onClick={() => scroll(rightListRef, 1)} aria-label="Scroll down">
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, -1)} aria-label="Scroll up">
+                <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
+              </button>
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, 1)} aria-label="Scroll down">
                 <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
               </button>
             </div>
@@ -182,15 +183,24 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
           {/* Right panel: print buttons + content */}
           <div className="flex flex-col w-[340px] shrink-0">
             <div className="flex flex-wrap gap-2 py-[40px] w-full justify-center items-center">
-              <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300">Production print</button>
-              <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300">Print all production</button>
+              <button
+                type="button"
+                disabled={!selectedOrderId}
+                className={`px-1.5 py-1.5 w-[100px] rounded text-xl ${
+                  selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70'
+                }`}
+              >
+                Production print
+              </button>
+              <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300" onClick={() => setShowPrintOptionsModal(true)}>Print all production</button>
               <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300">Print totals</button>
             </div>
             <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white" />
             <div className="flex justify-around w-full gap-2 py-5">
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700" onClick={() => scroll(rightListRef, -1)} aria-label="Scroll up">
-                <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>              </button>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700" onClick={() => scroll(rightListRef, 1)} aria-label="Scroll down">
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, -1)} aria-label="Scroll up">
+                <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
+              </button>
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, 1)} aria-label="Scroll down">
                 <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
               </button>
             </div>
@@ -262,6 +272,48 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
           setCalendarFor(null);
         }}
       />
+
+      {/* Print options modal */}
+      {showPrintOptionsModal && (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowPrintOptionsModal(false);
+          }}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 grid grid-rows-2 gap-6 min-w-[600px] h-[300px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex gap-4 justify-center items-center">
+              <button
+                type="button"
+                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300 text-center"
+                onClick={() => setShowPrintOptionsModal(false)}
+              >
+                Print All
+              </button>
+              <button
+                type="button"
+                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300 text-center"
+                onClick={() => setShowPrintOptionsModal(false)}
+              >
+                Print new orders
+              </button>
+            </div>
+            <div className="flex justify-center items-center">
+              <button
+                type="button"
+                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300"
+                onClick={() => setShowPrintOptionsModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
