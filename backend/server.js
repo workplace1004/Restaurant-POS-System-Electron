@@ -31,7 +31,7 @@ app.get('/api/categories/:id/products', async (req, res) => {
 app.get('/api/orders', async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { status: { in: ['open', 'in_planning'] } },
-    include: { items: { include: { product: true } }, table: true }
+    include: { items: { include: { product: true } }, table: true, customer: true }
   });
   res.json(orders);
 });
@@ -165,6 +165,13 @@ app.delete('/api/orders/:id/items/:itemId', async (req, res) => {
   res.json(updated);
 });
 
+// REST: delete single order (OrderItem cascades)
+app.delete('/api/orders/:id', async (req, res) => {
+  await prisma.order.delete({ where: { id: req.params.id } });
+  io.emit('order:deleted', { id: req.params.id });
+  res.json({ ok: true });
+});
+
 // REST: delete all orders (open + in_planning); OrderItem cascades
 app.delete('/api/orders', async (req, res) => {
   await prisma.order.deleteMany({
@@ -178,6 +185,16 @@ app.delete('/api/orders', async (req, res) => {
 app.get('/api/tables', async (req, res) => {
   const tables = await prisma.table.findMany({ include: { orders: { where: { status: 'open' } } } });
   res.json(tables);
+});
+
+// REST: weborders list (source weborder, open/in_planning) for modal
+app.get('/api/weborders', async (req, res) => {
+  const orders = await prisma.order.findMany({
+    where: { source: 'weborder', status: { in: ['open', 'in_planning'] } },
+    include: { customer: true, items: { include: { product: true } } },
+    orderBy: { createdAt: 'asc' }
+  });
+  res.json(orders);
 });
 
 // REST: weborders count (orders with source weborder, open/in_planning)

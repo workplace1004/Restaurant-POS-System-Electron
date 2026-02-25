@@ -19,7 +19,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory }
             {selectedCategoryId === cat.id ? (
               <span className="text-pos-text text-3xl pr-2 font-normal" aria-hidden>
                 <svg width="30px" height="30px" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M17.707 9.293l-5-5a.999.999 0 10-1.414 1.414L14.586 9H3a1 1 0 100 2h11.586l-3.293 3.293a.999.999 0 101.414 1.414l5-5a.999.999 0 000-1.414z" fill="#ffffff"/></svg>
+                  <path d="M17.707 9.293l-5-5a.999.999 0 10-1.414 1.414L14.586 9H3a1 1 0 100 2h11.586l-3.293 3.293a.999.999 0 101.414 1.414l5-5a.999.999 0 000-1.414z" fill="#ffffff" /></svg>
               </span>
             ) : <div className="pl-[34px]" />}
             {cat.name}
@@ -27,14 +27,20 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory }
         ))}
       </div>
       <div className="flex flex-col gap-5 items-center">
-        <div className="px-4 py-4 text-center">
-          <div className="text-3xl mb-6">admin</div>
+        <div className="px-4 py-4 text-center flex flex-col">
+          {/* <div className="text-3xl mb-6">admin</div> */}
+          <button type="button" className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text mb-6">
+            admin
+          </button>
           <button type="button" className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text">
             Log out
           </button>
         </div>
         <div className="px-10 py-6 border-t border-pos-border border-gray-500">
-          <div className="text-3xl text-pos-muted">Control</div>
+          {/* <div className="text-3xl text-pos-muted">Control</div> */}
+          <button type="button" className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text">
+            Control
+          </button>
         </div>
       </div>
       <div className="text-center text-3xl text-pos-muted">

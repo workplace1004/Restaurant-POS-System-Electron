@@ -1,12 +1,12 @@
 import React from 'react';
 
-export function Header({ time, webordersCount, inPlanningCount }) {
+export function Header({ time, webordersCount, inPlanningCount, onOpenWeborders, onOpenInPlanning }) {
   return (
     <header className="flex items-center w-full bg-pos-bg py-2 px-2 shrink-0">
       <nav className="flex-1 flex items-center justify-start gap-3 min-w-0">
         <button
           type="button"
-          className="flex items-center gap-2 px-16 py-5 rounded-md bg-transparent text-pos-text text-3xl hover:bg-pos-panel"
+          className="flex items-center gap-2 px-16 h-[100px] rounded-md text-pos-text text-3xl bg-pos-panel hover:bg-pos-rowHover"
         >
           <span className="opacity-90" aria-hidden="true">
             <svg
@@ -39,7 +39,8 @@ export function Header({ time, webordersCount, inPlanningCount }) {
         </button>
         <button
           type="button"
-          className="flex items-center gap-2 px-5 py-3 rounded-md bg-transparent text-pos-text text-3xl hover:bg-pos-panel"
+          className="flex items-center gap-2 px-5 h-[100px] rounded-md bg-pos-panel text-pos-text text-3xl hover:bg-pos-rowHover"
+          onClick={onOpenWeborders}
         >
           <span className="opacity-90 text-3xl">
             <svg
@@ -72,7 +73,8 @@ export function Header({ time, webordersCount, inPlanningCount }) {
         </button>
         <button
           type="button"
-          className="flex items-center gap-2 px-5 py-3 rounded-md bg-transparent text-pos-text text-3xl hover:bg-pos-panel"
+          className="flex items-center gap-2 px-5 h-[100px] rounded-md text-pos-text text-3xl bg-pos-panel hover:bg-pos-rowHover"
+          onClick={onOpenInPlanning}
         >
           <span className="opacity-90 text-xl">
             <svg

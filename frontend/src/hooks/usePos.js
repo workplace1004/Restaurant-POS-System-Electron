@@ -6,6 +6,7 @@ export function usePos(API, socket) {
   const [orders, setOrders] = useState([]);
   const [tables, setTables] = useState([]);
   const [webordersCount, setWebordersCount] = useState(0);
+  const [weborders, setWeborders] = useState([]);
   const [inPlanningCount, setInPlanningCount] = useState(0);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,12 @@ export function usePos(API, socket) {
     const res = await fetch(`${API}/weborders/count`);
     const data = await safeJson(res);
     if (data && typeof data.count === 'number') setWebordersCount(data.count);
+  }, [API]);
+
+  const fetchWeborders = useCallback(async () => {
+    const res = await fetch(`${API}/weborders`);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) setWeborders(data);
   }, [API]);
 
   const fetchInPlanningCount = useCallback(async () => {
@@ -162,6 +169,22 @@ export function usePos(API, socket) {
     setOrders([]);
   }, [API]);
 
+  const removeOrder = useCallback(
+    async (orderId) => {
+      await fetch(`${API}/orders/${orderId}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/orders`);
+      const data = await safeJson(res);
+      if (Array.isArray(data)) setOrders(data);
+      const countRes = await fetch(`${API}/weborders/count`);
+      const countData = await safeJson(countRes);
+      if (countData && typeof countData.count === 'number') setWebordersCount(countData.count);
+      const planRes = await fetch(`${API}/orders/in-planning/count`);
+      const planData = await safeJson(planRes);
+      if (planData && typeof planData.count === 'number') setInPlanningCount(planData.count);
+    },
+    [API]
+  );
+
   return {
     categories,
     products,
@@ -170,14 +193,17 @@ export function usePos(API, socket) {
     currentOrder,
     orders,
     webordersCount,
+    weborders,
     inPlanningCount,
     tables,
     loading,
+    fetchWeborders,
     addItemToOrder,
     removeOrderItem,
     updateOrderItemQuantity,
     setOrderStatus,
     createOrder,
+    removeOrder,
     removeAllOrders,
     fetchCategories,
     fetchProducts,

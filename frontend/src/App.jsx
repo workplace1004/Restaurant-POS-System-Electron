@@ -6,6 +6,8 @@ import { ProductArea } from './components/ProductArea';
 import { OrderPanel } from './components/OrderPanel';
 import { Footer } from './components/Footer';
 import { CustomersView } from './components/CustomersView';
+import { WebordersModal } from './components/WebordersModal';
+import { InPlanningModal } from './components/InPlanningModal';
 import { usePos } from './hooks/usePos';
 
 const API = '/api';
@@ -13,6 +15,9 @@ const socket = io(window.location.origin, { path: '/socket.io' });
 
 export default function App() {
   const [view, setView] = useState('pos');
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [ordersModalTab, setOrdersModalTab] = useState('new');
+  const [showInPlanningModal, setShowInPlanningModal] = useState(false);
   const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }));
   const {
     categories,
@@ -22,14 +27,17 @@ export default function App() {
     currentOrder,
     orders,
     webordersCount,
+    weborders,
     inPlanningCount,
     tables,
+    fetchWeborders,
     loading,
     addItemToOrder,
     removeOrderItem,
     updateOrderItemQuantity,
     setOrderStatus,
     createOrder,
+    removeOrder,
     removeAllOrders,
     fetchCategories,
     fetchProducts,
@@ -82,6 +90,15 @@ export default function App() {
           time={time}
           webordersCount={webordersCount}
           inPlanningCount={inPlanningCount}
+          onOpenWeborders={() => {
+            setOrdersModalTab('new');
+            setShowOrdersModal(true);
+            fetchWeborders();
+          }}
+          onOpenInPlanning={() => {
+            setShowInPlanningModal(true);
+            fetchOrders();
+          }}
         />
         <ProductArea
           products={products}
@@ -102,6 +119,24 @@ export default function App() {
         onCreateOrder={createOrder}
         onRemoveAllOrders={removeAllOrders}
         tables={tables}
+      />
+      <WebordersModal
+        open={showOrdersModal}
+        onClose={() => setShowOrdersModal(false)}
+        weborders={weborders}
+        inPlanningOrders={(orders || []).filter((o) => o.status === 'in_planning')}
+        initialTab={ordersModalTab}
+        onConfirm={() => {
+          fetchOrders();
+          fetchWebordersCount();
+          fetchInPlanningCount();
+        }}
+        onCancelOrder={removeOrder}
+      />
+      <InPlanningModal
+        open={showInPlanningModal}
+        onClose={() => setShowInPlanningModal(false)}
+        orders={orders || []}
       />
     </div>
   );
