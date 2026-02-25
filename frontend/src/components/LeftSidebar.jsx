@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory }) {
+export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, currentUser, onLogout, onControlClick }) {
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    onLogout?.();
+  };
+
   return (
     <aside className="w-[300px] shrink-0 flex flex-col bg-pos-bg p-4 px-2">
 
@@ -28,17 +35,23 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory }
       </div>
       <div className="flex flex-col gap-5 items-center">
         <div className="px-4 py-4 text-center flex flex-col">
-          {/* <div className="text-3xl mb-6">admin</div> */}
-          <button type="button" className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text mb-6">
-            admin
-          </button>
-          <button type="button" className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text">
+          {currentUser && (
+            <span className="text-3xl mb-6 text-pos-text">{currentUser.label}</span>
+          )}
+          <button
+            type="button"
+            className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text"
+            onClick={() => setShowLogoutModal(true)}
+          >
             Log out
           </button>
         </div>
         <div className="px-10 py-6 border-t border-pos-border border-gray-500">
-          {/* <div className="text-3xl text-pos-muted">Control</div> */}
-          <button type="button" className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text">
+          <button
+            type="button"
+            className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text"
+            onClick={() => onControlClick?.()}
+          >
             Control
           </button>
         </div>
@@ -47,6 +60,30 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory }
         <span className="text-4xl pr-1">☁</span>
         RestaurantPOS
       </div>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowLogoutModal(false)}>
+          <div className="bg-pos-panel border border-pos-border rounded-xl shadow-xl p-8 py-14 max-w-4xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-pos-text text-5xl mb-8 text-center">Are you sure you want to log out?</p>
+            <div className="flex gap-4 justify-around mt-20 items-center">
+              <button
+                type="button"
+                className="px-8 py-4 rounded-lg text-4xl font-medium bg-pos-bg text-pos-text hover:bg-gray-700 border border-pos-border"
+                onClick={() => setShowLogoutModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="px-8 py-4 rounded-lg text-4xl font-medium bg-red-600 text-white hover:bg-red-700"
+                onClick={handleLogoutConfirm}
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

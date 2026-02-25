@@ -138,7 +138,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
             className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-medium hover:bg-gray-400"
             onClick={() => {}}
           >
-            Terugnemen + Opnieuw inladen
+            Terugnemen + Again inladen
           </button>
           <button
             type="button"

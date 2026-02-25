@@ -9,12 +9,15 @@ import { CustomersView } from './components/CustomersView';
 import { WebordersModal } from './components/WebordersModal';
 import { InPlanningModal } from './components/InPlanningModal';
 import { HistoryModal } from './components/HistoryModal';
+import { LoginScreen } from './components/LoginScreen';
+import { ControlView } from './components/ControlView';
 import { usePos } from './hooks/usePos';
 
 const API = '/api';
 const socket = io(window.location.origin, { path: '/socket.io' });
 
 export default function App() {
+  const [user, setUser] = useState(null);
   const [view, setView] = useState('pos');
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [ordersModalTab, setOrdersModalTab] = useState('new');
@@ -86,6 +89,15 @@ export default function App() {
     setShowSubtotalView(true);
   };
 
+  if (!user) {
+    return (
+      <LoginScreen
+        time={time}
+        onLogin={(loggedInUser) => setUser(loggedInUser)}
+      />
+    );
+  }
+
   if (view === 'customers') {
     return (
       <CustomersView
@@ -100,12 +112,25 @@ export default function App() {
     );
   }
 
+  if (view === 'control') {
+    return (
+      <ControlView
+        currentUser={user}
+        onLogout={() => setUser(null)}
+        onBack={() => setView('pos')}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full bg-pos-bg text-pos-text">
       <LeftSidebar
         categories={categories}
         selectedCategoryId={selectedCategoryId}
         onSelectCategory={setSelectedCategoryId}
+        currentUser={user}
+        onLogout={() => setUser(null)}
+        onControlClick={() => setView('control')}
       />
       <div className="flex flex-col flex-1 min-h-0">
         <Header

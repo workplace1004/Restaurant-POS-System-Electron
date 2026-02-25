@@ -443,7 +443,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 onClick={async () => {
                   await onRemoveAllOrders?.();
                   setShowDeleteAllModal(false);
-                  setSelectedItemId(null);
+                  setSelectedItemIds([]);
                 }}
               >
                 OK
