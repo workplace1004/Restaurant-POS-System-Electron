@@ -6,9 +6,9 @@ export function Header({ time, webordersCount, inPlanningCount }) {
       <nav className="flex-1 flex items-center justify-start gap-3 min-w-0">
         <button
           type="button"
-          className="flex items-center gap-2 px-16 py-5 rounded-md bg-pos-surface text-white text-3xl"
+          className="flex items-center gap-2 px-16 py-5 rounded-md bg-transparent text-pos-text text-3xl hover:bg-pos-panel"
         >
-          <span className="opacity-100" aria-hidden="true">
+          <span className="opacity-90" aria-hidden="true">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="60"

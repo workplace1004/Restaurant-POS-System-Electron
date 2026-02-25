@@ -179,7 +179,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             className='w-[180px] h-full py-4 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover outline-none cursor-pointer'
             type='text'
             value={customAmount}
-            placeholder='Enter amount'
             aria-label='Enter amount (use keypad)'
           />
         </div>
@@ -404,7 +403,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <button
                 key={key}
                 type="button"
-                className="py-8 bg-pos-surface border-none rounded-md text-pos-text text-lg hover:bg-pos-surface-hover"
+                className="py-7 bg-pos-surface border-none rounded-md text-pos-text text-3xl hover:bg-pos-surface-hover"
                 onClick={() => handleKeypad(key)}
               >
                 {key}

@@ -61,11 +61,11 @@ export function ProductArea({
             <button
               type="button"
               key={product.id}
-              className="flex flex-col items-center justify-center p-4 bg-pos-panel border-none rounded-lg text-pos-text text-lg min-h-[88px] hover:bg-pos-rowHover"
+              className="flex flex-col items-center justify-center p-4 bg-pos-panel border-none rounded-lg text-pos-text text-2xl min-h-[88px] hover:bg-pos-rowHover"
               onClick={() => onAddProduct(product)}
             >
               <span className="mb-1">{product.name}</span>
-              <span className="font-semibold text-pos-text-dim text-base">€{Number(product.price).toFixed(2)}</span>
+              <span className="font-semibold text-pos-text-dim text-xl">€{Number(product.price).toFixed(2)}</span>
             </button>
           ))
         )}

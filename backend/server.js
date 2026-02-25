@@ -120,20 +120,35 @@ app.post('/api/orders/:id/items', async (req, res) => {
 
 // REST: update order item quantity
 app.patch('/api/orders/:id/items/:itemId', async (req, res) => {
-  const quantity = Math.max(1, Math.floor(Number(req.body.quantity)) || 1);
-  await prisma.orderItem.update({
-    where: { id: req.params.itemId },
-    data: { quantity }
-  });
-  const order = await prisma.order.findUnique({
-    where: { id: req.params.id },
-    include: { items: { include: { product: true } }, table: true }
-  });
-  const total = order?.items?.reduce((s, i) => s + i.price * i.quantity, 0) ?? 0;
-  await prisma.order.update({ where: { id: req.params.id }, data: { total } });
-  const updated = { ...order, total };
-  io.emit('order:updated', updated);
-  res.json(updated);
+  try {
+    const orderId = req.params.id;
+    const itemId = req.params.itemId;
+    const quantity = Math.max(1, Math.floor(Number(req.body?.quantity)) || 1);
+
+    const item = await prisma.orderItem.findFirst({
+      where: { id: itemId, orderId }
+    });
+    if (!item) {
+      return res.status(404).json({ error: 'Order item not found' });
+    }
+
+    await prisma.orderItem.update({
+      where: { id: itemId },
+      data: { quantity }
+    });
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: true } }, table: true }
+    });
+    const total = order?.items?.reduce((s, i) => s + i.price * i.quantity, 0) ?? 0;
+    await prisma.order.update({ where: { id: orderId }, data: { total } });
+    const updated = { ...order, total };
+    io.emit('order:updated', updated);
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/orders/:id/items/:itemId', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  }
 });
 
 // REST: remove order item

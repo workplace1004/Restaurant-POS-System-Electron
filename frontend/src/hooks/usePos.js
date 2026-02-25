@@ -10,42 +10,46 @@ export function usePos(API, socket) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const safeJson = (res) => res.json().catch(() => null);
+
   const fetchCategories = useCallback(async () => {
     const res = await fetch(`${API}/categories`);
-    const data = await res.json();
-    setCategories(data);
-    if (data.length && !selectedCategoryId) setSelectedCategoryId(data[0].id);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) {
+      setCategories(data);
+      if (data.length && !selectedCategoryId) setSelectedCategoryId(data[0].id);
+    }
   }, [API]);
 
   const fetchProducts = useCallback(async (categoryId) => {
     if (!categoryId) return;
     const res = await fetch(`${API}/categories/${categoryId}/products`);
-    const data = await res.json();
-    setProducts(data);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) setProducts(data);
   }, [API]);
 
   const fetchOrders = useCallback(async () => {
     const res = await fetch(`${API}/orders`);
-    const data = await res.json();
-    setOrders(data);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) setOrders(data);
   }, [API]);
 
   const fetchWebordersCount = useCallback(async () => {
     const res = await fetch(`${API}/weborders/count`);
-    const data = await res.json();
-    setWebordersCount(data.count ?? 0);
+    const data = await safeJson(res);
+    if (data && typeof data.count === 'number') setWebordersCount(data.count);
   }, [API]);
 
   const fetchInPlanningCount = useCallback(async () => {
     const res = await fetch(`${API}/orders/in-planning/count`);
-    const data = await res.json();
-    setInPlanningCount(data.count ?? 0);
+    const data = await safeJson(res);
+    if (data && typeof data.count === 'number') setInPlanningCount(data.count);
   }, [API]);
 
   const fetchTables = useCallback(async () => {
     const res = await fetch(`${API}/tables`);
-    const data = await res.json();
-    setTables(data);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) setTables(data);
   }, [API]);
 
   useEffect(() => {
@@ -77,9 +81,11 @@ export function usePos(API, socket) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: [{ productId: product.id, quantity, price: product.price }] })
         });
-        const created = await createRes.json();
-        orderId = created.id;
-        setOrders((prev) => [created, ...prev]);
+        const created = await safeJson(createRes);
+        if (created?.id) {
+          orderId = created.id;
+          setOrders((prev) => [created, ...prev]);
+        }
         return;
       }
       await fetch(`${API}/orders/${orderId}/items`, {
@@ -88,8 +94,8 @@ export function usePos(API, socket) {
         body: JSON.stringify({ productId: product.id, quantity, price: product.price })
       });
       const res = await fetch(`${API}/orders`);
-      const list = await res.json();
-      setOrders(list);
+      const list = await safeJson(res);
+      if (Array.isArray(list)) setOrders(list);
     },
     [API, currentOrder?.id]
   );
@@ -98,21 +104,27 @@ export function usePos(API, socket) {
     async (orderId, itemId) => {
       await fetch(`${API}/orders/${orderId}/items/${itemId}`, { method: 'DELETE' });
       const res = await fetch(`${API}/orders`);
-      const list = await res.json();
-      setOrders(list);
+      const list = await safeJson(res);
+      if (Array.isArray(list)) setOrders(list);
     },
     [API]
   );
 
   const updateOrderItemQuantity = useCallback(
     async (orderId, itemId, quantity) => {
-      await fetch(`${API}/orders/${orderId}/items/${itemId}`, {
+      const patchRes = await fetch(`${API}/orders/${orderId}/items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity })
       });
+      if (!patchRes.ok) {
+        const err = await patchRes.json().catch(() => ({ error: patchRes.statusText }));
+        console.error('updateOrderItemQuantity', err);
+        return;
+      }
       const res = await fetch(`${API}/orders`);
-      const list = await res.json();
+      if (!res.ok) return;
+      const list = await res.json().catch(() => []);
       setOrders(list);
     },
     [API]
@@ -129,8 +141,8 @@ export function usePos(API, socket) {
         fetchInPlanningCount();
       }
       const res = await fetch(`${API}/orders`);
-      const list = await res.json();
-      setOrders(list);
+      const list = await safeJson(res);
+      if (Array.isArray(list)) setOrders(list);
     },
     [API, fetchInPlanningCount]
   );
@@ -141,8 +153,8 @@ export function usePos(API, socket) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     });
-    const created = await res.json();
-    setOrders((prev) => [created, ...prev]);
+    const created = await safeJson(res);
+    if (created?.id) setOrders((prev) => [created, ...prev]);
   }, [API]);
 
   const removeAllOrders = useCallback(async () => {
