@@ -10,6 +10,55 @@ const toDateOnly = (d) => {
   return new Date(x.getFullYear(), x.getMonth(), x.getDate());
 };
 
+const MONTH_ABBREV = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function MonthPickerModal({ open, onClose, value, onChange }) {
+  // value: Date (first day of selected month) or null
+  const initial = value ? new Date(value) : new Date();
+  const [viewYear, setViewYear] = useState(initial.getFullYear());
+  const selectedMonth = value ? new Date(value).getMonth() : null;
+  const selectedYear = value ? new Date(value).getFullYear() : null;
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[52] flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[710px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-[#1e3a5f] flex items-center justify-between px-4 py-3">
+          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y - 1)} aria-label="Previous year">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
+          </button>
+          <span className="text-white py-5 text-5xl font-medium">{viewYear}</span>
+          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y + 1)} aria-label="Next year">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" /></svg>
+          </button>
+        </div>
+        <div className="p-4 grid grid-cols-4 gap-2">
+          {MONTH_ABBREV.map((label, i) => {
+            const isSelected = selectedMonth === i && selectedYear === viewYear;
+            return (
+              <button
+                key={label}
+                type="button"
+                className={`py-20 px-3 rounded text-4xl font-medium transition-colors ${isSelected ? 'bg-[#1e3a5f] text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                onClick={() => {
+                  onChange(new Date(viewYear, i, 1));
+                  onClose();
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function InPlanningModal({ open, onClose, orders = [] }) {
   const leftListRef = useRef(null);
   const rightListRef = useRef(null);
@@ -19,10 +68,27 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const [toDate, setToDate] = useState(today);
   const [calendarFor, setCalendarFor] = useState(null);
   const [showPrintOptionsModal, setShowPrintOptionsModal] = useState(false);
+  const [keyboardUppercase, setKeyboardUppercase] = useState(false);
+  const [keyboardInputValue, setKeyboardInputValue] = useState('');
+  const [historyMode, setHistoryMode] = useState(false);
+  const [historyMonthDate, setHistoryMonthDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const [showMonthPickerModal, setShowMonthPickerModal] = useState(false);
+  const [dateViewActive, setDateViewActive] = useState(false); // true = show all orders history, white Date, hide date input
+
+  const keyDisplay = (k) => (/^[a-z]$/.test(k) ? (keyboardUppercase ? k.toUpperCase() : k) : k);
+
+  const sendKey = (char) => {
+    if (char === 'Backspace') setKeyboardInputValue((prev) => prev.slice(0, -1));
+    else setKeyboardInputValue((prev) => prev + char);
+  };
+
+  const sendLetterOrSymbol = (k) => {
+    if (/^[a-z]$/.test(k)) sendKey(keyboardUppercase ? k.toUpperCase() : k);
+    else sendKey(k);
+  };
 
   if (!open) return null;
 
-  const inPlanningOrders = orders.filter((o) => o.status === 'in_planning' || o.status === 'open');
   const formatDate = (d) => {
     try {
       const date = new Date(d);
@@ -42,6 +108,55 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const customerName = (o) => (o?.customer ? (o.customer.companyName || o.customer.name) : '–');
   const orderNo = (id) => (id ? id.slice(-6) : '–');
 
+  // In history mode: fromDate/toDate = first/last day of selected month; when dateViewActive show all orders (no date filter)
+  const effectiveFrom = dateViewActive
+    ? new Date(1970, 0, 1)
+    : historyMode
+      ? new Date(historyMonthDate.getFullYear(), historyMonthDate.getMonth(), 1)
+      : fromDate;
+  const effectiveTo = dateViewActive
+    ? new Date(2100, 11, 31)
+    : historyMode
+      ? new Date(historyMonthDate.getFullYear(), historyMonthDate.getMonth() + 1, 0)
+      : toDate;
+  const formatMonthYear = (d) => {
+    try {
+      const date = new Date(d);
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${m}/${y}`;
+    } catch {
+      return '–';
+    }
+  };
+
+  // Orders in planning/open whose date is within [effectiveFrom, effectiveTo] (or all when dateViewActive)
+  const ordersInDateRange = orders.filter((o) => {
+    if (o.status !== 'in_planning' && o.status !== 'open') return false;
+    if (dateViewActive) return true;
+    const orderDay = toDateOnly(o.createdAt);
+    const from = effectiveFrom.getTime();
+    const to = effectiveTo.getTime();
+    const t = orderDay.getTime();
+    return t >= from && t <= to;
+  });
+
+  // Search filter: match query in order no, name, time, type, amount, origin
+  const searchQuery = keyboardInputValue.trim().toLowerCase();
+  const displayedOrders =
+    searchQuery === ''
+      ? ordersInDateRange
+      : ordersInDateRange.filter((o) => {
+        const no = orderNo(o.id).toLowerCase();
+        const name = customerName(o).toLowerCase();
+        const time = formatTime(o.createdAt).toLowerCase();
+        const type = 'collection';
+        const amount = formatAmount(o.total).toLowerCase();
+        const origin = (o.source || 'pos').toLowerCase();
+        const q = searchQuery;
+        return no.includes(q) || name.includes(q) || time.includes(q) || type.includes(q) || amount.includes(q) || origin.includes(q);
+      });
+
   const scroll = (ref, dir) => {
     const el = ref?.current;
     if (el) el.scrollTop += dir * 60;
@@ -52,45 +167,85 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const qwertyBot = 'w x c v b n , €'.split(' ');
   const numPad = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
 
+  const handleBackdropClick = () => {
+    if (showMonthPickerModal) setShowMonthPickerModal(false);
+    else if (calendarFor !== null) setCalendarFor(null);
+    else onClose();
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={() => (calendarFor !== null ? setCalendarFor(null) : onClose())}
+      onClick={handleBackdropClick}
     >
       <div
         className="bg-pos-panel rounded-lg shadow-xl flex flex-col w-full max-w-[1400px] h-[1000px] overflow-hidden"
         onClick={(e) => {
           e.stopPropagation();
+          if (showMonthPickerModal) setShowMonthPickerModal(false);
           if (calendarFor !== null) setCalendarFor(null);
         }}
       >
         <div className="flex w-full overflow-hidden">
           {/* Left panel: table */}
           <div className="flex flex-col w-full h-full overflow-hidden">
-            {/* Header: Date, Full list, Date value, History tab */}
+            {/* Header: Date, Full list or mm/yyyy, Search, History / Full list */}
             <div className="flex items-center justify-around w-full px-4 py-5">
-              <div>
-                <div className="text-green-400 font-semibold text-3xl">Date</div>
-                <div className="text-white text-xl">Full list</div>
-              </div>
+              <button
+                type="button"
+                className="text-left"
+                onClick={() => setDateViewActive((prev) => !prev)}
+              >
+                <div className={`font-semibold text-3xl ${dateViewActive ? 'text-white' : 'text-green-400'}`}>Date</div>
+                {!historyMode && <div className={`text-xl ${dateViewActive ? 'text-green-400' : 'text-white'}`}>Full list</div>}
+              </button>
+              {!dateViewActive ? (
+                <>
+                  {historyMode ? (
+                    <input
+                      type="text"
+                      readOnly
+                      value={formatMonthYear(historyMonthDate)}
+                      className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
+                      onClick={() => setShowMonthPickerModal(true)}
+                      aria-label="Select month and year"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      readOnly
+                      value={formatDate(fromDate)}
+                      className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      onClick={() => setCalendarFor('from')}
+                      aria-label="From date"
+                    />
+                  )}
+                </>
+              ) : (
+                <div className='w-48 h-5'>
+                </div>
+              )}
               <input
                 type="text"
                 readOnly
-                value={formatDate(fromDate)}
-                className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
-                onClick={() => setCalendarFor('from')}
-                aria-label="From date"
+                value={keyboardInputValue}
+                className="max-w-[200px] flex-1 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border-2 border-gray-400 rounded placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                aria-label="Search orders"
               />
-              <input
-                type="text"
-                className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
-                aria-label="To date"
-              />
-              <div className="flex gap-2">
-                <button type="button" className="px-3 py-1.5 rounded text-white text-3xl font-medium">
-                  History
-                </button>
-              </div>
+              <button
+                type="button"
+                className={`px-3 py-1.5 rounded text-3xl font-medium ${historyMode ? 'text-green-400' : 'text-white'}`}
+                onClick={() => {
+                  if (historyMode) {
+                    setHistoryMode(false);
+                    setKeyboardInputValue('');
+                  } else {
+                    setHistoryMode(true);
+                  }
+                }}
+              >
+                History
+              </button>
             </div>
 
             <div className="flex w-full gap-1 px-2 py-2 text-2xl justify-around font-medium text-white">
@@ -107,10 +262,10 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
               ref={leftListRef}
               className="overflow-auto min-h-[400px] border border-white rounded-lg mx-2"
             >
-              {inPlanningOrders.length > 0 ? (
+              {displayedOrders.length > 0 ? (
                 <table className="text-left text-xl text-white">
                   <tbody>
-                    {inPlanningOrders.map((order) => (
+                    {displayedOrders.map((order) => (
                       <tr
                         key={order.id}
                         className={`border-b border-gray-100 cursor-pointer ${selectedOrderId === order.id ? 'bg-gray-400' : 'hover:bg-gray-300'
@@ -166,7 +321,11 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                   <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
-                  <span>No orders</span>
+                  {searchQuery ? (
+                    <span className="text-xl">No orders match &quot;{keyboardInputValue.trim()}&quot;</span>
+                  ) : (
+                    <span className="text-xl">{historyMode ? 'No orders for selected month' : 'No orders for selected date'}</span>
+                  )}
                 </div>
               )}
             </div>
@@ -186,13 +345,19 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
               <button
                 type="button"
                 disabled={!selectedOrderId}
-                className={`px-1.5 py-1.5 w-[100px] rounded text-xl ${
-                  selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70'
-                }`}
+                className={`px-1.5 py-1.5 w-[100px] rounded text-xl ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70'
+                  }`}
               >
                 Production print
               </button>
-              <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300" onClick={() => setShowPrintOptionsModal(true)}>Print all production</button>
+              <button
+                type="button"
+                disabled={historyMode}
+                className={`px-1.5 py-1.5 w-[100px] rounded text-xl ${historyMode ? 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                onClick={() => !historyMode && setShowPrintOptionsModal(true)}
+              >
+                Print all production
+              </button>
               <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300">Print totals</button>
             </div>
             <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white" />
@@ -215,27 +380,34 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
               <div className="flex flex-col gap-1 text-5xl">
                 <div className="flex gap-1 justify-center">
                   {qwertyTop.map((k) => (
-                    <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">{k}</button>
+                    <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
                   ))}
                 </div>
                 <div className="flex gap-1 justify-center">
                   {qwertyMid.map((k) => (
-                    <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">{k}</button>
+                    <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
                   ))}
                 </div>
                 <div className="flex gap-1 justify-center">
                   {qwertyBot.map((k) => (
-                    <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">{k}</button>
+                    <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
                   ))}
-                  <button type="button" className="w-[164px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">←</button>
+                  <button type="button" className="w-[164px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('Backspace')}>←</button>
                 </div>
                 <div className="flex gap-1 justify-center">
-                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">↑</button>
-                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">@</button>
-                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">/</button>
-                  <button type="button" className="w-[332px] h-[80px] border rounded bg-pos-panel hover:bg-pos-rowHover" aria-label="Space" />
-                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">_</button>
-                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">←</button>
+                  <button
+                    type="button"
+                    className={`w-[80px] h-[80px] border rounded text-pos-text hover:bg-pos-rowHover ${keyboardUppercase ? 'bg-pos-rowHover ring-2 ring-green-400' : 'bg-pos-panel'}`}
+                    onClick={() => setKeyboardUppercase((prev) => !prev)}
+                    title="Toggle uppercase"
+                  >
+                    ↑
+                  </button>
+                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('@')}>@</button>
+                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('/')}>/</button>
+                  <button type="button" className="w-[332px] h-[80px] border rounded bg-pos-panel hover:bg-pos-rowHover" aria-label="Space" onClick={() => sendKey(' ')} />
+                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('_')}>_</button>
+                  <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('Backspace')}>←</button>
                   <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">→</button>
                 </div>
               </div>
@@ -244,7 +416,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 {numPad.map((row, i) => (
                   <div key={i} className="flex gap-1">
                     {row.map((k) => (
-                      <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">{k}</button>
+                      <button key={k} type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey(k)}>{k}</button>
                     ))}
                   </div>
                 ))}
@@ -271,6 +443,13 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
           else if (calendarFor === 'to') setToDate(d);
           setCalendarFor(null);
         }}
+      />
+
+      <MonthPickerModal
+        open={showMonthPickerModal}
+        onClose={() => setShowMonthPickerModal(false)}
+        value={historyMonthDate}
+        onChange={(firstDayOfMonth) => setHistoryMonthDate(firstDayOfMonth)}
       />
 
       {/* Print options modal */}

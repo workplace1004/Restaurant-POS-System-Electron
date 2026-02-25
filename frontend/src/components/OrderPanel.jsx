@@ -12,9 +12,11 @@ const PAYMENT_METHODS = [
   { id: 'visa', label: 'Visa', icon: 'visa' }
 ];
 
-export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables }) {
+const formatSubtotalPrice = (n) => `€ ${Number(n).toFixed(2).replace('.', ',')}`;
+
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [] }) {
   const [customAmount, setCustomAmount] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
   const [paymentAmounts, setPaymentAmounts] = useState({ cash: 0, bancontact: 0, visa: 0 });
@@ -24,7 +26,15 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
-  const selectedItem = selectedItemId != null ? items.find((i) => i.id === selectedItemId) : null;
+  const selectedItems = items.filter((i) => selectedItemIds.includes(i.id));
+  const hasSelection = selectedItemIds.length > 0;
+  const canDecreaseAll = selectedItems.length > 0 && selectedItems.every((i) => (i.quantity ?? 0) > 1);
+
+  const toggleItemSelection = (id) => {
+    setSelectedItemIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   const handleKeypad = (key) => {
     if (key === 'C') {
@@ -95,31 +105,74 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   return (
     <aside className="w-[500px] shrink-0 flex flex-col gap-3 p-4 bg-pos-bg border-l border-pos-border">
       <div className="min-h-[600px] flex flex-col bg-pos-surface rounded-lg overflow-hidden">
-        <div className="flex-1 overflow-auto p-2">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className={`flex flex-wrap items-center gap-1 p-2 text-2xl text-pos-bg rounded mb-1 hover:bg-white/30 ${selectedItemId === item.id ? 'bg-white/50' : ''
-                }`}
-              onClick={() => setSelectedItemId(selectedItemId === item.id ? null : item.id)}
-            >
-              <span className="flex-1 font-semibold">
-                {item.product?.name} × {item.quantity}
-              </span>
-              <span className="font-semibold">€{(item.price * item.quantity).toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
+        {showSubtotalView ? (
+          <div className="flex-1 overflow-auto p-4 text-pos-bg">
+            {(() => {
+              let start = 0;
+              const result = [];
+              for (let i = 0; i < subtotalBreaks.length; i++) {
+                const end = subtotalBreaks[i];
+                const group = items.slice(start, end);
+                const groupTotal = group.reduce((s, it) => s + it.price * it.quantity, 0);
+                group.forEach((item) => (
+                  result.push(
+                    <div key={item.id} className="flex justify-between items-baseline py-1.5 text-2xl">
+                      <span className="font-medium">{item.quantity}x {item.product?.name ?? '—'}</span>
+                      <span className="font-medium">{formatSubtotalPrice(item.price * item.quantity)}</span>
+                    </div>
+                  )
+                ));
+                result.push(
+                  <div key={`sub-${i}`} className="border-b border-gray-800 mb-2 pb-2 mb-3">
+                    <div className="flex justify-center items-baseline text-3xl font-medium relative">
+                      <span className='font-bold'>Subtotal:</span>
+                      <span className='flex font-bold absolute w-full justify-end'>{formatSubtotalPrice(groupTotal)}</span>
+                    </div>
+                  </div>
+                );
+                start = end;
+              }
+              const remaining = items.slice(start);
+              remaining.forEach((item) =>
+                result.push(
+                  <div key={item.id} className="flex justify-between items-baseline py-1.5 text-2xl">
+                    <span className="font-medium">{item.quantity}x {item.product?.name ?? '—'}</span>
+                    <span className="font-medium">{formatSubtotalPrice(item.price * item.quantity)}</span>
+                  </div>
+                )
+              );
+              return result;
+            })()}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-auto p-2">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className={`flex flex-wrap items-center gap-1 p-2 text-2xl text-pos-bg rounded mb-1 hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''
+                  }`}
+                onClick={() => toggleItemSelection(item.id)}
+              >
+                <span className="flex-1 font-semibold">
+                  {item.product?.name} × {item.quantity}
+                </span>
+                <span className="font-semibold">€{(item.price * item.quantity).toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-2 py-2 px-2 border-t border-black/10 text-2xl">
           <button
             type="button"
-            disabled={selectedItemId === null}
+            disabled={!hasSelection}
             className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${
-              selectedItemId === null ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+              !hasSelection ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
             }`}
             onClick={() => {
-              if (selectedItemId !== null && order && selectedItem) {
-                onUpdateItemQuantity?.(order.id, selectedItemId, selectedItem.quantity + 1);
+              if (order && selectedItems.length > 0) {
+                selectedItems.forEach((item) => {
+                  onUpdateItemQuantity?.(order.id, item.id, item.quantity + 1);
+                });
               }
             }}
           >
@@ -130,17 +183,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <button
             type="button"
             className={`flex-1 py-2 border-none rounded text-2xl ${
-              selectedItemId === null
+              !hasSelection
                 ? 'text-gray-400 cursor-not-allowed opacity-70'
                 : 'text-white hover:bg-gray-600'
             }`}
             onClick={() => {
-              if (selectedItemId !== null && order) {
-                onRemoveItem(order.id, selectedItemId);
-                setSelectedItemId(null);
+              if (order && selectedItemIds.length > 0) {
+                selectedItemIds.forEach((id) => onRemoveItem(order.id, id));
+                setSelectedItemIds([]);
               }
             }}
-            disabled={selectedItemId === null}
+            disabled={!hasSelection}
           >
             Delete
           </button>
@@ -153,13 +206,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </button>
           <button
             type="button"
-            disabled={selectedItemId === null || (selectedItem?.quantity ?? 0) <= 1}
+            disabled={!canDecreaseAll}
             className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${
-              selectedItemId === null || (selectedItem?.quantity ?? 0) <= 1 ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+              !canDecreaseAll ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
             }`}
             onClick={() => {
-              if (selectedItemId !== null && order && selectedItem && selectedItem.quantity > 1) {
-                onUpdateItemQuantity?.(order.id, selectedItemId, selectedItem.quantity - 1);
+              if (order && canDecreaseAll) {
+                selectedItems.forEach((item) => {
+                  if (item.quantity > 1) {
+                    onUpdateItemQuantity?.(order.id, item.id, item.quantity - 1);
+                  }
+                });
               }
             }}
           >

@@ -115,7 +115,7 @@ export function WebordersModal({
         {/* List area */}
         <div
           ref={listRef}
-          className="flex-1 min-h-[200px] max-h-[40vh] overflow-auto border border-gray-300 m-4 rounded bg-gray-50"
+          className="flex-1 min-h-[200px] max-h-[40vh] overflow-auto border border-gray-300 m-4 rounded bg-gray-300"
         >
           {!isEmpty ? (
             <table className="text-left">

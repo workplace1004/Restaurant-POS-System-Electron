@@ -8,6 +8,7 @@ import { Footer } from './components/Footer';
 import { CustomersView } from './components/CustomersView';
 import { WebordersModal } from './components/WebordersModal';
 import { InPlanningModal } from './components/InPlanningModal';
+import { HistoryModal } from './components/HistoryModal';
 import { usePos } from './hooks/usePos';
 
 const API = '/api';
@@ -18,6 +19,9 @@ export default function App() {
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [ordersModalTab, setOrdersModalTab] = useState('new');
   const [showInPlanningModal, setShowInPlanningModal] = useState(false);
+  const [showSubtotalView, setShowSubtotalView] = useState(false);
+  const [subtotalBreaks, setSubtotalBreaks] = useState([]); // after each click: item count at which we inserted a subtotal
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }));
   const {
     categories,
@@ -44,7 +48,9 @@ export default function App() {
     fetchOrders,
     fetchWebordersCount,
     fetchInPlanningCount,
-    fetchTables
+    fetchTables,
+    historyOrders,
+    fetchOrderHistory
   } = usePos(API, socket);
 
   useEffect(() => {
@@ -63,6 +69,22 @@ export default function App() {
   useEffect(() => {
     if (selectedCategoryId) fetchProducts(selectedCategoryId);
   }, [selectedCategoryId, fetchProducts]);
+
+  useEffect(() => {
+    setSubtotalBreaks([]);
+  }, [currentOrder?.id]);
+
+  const itemCount = currentOrder?.items?.length ?? 0;
+  const lastBreak = subtotalBreaks[subtotalBreaks.length - 1] ?? 0;
+  const hasNewItemsSinceLastSubtotal = itemCount > lastBreak;
+  const subtotalButtonDisabled = itemCount === 0 || !hasNewItemsSinceLastSubtotal;
+
+  const handleSubtotalClick = () => {
+    if (subtotalButtonDisabled) return;
+    const n = currentOrder?.items?.length ?? 0;
+    setSubtotalBreaks((prev) => [...prev, n]);
+    setShowSubtotalView(true);
+  };
 
   if (view === 'customers') {
     return (
@@ -108,7 +130,14 @@ export default function App() {
           onAddProduct={addItemToOrder}
           currentOrderId={currentOrder?.id}
         />
-        <Footer view={view} onViewChange={setView} />
+        <Footer
+          view={view}
+          onViewChange={setView}
+          showSubtotalView={showSubtotalView}
+          subtotalButtonDisabled={subtotalButtonDisabled}
+          onSubtotalClick={handleSubtotalClick}
+          onHistoryClick={() => setShowHistoryModal(true)}
+        />
       </div>
       <OrderPanel
         order={currentOrder}
@@ -119,6 +148,8 @@ export default function App() {
         onCreateOrder={createOrder}
         onRemoveAllOrders={removeAllOrders}
         tables={tables}
+        showSubtotalView={showSubtotalView}
+        subtotalBreaks={subtotalBreaks}
       />
       <WebordersModal
         open={showOrdersModal}
@@ -137,6 +168,12 @@ export default function App() {
         open={showInPlanningModal}
         onClose={() => setShowInPlanningModal(false)}
         orders={orders || []}
+      />
+      <HistoryModal
+        open={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        historyOrders={historyOrders || []}
+        onFetchHistory={fetchOrderHistory}
       />
     </div>
   );

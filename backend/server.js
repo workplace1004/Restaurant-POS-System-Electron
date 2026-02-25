@@ -209,6 +209,21 @@ app.get('/api/orders/in-planning/count', async (req, res) => {
   res.json({ count });
 });
 
+// REST: order history (paid orders, newest first)
+app.get('/api/orders/history', async (req, res) => {
+  try {
+    const orders = await prisma.order.findMany({
+      where: { status: 'paid' },
+      include: { table: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(orders);
+  } catch (err) {
+    console.error('GET /api/orders/history', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch order history' });
+  }
+});
+
 // REST: customers (list with optional search) - filter in memory for SQLite compatibility
 app.get('/api/customers', async (req, res) => {
   try {

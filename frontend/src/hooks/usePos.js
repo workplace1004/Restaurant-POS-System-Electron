@@ -8,6 +8,7 @@ export function usePos(API, socket) {
   const [webordersCount, setWebordersCount] = useState(0);
   const [weborders, setWeborders] = useState([]);
   const [inPlanningCount, setInPlanningCount] = useState(0);
+  const [historyOrders, setHistoryOrders] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -57,6 +58,12 @@ export function usePos(API, socket) {
     const res = await fetch(`${API}/tables`);
     const data = await safeJson(res);
     if (Array.isArray(data)) setTables(data);
+  }, [API]);
+
+  const fetchOrderHistory = useCallback(async () => {
+    const res = await fetch(`${API}/orders/history`);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) setHistoryOrders(data);
   }, [API]);
 
   useEffect(() => {
@@ -210,6 +217,8 @@ export function usePos(API, socket) {
     fetchOrders,
     fetchWebordersCount,
     fetchInPlanningCount,
-    fetchTables
+    fetchTables,
+    historyOrders,
+    fetchOrderHistory
   };
 }
