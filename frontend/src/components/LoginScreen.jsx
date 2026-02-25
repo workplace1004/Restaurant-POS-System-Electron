@@ -1,13 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
-const PIN = '1234';
+const API = '/api';
 const TOAST_DURATION_MS = 3500;
 
-const USERS = [
-  { id: 'admin', label: 'Admin', color: 'bg-red-600' },
-  { id: 'kitchen', label: 'Kitchen Staff', color: 'bg-amber-600' },
-  { id: 'waiter', label: 'Waiter', color: 'bg-blue-600' }
-];
+const ROLE_COLORS = { admin: 'bg-red-600', kitchen: 'bg-amber-600', waiter: 'bg-blue-600' };
 
 const PAD = [
   ['7', '8', '9'],
@@ -17,9 +13,21 @@ const PAD = [
 ];
 
 export function LoginScreen({ time, onLogin }) {
+  const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [pinInput, setPinInput] = useState('');
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/users`)
+      .then((res) => res.json())
+      .then((data) => { if (!cancelled) setUsers(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelled) setUsers([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -38,18 +46,29 @@ export function LoginScreen({ time, onLogin }) {
     setPinInput((prev) => prev + key);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(async () => {
     if (!selectedUser) {
       showToast('Select a user');
       return;
     }
-    if (pinInput !== PIN) {
-      showToast('Wrong PIN');
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUser.id, pin: pinInput })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || 'Wrong PIN');
+        setPinInput('');
+        return;
+      }
+      onLogin?.(data);
+    } catch {
+      showToast('Login failed');
       setPinInput('');
-      return;
     }
-    onLogin?.(selectedUser);
-  };
+  }, [selectedUser, pinInput, onLogin]);
 
   return (
     <div className="flex flex-col h-full bg-pos-bg text-pos-text">
@@ -62,12 +81,17 @@ export function LoginScreen({ time, onLogin }) {
       <div className="mt-10 flex flex-col items-center justify-center gap-8 p-6">
 
         <div className="flex gap-6">
-          {USERS.map((user) => (
+          {loading ? (
+            <p className="text-pos-muted text-2xl">Loading users…</p>
+          ) : (
+            users.map((user) => {
+              const color = ROLE_COLORS[user.role] || 'bg-gray-600';
+              return (
             <button
               key={user.id}
               type="button"
               className={`flex w-[350px] h-[320px] flex-col items-center p-6 rounded-xl border-2 transition-all ${selectedUser?.id === user.id
-                ? `${user.color} border-white text-white`
+                ? `${color} border-white text-white`
                 : 'bg-pos-panel border-pos-border text-pos-text hover:border-white/50'
                 }`}
               onClick={() => {
@@ -76,7 +100,7 @@ export function LoginScreen({ time, onLogin }) {
               }}
             >
               <span className="flex-1 flex items-center justify-center" aria-hidden>
-                {user.id === 'admin' ?
+                {user.role === 'admin' ?
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="150"
@@ -90,7 +114,7 @@ export function LoginScreen({ time, onLogin }) {
                       <path d="M 65.84 78.626 c 0 -11.759 -9.79 -21.274 -21.646 -20.825 C 32.917 58.228 24.16 67.853 24.16 79.138 V 85.7 c 0 2.374 1.925 4.299 4.299 4.299 L 61.541 90 c 2.374 0 4.299 -1.924 4.299 -4.299 V 78.626 z" style={{ fill: "#ffffff" }} />
                     </g>
                   </svg>
-                  : user.id === 'kitchen' ? (
+                  : user.role === 'kitchen' ? (
                     <svg xmlns="http://www.w3.org/2000/svg" width="170" height="170" viewBox="0 0 256 256" aria-hidden>
                       <g style={{ stroke: 'none', strokeWidth: 0, strokeDasharray: 'none', strokeLinecap: 'butt', strokeLinejoin: 'miter', strokeMiterlimit: 10, fill: 'none', fillRule: 'nonzero', opacity: 1 }} transform="translate(18.12918287937744 18.12918287937741) scale(2.43 2.43)">
                         <path d="M 55.222 62.02 H 34.778 c -8.794 0 -15.922 7.129 -15.922 15.922 V 90 h 11.49 V 77.816 c 0 -0.819 0.664 -1.484 1.484 -1.484 c 0.82 0 1.484 0.664 1.484 1.484 V 90 h 23.375 V 77.816 c 0 -0.819 0.664 -1.484 1.484 -1.484 c 0.819 0 1.484 0.664 1.484 1.484 V 90 h 11.49 V 77.942 C 71.144 69.148 64.016 62.02 55.222 62.02 z" style={{ stroke: 'none', strokeWidth: 1, strokeDasharray: 'none', strokeLinecap: 'butt', strokeLinejoin: 'miter', strokeMiterlimit: 10, fill: 'rgb(255,255,255)', fillRule: 'nonzero', opacity: 1 }} transform=" matrix(1 0 0 1 0 0) " strokeLinecap="round" />
@@ -115,7 +139,8 @@ export function LoginScreen({ time, onLogin }) {
               </span>
               <span className="text-5xl font-semibold">{user.label}</span>
             </button>
-          ))}
+          ); })
+          )}
         </div>
 
         <div className="bg-pos-panel rounded-xl shadow-xl p-6 w-full max-w-2xl">

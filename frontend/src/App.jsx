@@ -14,11 +14,42 @@ import { ControlView } from './components/ControlView';
 import { usePos } from './hooks/usePos';
 
 const API = '/api';
+const USER_STORAGE_KEY = 'pos-user';
+const VIEW_STORAGE_KEY = 'pos-view';
+const VALID_VIEWS = ['pos', 'control', 'customers'];
+
+function loadStoredUser() {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    return u && u.id && (u.label ?? u.name) ? u : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadStoredView() {
+  try {
+    const v = localStorage.getItem(VIEW_STORAGE_KEY);
+    return VALID_VIEWS.includes(v) ? v : 'pos';
+  } catch {
+    return 'pos';
+  }
+}
+
 const socket = io(window.location.origin, { path: '/socket.io' });
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [view, setView] = useState('pos');
+  const [user, setUser] = useState(loadStoredUser);
+  const [view, setView] = useState(loadStoredView);
+
+  const setViewAndPersist = useCallback((nextView) => {
+    setView(nextView);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, nextView);
+    } catch {}
+  }, []);
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [ordersModalTab, setOrdersModalTab] = useState('new');
   const [showInPlanningModal, setShowInPlanningModal] = useState(false);
@@ -89,11 +120,25 @@ export default function App() {
     setShowSubtotalView(true);
   };
 
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser);
+    try {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
+    } catch {}
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    try {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    } catch {}
+  };
+
   if (!user) {
     return (
       <LoginScreen
         time={time}
-        onLogin={(loggedInUser) => setUser(loggedInUser)}
+        onLogin={handleLogin}
       />
     );
   }
@@ -107,7 +152,7 @@ export default function App() {
         onSelectCategory={setSelectedCategoryId}
         webordersCount={webordersCount}
         inPlanningCount={inPlanningCount}
-        onBack={() => setView('pos')}
+        onBack={() => setViewAndPersist('pos')}
       />
     );
   }
@@ -116,8 +161,8 @@ export default function App() {
     return (
       <ControlView
         currentUser={user}
-        onLogout={() => setUser(null)}
-        onBack={() => setView('pos')}
+        onLogout={handleLogout}
+        onBack={() => setViewAndPersist('pos')}
       />
     );
   }
@@ -129,8 +174,8 @@ export default function App() {
         selectedCategoryId={selectedCategoryId}
         onSelectCategory={setSelectedCategoryId}
         currentUser={user}
-        onLogout={() => setUser(null)}
-        onControlClick={() => setView('control')}
+        onLogout={handleLogout}
+        onControlClick={() => setViewAndPersist('control')}
       />
       <div className="flex flex-col flex-1 min-h-0">
         <Header
@@ -157,7 +202,7 @@ export default function App() {
         />
         <Footer
           view={view}
-          onViewChange={setView}
+          onViewChange={setViewAndPersist}
           showSubtotalView={showSubtotalView}
           subtotalButtonDisabled={subtotalButtonDisabled}
           onSubtotalClick={handleSubtotalClick}

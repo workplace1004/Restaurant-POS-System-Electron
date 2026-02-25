@@ -224,6 +224,92 @@ app.get('/api/orders/history', async (req, res) => {
   }
 });
 
+// REST: users (for login screen)
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({ orderBy: { name: 'asc' } });
+    res.json(users.map((u) => ({ id: u.id, name: u.name, label: u.name, role: u.role })));
+  } catch (err) {
+    console.error('GET /api/users', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch users' });
+  }
+});
+
+// REST: login (validate user + PIN)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { userId, pin } = req.body;
+    if (!userId || pin === undefined) {
+      return res.status(400).json({ error: 'userId and pin required' });
+    }
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.pin !== String(pin)) {
+      return res.status(401).json({ error: 'Wrong PIN' });
+    }
+    res.json({ id: user.id, name: user.name, label: user.name, role: user.role });
+  } catch (err) {
+    console.error('POST /api/auth/login', err);
+    res.status(500).json({ error: err.message || 'Login failed' });
+  }
+});
+
+// REST: price groups
+app.get('/api/price-groups', async (req, res) => {
+  try {
+    const list = await prisma.priceGroup.findMany({ orderBy: { sortOrder: 'asc' } });
+    res.json(list);
+  } catch (err) {
+    console.error('GET /api/price-groups', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch price groups' });
+  }
+});
+
+app.post('/api/price-groups', async (req, res) => {
+  try {
+    const { name, tax } = req.body;
+    const count = await prisma.priceGroup.count();
+    const taxValue = tax != null && String(tax).trim() !== '' ? String(tax).trim() : null;
+    const created = await prisma.priceGroup.create({
+      data: {
+        name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New price group',
+        tax: taxValue,
+        sortOrder: count + 1
+      }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/price-groups', err);
+    res.status(500).json({ error: err.message || 'Failed to create price group' });
+  }
+});
+
+app.patch('/api/price-groups/:id', async (req, res) => {
+  try {
+    const { name, tax } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = String(name ?? '').trim() || 'New price group';
+    if (tax !== undefined) data.tax = tax != null && String(tax).trim() !== '' ? String(tax).trim() : null;
+    const updated = await prisma.priceGroup.update({
+      where: { id: req.params.id },
+      data
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/price-groups/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update price group' });
+  }
+});
+
+app.delete('/api/price-groups/:id', async (req, res) => {
+  try {
+    await prisma.priceGroup.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/price-groups/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete price group' });
+  }
+});
+
 // REST: customers (list with optional search) - filter in memory for SQLite compatibility
 app.get('/api/customers', async (req, res) => {
   try {

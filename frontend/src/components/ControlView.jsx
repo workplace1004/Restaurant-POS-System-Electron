@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Dropdown } from './Dropdown';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
+
+const API = '/api';
 
 const CONTROL_SIDEBAR_ITEMS = [
   { id: 'personalize', label: 'Personalize Cash Register', icon: 'monitor' },
@@ -21,6 +25,17 @@ const SUB_NAV_ITEMS = [
   'Kitchen messages',
   'Discounts'
 ];
+
+const VAT_OPTIONS = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'take-out', label: 'Take-out' },
+  { value: 'eat-in', label: 'Eat-in' }
+];
+
+const QWERTY_ROW1 = 'a z e r t y u i o p'.split(' ');
+const QWERTY_ROW2 = 'q s d f g h j k l m'.split(' ');
+const QWERTY_ROW3 = 'w x c v b n , €'.split(' ');
+const NUMPAD = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
 
 function IconMonitor({ className }) {
   return (
@@ -99,10 +114,113 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [controlSidebarId, setControlSidebarId] = useState('personalize');
   const [topNavId, setTopNavId] = useState('categories-products');
   const [subNavId, setSubNavId] = useState('Price Groups');
+  const [priceGroups, setPriceGroups] = useState([]);
+  const [priceGroupsLoading, setPriceGroupsLoading] = useState(false);
+  const [showPriceGroupModal, setShowPriceGroupModal] = useState(false);
+  const [editingPriceGroupId, setEditingPriceGroupId] = useState(null);
+  const [priceGroupName, setPriceGroupName] = useState('');
+  const [priceGroupTax, setPriceGroupTax] = useState('standard');
+  const [keyboardUppercase, setKeyboardUppercase] = useState(false);
+  const [savingPriceGroup, setSavingPriceGroup] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const fetchPriceGroups = useCallback(async () => {
+    setPriceGroupsLoading(true);
+    try {
+      const res = await fetch(`${API}/price-groups`);
+      const data = await res.json();
+      setPriceGroups(Array.isArray(data) ? data : []);
+    } catch {
+      setPriceGroups([]);
+    } finally {
+      setPriceGroupsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (subNavId === 'Price Groups') fetchPriceGroups();
+  }, [subNavId, fetchPriceGroups]);
 
   const handleLogoutConfirm = () => {
     setShowLogoutModal(false);
     onLogout?.();
+  };
+
+  const openPriceGroupModal = () => {
+    setEditingPriceGroupId(null);
+    setPriceGroupName('');
+    setPriceGroupTax('standard');
+    setKeyboardUppercase(false);
+    setShowPriceGroupModal(true);
+  };
+
+  const openEditPriceGroupModal = (pg) => {
+    setEditingPriceGroupId(pg.id);
+    setPriceGroupName(pg.name || '');
+    setPriceGroupTax(pg.tax && VAT_OPTIONS.some((o) => o.value === pg.tax) ? pg.tax : 'standard');
+    setKeyboardUppercase(false);
+    setShowPriceGroupModal(true);
+  };
+
+  const closePriceGroupModal = () => {
+    setShowPriceGroupModal(false);
+    setEditingPriceGroupId(null);
+  };
+
+  const keyDisplay = (k) => (/^[a-z]$/.test(k) ? (keyboardUppercase ? k.toUpperCase() : k) : k);
+  const sendKey = (char) => {
+    if (char === 'Backspace') setPriceGroupName((prev) => prev.slice(0, -1));
+    else setPriceGroupName((prev) => prev + char);
+  };
+  const sendLetterOrSymbol = (k) => {
+    if (/^[a-z]$/.test(k)) sendKey(keyboardUppercase ? k.toUpperCase() : k);
+    else sendKey(k);
+  };
+
+  const handleSavePriceGroup = async () => {
+    setSavingPriceGroup(true);
+    const payload = { name: priceGroupName.trim() || 'New price group', tax: priceGroupTax };
+    try {
+      if (editingPriceGroupId) {
+        const res = await fetch(`${API}/price-groups/${editingPriceGroupId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const updated = await res.json();
+        if (res.ok && updated) {
+          setPriceGroups((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+          closePriceGroupModal();
+        } else fetchPriceGroups();
+      } else {
+        const res = await fetch(`${API}/price-groups`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const created = await res.json();
+        if (res.ok && created) {
+          setPriceGroups((prev) => [...prev, created]);
+          closePriceGroupModal();
+        } else fetchPriceGroups();
+      }
+    } catch {
+      fetchPriceGroups();
+    } finally {
+      setSavingPriceGroup(false);
+    }
+  };
+
+  const handleDeletePriceGroup = async (id) => {
+    try {
+      const res = await fetch(`${API}/price-groups/${id}`, { method: 'DELETE' });
+      if (res.ok) setPriceGroups((prev) => prev.filter((p) => p.id !== id));
+      else fetchPriceGroups();
+    } catch {
+      fetchPriceGroups();
+    } finally {
+      setDeleteConfirmId(null);
+    }
   };
 
   return (
@@ -201,13 +319,153 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
         {/* Content area */}
         <main className="flex-1 overflow-auto p-6">
-          <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px] flex items-center justify-center">
-            <p className="text-pos-muted text-xl">
-              Select a section above to manage {subNavId.toLowerCase()}.
-            </p>
-          </div>
+          {subNavId === 'Price Groups' ? (
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
+              <div className="flex items-center w-full  justify-center mb-6">
+                <button
+                  type="button"
+                  className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                  disabled={priceGroupsLoading}
+                  onClick={openPriceGroupModal}
+                >
+                  New price group
+                </button>
+              </div>
+              <ul className="w-full flex justify-center items-center flex flex-col h-full">
+                {priceGroupsLoading ? (
+                  <li className="text-pos-muted text-lg py-4">Loading price groups…</li>
+                ) : priceGroups.length === 0 ? (
+                  <li className="text-pos-muted text-3xl py-4">No price groups yet.</li>
+                ) : (
+                  priceGroups.map((pg) => (
+                    <li
+                      key={pg.id}
+                      className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-y border-pos-panel text-pos-text text-lg"
+                    >
+                      <span className="font-medium">{pg.name}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="p-2 rounded text-pos-text mr-20 hover:bg-pos-panel"
+                          onClick={() => openEditPriceGroupModal(pg)}
+                          aria-label="Edit"
+                        >
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                          onClick={() => setDeleteConfirmId(pg.id)}
+                          aria-label="Delete"
+                        >
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px] flex items-center justify-center">
+              <p className="text-pos-muted text-xl">
+                Select a section above to manage {subNavId.toLowerCase()}.
+              </p>
+            </div>
+          )}
         </main>
       </div>
+
+      <DeleteConfirmModal
+        open={deleteConfirmId !== null}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={() => handleDeletePriceGroup(deleteConfirmId)}
+        message="Are you sure you want to delete this price group?"
+      />
+
+      {/* New price group modal */}
+      {showPriceGroupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closePriceGroupModal}>
+          <div className="bg-pos-bg rounded-xl shadow-2xl max-w-[1450px] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center">
+              <div className='w-full flex flex-col h-[400px] justify-center items-center gap-10'>
+                <div className="flex gap-2 w-full items-center justify-center h-[100px]">
+                  <label className="block text-3xl pr-[50px] font-medium text-gray-200 mb-2">Name : </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={priceGroupName}
+                    placeholder="Enter name"
+                    className="px-4 w-[300px] bg-pos-panel h-[60px] py-3 text-2xl border border-gray-300 rounded-lg text-gray-200"
+                  />
+                </div>
+                <div className="flex gap-2 w-full items-center justify-center h-[100px]">
+                  <label className="block text-3xl pr-[80px] font-medium text-gray-200 mb-2">VAT : </label>
+                  <Dropdown
+                    options={VAT_OPTIONS}
+                    value={priceGroupTax}
+                    onChange={setPriceGroupTax}
+                    placeholder="Select VAT"
+                    className="text-2xl min-w-[300px]"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  className="flex items-center text-4xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                  disabled={savingPriceGroup}
+                  onClick={handleSavePriceGroup}
+                >
+                  <svg fill="#ffffff" width="30px" height="30px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
+                    <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
+                  </svg>
+                  Save
+                </button>
+              </div>
+            </div>
+            {/* On-screen keyboard */}
+            <div className="p-4 flex gap-4 flex-wrap">
+              <div className="flex gap-16">
+                <div className="flex flex-col gap-1">
+                  <div className="flex gap-1">
+                    {QWERTY_ROW1.map((k) => (
+                      <button key={k} type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-white text-5xl hover:bg-pos-panel/50" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    {QWERTY_ROW2.map((k) => (
+                      <button key={k} type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-white text-5xl hover:bg-pos-panel/50" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    {QWERTY_ROW3.map((k) => (
+                      <button key={k} type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-white text-5xl hover:bg-pos-panel/50" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
+                    ))}
+                    <button type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-white hover:bg-pos-panel/50 text-5xl w-[204px]" onClick={() => sendKey('Backspace')}>←</button>
+                  </div>
+                  <div className="flex gap-1">
+                    <button type="button" className={`w-[100px] bg-pos-panel h-[100px] rounded text-5xl text-white ${keyboardUppercase ? 'bg-blue-200 ring-2 ring-blue-500' : 'bg-pos'} text-gray-800 hover:bg-pos-panel/50`} onClick={() => setKeyboardUppercase((p) => !p)}>↑</button>
+                    <button type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-white text-5xl hover:bg-pos-panel/50" onClick={() => sendKey('@')}>@</button>
+                    <button type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-white text-5xl hover:bg-pos-panel/50" onClick={() => sendKey('/')}>/</button>
+                    <button type="button" className="bg-pos-panel rounded hove-white w-[412px]" onClick={() => sendKey(' ')} aria-label="Space" />
+                    <button type="button" className="w-[100px] bg-pos-panel h-[100px] rounded text-5xl text-white hover:bg-pos-panel/50" onClick={() => sendKey('Backspace')}>_</button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {NUMPAD.map((row, i) => (
+                    <div key={i} className="flex gap-1">
+                      {row.map((k) => (
+                        <button key={k} type="button" className="w-[100px] h-[100px] bg-pos-panel rounded text-white text-5xl hover:bg-pos-panel/50" onClick={() => sendKey(k)}>{k}</button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Logout confirmation modal */}
       {showLogoutModal && (

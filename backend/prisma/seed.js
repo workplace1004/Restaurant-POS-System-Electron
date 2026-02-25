@@ -3,6 +3,31 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Users for POS login
+  const userData = [
+    { id: 'user-admin', name: 'Admin', role: 'admin', pin: '1234' },
+    { id: 'user-kitchen', name: 'Kitchen Staff', role: 'kitchen', pin: '1234' },
+    { id: 'user-waiter', name: 'Waiter', role: 'waiter', pin: '1234' }
+  ];
+  for (const u of userData) {
+    await prisma.user.upsert({
+      where: { id: u.id },
+      update: {},
+      create: u
+    });
+  }
+
+  // Price groups (optional starter data)
+  const priceGroupData = [
+  ];
+  for (const pg of priceGroupData) {
+    await prisma.priceGroup.upsert({
+      where: { id: pg.id },
+      update: {},
+      create: pg
+    });
+  }
+
   const catDrinks = await prisma.category.upsert({
     where: { id: 'cat-drinks' },
     update: {},
