@@ -22,10 +22,13 @@ model PriceGroup {
 }
 
 model Category {
-  id        String    @id @default(cuid())
-  name      String
-  sortOrder Int       @default(0)
-  products  Product[]
+  id                    String    @id @default(cuid())
+  name                  String
+  sortOrder             Int       @default(0)
+  inWebshop             Boolean   @default(true)
+  displayOnCashRegister Boolean   @default(true)
+  nextCourse            String?
+  products              Product[]
 }
 
 model Product {
@@ -33,6 +36,7 @@ model Product {
   name        String
   price       Float
   categoryId  String
+  sortOrder   Int      @default(0)
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
 }

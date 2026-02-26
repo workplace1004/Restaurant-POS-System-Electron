@@ -21,10 +21,106 @@ app.get('/api/categories', async (req, res) => {
   res.json(categories);
 });
 
+app.post('/api/categories', async (req, res) => {
+  try {
+    const { name, inWebshop, displayOnCashRegister, nextCourse } = req.body;
+    const count = await prisma.category.count();
+    const created = await prisma.category.create({
+      data: {
+        name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New category',
+        inWebshop: inWebshop !== false,
+        displayOnCashRegister: displayOnCashRegister !== false,
+        nextCourse: nextCourse != null && String(nextCourse).trim() !== '' ? String(nextCourse).trim() : null,
+        sortOrder: count + 1
+      }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/categories', err);
+    res.status(500).json({ error: err.message || 'Failed to create category' });
+  }
+});
+
+app.patch('/api/categories/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { name, inWebshop, displayOnCashRegister, nextCourse, sortOrder } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = String(name).trim() || 'New category';
+    if (inWebshop !== undefined) data.inWebshop = inWebshop !== false;
+    if (displayOnCashRegister !== undefined) data.displayOnCashRegister = displayOnCashRegister !== false;
+    if (nextCourse !== undefined) data.nextCourse = nextCourse != null && String(nextCourse).trim() !== '' ? String(nextCourse).trim() : null;
+    if (typeof sortOrder === 'number') data.sortOrder = sortOrder;
+    const updated = await prisma.category.update({ where: { id }, data });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/categories/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update category' });
+  }
+});
+
+app.delete('/api/categories/:id', async (req, res) => {
+  try {
+    await prisma.category.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/categories/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete category' });
+  }
+});
+
 // REST: products by category
 app.get('/api/categories/:id/products', async (req, res) => {
-  const products = await prisma.product.findMany({ where: { categoryId: req.params.id } });
+  const products = await prisma.product.findMany({
+    where: { categoryId: req.params.id },
+    orderBy: { sortOrder: 'asc' }
+  });
   res.json(products);
+});
+
+// REST: products CRUD
+app.post('/api/products', async (req, res) => {
+  try {
+    const { name, price, categoryId } = req.body;
+    const count = await prisma.product.count({ where: { categoryId: categoryId || undefined } });
+    const created = await prisma.product.create({
+      data: {
+        name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New product',
+        price: typeof price === 'number' ? price : 0,
+        categoryId: categoryId || req.body.category,
+        sortOrder: count
+      }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/products', err);
+    res.status(500).json({ error: err.message || 'Failed to create product' });
+  }
+});
+
+app.patch('/api/products/:id', async (req, res) => {
+  try {
+    const { name, price, sortOrder } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = String(name).trim() || 'New product';
+    if (typeof price === 'number') data.price = price;
+    if (typeof sortOrder === 'number') data.sortOrder = sortOrder;
+    const updated = await prisma.product.update({ where: { id: req.params.id }, data });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/products/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update product' });
+  }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    await prisma.product.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/products/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete product' });
+  }
 });
 
 // REST: orders (current/open)
