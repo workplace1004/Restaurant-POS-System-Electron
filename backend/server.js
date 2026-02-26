@@ -71,26 +71,120 @@ app.delete('/api/categories/:id', async (req, res) => {
 
 // REST: products by category
 app.get('/api/categories/:id/products', async (req, res) => {
-  const products = await prisma.product.findMany({
-    where: { categoryId: req.params.id },
-    orderBy: { sortOrder: 'asc' }
-  });
-  res.json(products);
+  try {
+    const products = await prisma.product.findMany({
+      where: { categoryId: req.params.id },
+      orderBy: { sortOrder: 'asc' }
+    });
+    res.json(products);
+  } catch (err) {
+    console.error('GET /api/categories/:id/products', err);
+    res.status(500).json({ error: err.message || 'Failed to load products' });
+  }
 });
+
+// Next product number (unique numeric id for display)
+app.get('/api/products/next-number', async (req, res) => {
+  try {
+    const max = await prisma.product.aggregate({ _max: { number: true } });
+    const next = (max._max.number ?? 0) + 1;
+    res.json({ nextNumber: next });
+  } catch (err) {
+    console.error('GET /api/products/next-number', err);
+    res.status(500).json({ error: err.message || 'Failed to get next number' });
+  }
+});
+
+// Build product payload from body (for POST create; optional fields)
+function productDataFromBody(body, forCreate = false) {
+  const str = (v) => (v != null && v !== '' ? String(v) : null);
+  const num = (v) => (typeof v === 'number' ? v : typeof v === 'string' && v !== '' ? parseFloat(v) : null);
+  const bool = (v) => (typeof v === 'boolean' ? v : v === 'true' || v === 1);
+  const data = {};
+  if (body.name !== undefined) data.name = String(body.name).trim() || 'New product';
+  if (body.price !== undefined) data.price = typeof body.price === 'number' ? body.price : parseFloat(body.price) || 0;
+  if (body.categoryId !== undefined) data.categoryId = body.categoryId || undefined;
+  if (body.sortOrder !== undefined && typeof body.sortOrder === 'number') data.sortOrder = body.sortOrder;
+  // General
+  if (body.keyName !== undefined) data.keyName = str(body.keyName);
+  if (body.productionName !== undefined) data.productionName = str(body.productionName);
+  if (body.vatTakeOut !== undefined) data.vatTakeOut = str(body.vatTakeOut);
+  if (body.vatEatIn !== undefined) data.vatEatIn = str(body.vatEatIn);
+  if (body.barcode !== undefined) data.barcode = str(body.barcode);
+  if (body.printer1 !== undefined) data.printer1 = str(body.printer1);
+  if (body.printer2 !== undefined) data.printer2 = str(body.printer2);
+  if (body.printer3 !== undefined) data.printer3 = str(body.printer3);
+  if (body.addition !== undefined) data.addition = str(body.addition);
+  if (body.categoryIdsJson !== undefined) data.categoryIdsJson = typeof body.categoryIdsJson === 'string' ? body.categoryIdsJson : JSON.stringify(body.categoryIds || []);
+  // Advanced
+  if (body.openPrice !== undefined) data.openPrice = bool(body.openPrice);
+  if (body.weegschaal !== undefined) data.weegschaal = bool(body.weegschaal);
+  if (body.subproductRequires !== undefined) data.subproductRequires = bool(body.subproductRequires);
+  if (body.leeggoedPrijs !== undefined) data.leeggoedPrijs = str(body.leeggoedPrijs);
+  if (body.pagerVerplicht !== undefined) data.pagerVerplicht = bool(body.pagerVerplicht);
+  if (body.boldPrint !== undefined) data.boldPrint = bool(body.boldPrint);
+  if (body.groupingReceipt !== undefined) data.groupingReceipt = bool(body.groupingReceipt);
+  if (body.labelExtraInfo !== undefined) data.labelExtraInfo = str(body.labelExtraInfo);
+  if (body.kassaPhotoPath !== undefined) data.kassaPhotoPath = str(body.kassaPhotoPath);
+  if (body.voorverpakVervaltype !== undefined) data.voorverpakVervaltype = str(body.voorverpakVervaltype);
+  if (body.houdbareDagen !== undefined) data.houdbareDagen = str(body.houdbareDagen);
+  if (body.bewarenGebruik !== undefined) data.bewarenGebruik = str(body.bewarenGebruik);
+  // Extra prices
+  if (body.extraPricesJson !== undefined) data.extraPricesJson = typeof body.extraPricesJson === 'string' ? body.extraPricesJson : JSON.stringify(body.extraPrices || []);
+  // Purchase and stock
+  if (body.purchaseVat !== undefined) data.purchaseVat = str(body.purchaseVat);
+  if (body.purchasePriceExcl !== undefined) data.purchasePriceExcl = str(body.purchasePriceExcl);
+  if (body.purchasePriceIncl !== undefined) data.purchasePriceIncl = str(body.purchasePriceIncl);
+  if (body.profitPct !== undefined) data.profitPct = str(body.profitPct);
+  if (body.unit !== undefined) data.unit = str(body.unit);
+  if (body.unitContent !== undefined) data.unitContent = str(body.unitContent);
+  if (body.stock !== undefined) data.stock = str(body.stock);
+  if (body.supplierCode !== undefined) data.supplierCode = str(body.supplierCode);
+  if (body.stockNotification !== undefined) data.stockNotification = bool(body.stockNotification);
+  if (body.expirationDate !== undefined) data.expirationDate = str(body.expirationDate);
+  if (body.declarationExpiryDays !== undefined) data.declarationExpiryDays = str(body.declarationExpiryDays);
+  if (body.notificationSoldOutPieces !== undefined) data.notificationSoldOutPieces = str(body.notificationSoldOutPieces);
+  // Webshop
+  if (body.inWebshop !== undefined) data.inWebshop = bool(body.inWebshop);
+  if (body.onlineOrderable !== undefined) data.onlineOrderable = bool(body.onlineOrderable);
+  if (body.websiteRemark !== undefined) data.websiteRemark = str(body.websiteRemark);
+  if (body.websiteOrder !== undefined) data.websiteOrder = str(body.websiteOrder);
+  if (body.shortWebText !== undefined) data.shortWebText = str(body.shortWebText);
+  if (body.websitePhotoPath !== undefined) data.websitePhotoPath = str(body.websitePhotoPath);
+  // Kiosk
+  if (body.kioskInfo !== undefined) data.kioskInfo = str(body.kioskInfo);
+  if (body.kioskTakeAway !== undefined) data.kioskTakeAway = bool(body.kioskTakeAway);
+  if (body.kioskEatIn !== undefined) data.kioskEatIn = str(body.kioskEatIn);
+  if (body.kioskSubtitle !== undefined) data.kioskSubtitle = str(body.kioskSubtitle);
+  if (body.kioskMinSubs !== undefined) data.kioskMinSubs = str(body.kioskMinSubs);
+  if (body.kioskMaxSubs !== undefined) data.kioskMaxSubs = str(body.kioskMaxSubs);
+  if (body.kioskPicturePath !== undefined) data.kioskPicturePath = str(body.kioskPicturePath);
+  return data;
+}
 
 // REST: products CRUD
 app.post('/api/products', async (req, res) => {
   try {
-    const { name, price, categoryId } = req.body;
-    const count = await prisma.product.count({ where: { categoryId: categoryId || undefined } });
-    const created = await prisma.product.create({
-      data: {
-        name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New product',
-        price: typeof price === 'number' ? price : 0,
-        categoryId: categoryId || req.body.category,
-        sortOrder: count
-      }
-    });
+    const body = req.body;
+    const categoryId = (body.categoryId || body.category || '').toString().trim();
+    if (!categoryId) {
+      return res.status(400).json({ error: 'categoryId is required' });
+    }
+    const max = await prisma.product.aggregate({ _max: { number: true } });
+    const nextNumber = (max._max.number ?? 0) + 1;
+    const count = await prisma.product.count({ where: { categoryId } });
+    const data = productDataFromBody(body, true);
+    data.number = nextNumber;
+    data.name = (data.name || 'New product').toString().trim();
+    data.price = typeof data.price === 'number' ? data.price : parseFloat(data.price) || 0;
+    data.categoryId = categoryId;
+    data.sortOrder = count;
+    // Only pass defined values so Prisma doesn't receive undefined
+    const createData = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (v !== undefined) createData[k] = v;
+    }
+    const created = await prisma.product.create({ data: createData });
     res.status(201).json(created);
   } catch (err) {
     console.error('POST /api/products', err);
@@ -100,11 +194,8 @@ app.post('/api/products', async (req, res) => {
 
 app.patch('/api/products/:id', async (req, res) => {
   try {
-    const { name, price, sortOrder } = req.body;
-    const data = {};
-    if (name !== undefined) data.name = String(name).trim() || 'New product';
-    if (typeof price === 'number') data.price = price;
-    if (typeof sortOrder === 'number') data.sortOrder = sortOrder;
+    const data = productDataFromBody(req.body);
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No fields to update' });
     const updated = await prisma.product.update({ where: { id: req.params.id }, data });
     res.json(updated);
   } catch (err) {
@@ -120,6 +211,102 @@ app.delete('/api/products/:id', async (req, res) => {
   } catch (err) {
     console.error('DELETE /api/products/:id', err);
     res.status(500).json({ error: err.message || 'Failed to delete product' });
+  }
+});
+
+// REST: subproduct groups
+app.get('/api/subproduct-groups', async (req, res) => {
+  const groups = await prisma.subproductGroup.findMany({ orderBy: { sortOrder: 'asc' } });
+  res.json(groups);
+});
+
+app.post('/api/subproduct-groups', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const count = await prisma.subproductGroup.count();
+    const created = await prisma.subproductGroup.create({
+      data: { name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New group', sortOrder: count }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/subproduct-groups', err);
+    res.status(500).json({ error: err.message || 'Failed to create group' });
+  }
+});
+
+app.patch('/api/subproduct-groups/:id', async (req, res) => {
+  try {
+    const { name, sortOrder } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = String(name).trim() || 'New group';
+    if (typeof sortOrder === 'number') data.sortOrder = sortOrder;
+    const updated = await prisma.subproductGroup.update({ where: { id: req.params.id }, data });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/subproduct-groups/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update group' });
+  }
+});
+
+app.delete('/api/subproduct-groups/:id', async (req, res) => {
+  try {
+    await prisma.subproductGroup.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/subproduct-groups/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete group' });
+  }
+});
+
+// REST: subproducts by group
+app.get('/api/subproduct-groups/:id/subproducts', async (req, res) => {
+  const subproducts = await prisma.subproduct.findMany({
+    where: { groupId: req.params.id },
+    orderBy: { sortOrder: 'asc' }
+  });
+  res.json(subproducts);
+});
+
+app.post('/api/subproducts', async (req, res) => {
+  try {
+    const { name, groupId } = req.body;
+    if (!groupId) return res.status(400).json({ error: 'groupId required' });
+    const count = await prisma.subproduct.count({ where: { groupId } });
+    const created = await prisma.subproduct.create({
+      data: {
+        name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New subproduct',
+        groupId,
+        sortOrder: count
+      }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/subproducts', err);
+    res.status(500).json({ error: err.message || 'Failed to create subproduct' });
+  }
+});
+
+app.patch('/api/subproducts/:id', async (req, res) => {
+  try {
+    const { name, sortOrder } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = String(name).trim() || 'New subproduct';
+    if (typeof sortOrder === 'number') data.sortOrder = sortOrder;
+    const updated = await prisma.subproduct.update({ where: { id: req.params.id }, data });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/subproducts/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update subproduct' });
+  }
+});
+
+app.delete('/api/subproducts/:id', async (req, res) => {
+  try {
+    await prisma.subproduct.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/subproducts/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete subproduct' });
   }
 });
 

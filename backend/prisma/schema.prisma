@@ -33,12 +33,73 @@ model Category {
 
 model Product {
   id          String   @id @default(cuid())
+  number      Int      @default(0)
   name        String
   price       Float
   categoryId  String
   sortOrder   Int      @default(0)
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
+
+  // General (extra)
+  keyName           String?
+  productionName    String?
+  vatTakeOut        String?
+  vatEatIn          String?
+  barcode           String?
+  printer1          String?
+  printer2          String?
+  printer3          String?
+  addition          String?
+  categoryIdsJson   String?  // JSON array of category ids [id1, id2, ...]
+
+  // Advanced
+  openPrice           Boolean? @default(false)
+  weegschaal          Boolean? @default(false)
+  subproductRequires  Boolean? @default(false)
+  leeggoedPrijs       String?
+  pagerVerplicht      Boolean? @default(false)
+  boldPrint           Boolean? @default(false)
+  groupingReceipt     Boolean? @default(true)
+  labelExtraInfo      String?
+  kassaPhotoPath      String?
+  voorverpakVervaltype String?
+  houdbareDagen       String?
+  bewarenGebruik      String?
+
+  // Extra prices (JSON array of { priceGroupId, priceGroupLabel, otherName, otherPrinter, otherPrice })
+  extraPricesJson     String?
+
+  // Purchase and stock
+  purchaseVat                String?
+  purchasePriceExcl          String?
+  purchasePriceIncl          String?
+  profitPct                  String?
+  unit                       String?
+  unitContent                String?
+  stock                      String?
+  supplierCode               String?
+  stockNotification          Boolean? @default(true)
+  expirationDate             String?
+  declarationExpiryDays      String?
+  notificationSoldOutPieces  String?
+
+  // Webshop
+  inWebshop          Boolean? @default(false)
+  onlineOrderable    Boolean? @default(true)
+  websiteRemark      String?
+  websiteOrder       String?
+  shortWebText       String?
+  websitePhotoPath   String?
+
+  // Kiosk
+  kioskInfo        String?
+  kioskTakeAway     Boolean? @default(true)
+  kioskEatIn        String?
+  kioskSubtitle     String?
+  kioskMinSubs      String?
+  kioskMaxSubs      String?
+  kioskPicturePath  String?
 }
 
 model Table {
@@ -80,4 +141,19 @@ model OrderItem {
   quantity  Int      @default(1)
   price     Float
   notes     String?
+}
+
+model SubproductGroup {
+  id         String       @id @default(cuid())
+  name       String
+  sortOrder  Int          @default(0)
+  subproducts Subproduct[]
+}
+
+model Subproduct {
+  id        String           @id @default(cuid())
+  name      String
+  groupId   String
+  sortOrder Int              @default(0)
+  group     SubproductGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
