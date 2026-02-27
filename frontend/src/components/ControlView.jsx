@@ -4523,61 +4523,58 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit table location modal */}
       {showTableLocationModal && topNavId === 'tables' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeTableLocationModal}>
-          <div className="relative bg-gray-100 rounded-xl shadow-2xl max-w-[600px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-gray-600 hover:text-gray-800 hover:bg-gray-200" onClick={closeTableLocationModal} aria-label="Close">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeTableLocationModal}>
+          <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[600px] w-full overflow-hidden max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeTableLocationModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="w-full flex items-center justify-end px-6 py-4 bg-gray-100 border-b border-gray-300 shrink-0 pr-14">
-              <span className="flex-1 text-xl font-medium text-gray-800">{editingTableLocationId ? 'Edit table location' : 'New table location'}</span>
-            </div>
-            <div className="p-6 flex flex-col gap-6 bg-white">
-              <div className="flex gap-2 w-full items-center">
-                <label className="block text-xl min-w-[160px] font-medium text-gray-800 shrink-0">Location Name :</label>
+            <div className="p-6 overflow-auto flex-1 flex flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Location Name:</span>
                 <input
                   type="text"
                   readOnly
                   value={tableLocationName}
                   placeholder="e.g. zaal 1"
-                  className="flex-1 px-4 bg-gray-100 h-[48px] py-3 text-xl border border-gray-300 rounded-lg text-gray-800"
+                  className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
                 />
               </div>
-              <div className="flex gap-2 w-full items-center">
-                <label className="block text-xl min-w-[160px] font-medium text-gray-800 shrink-0">Background :</label>
+              <div className="flex items-center gap-3">
+                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Background:</span>
                 <Dropdown
                   options={TABLE_LOCATION_BACKGROUND_OPTIONS}
                   value={tableLocationBackground}
                   onChange={setTableLocationBackground}
-                  placeholder="Select"
-                  className="flex-1 text-xl h-[48px]"
+                  placeholder="Default"
+                  className="flex-1 text-xl min-w-0 max-w-[280px]"
                 />
               </div>
-              <div className="flex gap-2 w-full items-center">
-                <label className="block text-xl min-w-[160px] font-medium text-gray-800 shrink-0">Text color :</label>
+              <div className="flex items-center gap-3">
+                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Text color:</span>
                 <div className="flex gap-6">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'light'} onChange={() => setTableLocationTextColor('light')} className="w-5 h-5" />
-                    <span className="text-gray-800 text-xl">light</span>
+                    <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'light'} onChange={() => setTableLocationTextColor('light')} className="w-6 h-6" />
+                    <span className="text-pos-text text-xl">light</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'dark'} onChange={() => setTableLocationTextColor('dark')} className="w-5 h-5" />
-                    <span className="text-gray-800 text-xl">dark</span>
+                    <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'dark'} onChange={() => setTableLocationTextColor('dark')} className="w-6 h-6" />
+                    <span className="text-pos-text text-xl">dark</span>
                   </label>
                 </div>
               </div>
               <div className="flex justify-center pt-2">
                 <button
                   type="button"
-                  className="flex items-center gap-3 px-8 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
                   disabled={savingTableLocation}
                   onClick={handleSaveTableLocation}
                 >
-                  <svg fill="#ffffff" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                   Save
                 </button>
               </div>
             </div>
-            <div className="shrink-0 bg-gray-100">
+            <div className="shrink-0">
               <KeyboardWithNumpad value={tableLocationName} onChange={setTableLocationName} />
             </div>
           </div>
