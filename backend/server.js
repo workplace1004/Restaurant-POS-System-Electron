@@ -464,10 +464,56 @@ app.delete('/api/orders', async (req, res) => {
   res.json({ ok: true });
 });
 
-// REST: tables
+// REST: tables (table locations / areas)
 app.get('/api/tables', async (req, res) => {
-  const tables = await prisma.table.findMany({ include: { orders: { where: { status: 'open' } } } });
-  res.json(tables);
+  try {
+    const tables = await prisma.table.findMany({
+      include: { orders: { where: { status: 'open' } } },
+      orderBy: { name: 'asc' }
+    });
+    res.json(tables);
+  } catch (err) {
+    console.error('GET /api/tables', err);
+    res.status(500).json({ error: err.message || 'Failed to load tables' });
+  }
+});
+
+app.post('/api/tables', async (req, res) => {
+  try {
+    const name = req.body.name != null ? String(req.body.name).trim() : 'New location';
+    const created = await prisma.table.create({
+      data: { name: name || 'New location', status: 'available' }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/tables', err);
+    res.status(500).json({ error: err.message || 'Failed to create table location' });
+  }
+});
+
+app.patch('/api/tables/:id', async (req, res) => {
+  try {
+    const name = req.body.name != null ? String(req.body.name).trim() : undefined;
+    if (name === undefined) return res.status(400).json({ error: 'No fields to update' });
+    const updated = await prisma.table.update({
+      where: { id: req.params.id },
+      data: { name: name || 'New location' }
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/tables/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update table location' });
+  }
+});
+
+app.delete('/api/tables/:id', async (req, res) => {
+  try {
+    await prisma.table.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/tables/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete table location' });
+  }
 });
 
 // REST: weborders list (source weborder, open/in_planning) for modal
@@ -507,7 +553,7 @@ app.get('/api/orders/history', async (req, res) => {
   }
 });
 
-// REST: users (for login screen)
+// REST: users (for login screen and control view)
 app.get('/api/users', async (req, res) => {
   try {
     const users = await prisma.user.findMany({ orderBy: { name: 'asc' } });
@@ -515,6 +561,49 @@ app.get('/api/users', async (req, res) => {
   } catch (err) {
     console.error('GET /api/users', err);
     res.status(500).json({ error: err.message || 'Failed to fetch users' });
+  }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, role, pin } = req.body;
+    const created = await prisma.user.create({
+      data: {
+        name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New user',
+        role: role === 'admin' || role === 'kitchen' || role === 'waiter' ? role : 'waiter',
+        pin: pin != null ? String(pin) : '0000'
+      }
+    });
+    res.status(201).json({ id: created.id, name: created.name, label: created.name, role: created.role });
+  } catch (err) {
+    console.error('POST /api/users', err);
+    res.status(500).json({ error: err.message || 'Failed to create user' });
+  }
+});
+
+app.patch('/api/users/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { name, role, pin } = req.body;
+    const data = {};
+    if (name !== undefined) data.name = String(name).trim() || 'New user';
+    if (role !== undefined) data.role = role === 'admin' || role === 'kitchen' || role === 'waiter' ? role : undefined;
+    if (pin !== undefined) data.pin = String(pin);
+    const updated = await prisma.user.update({ where: { id }, data });
+    res.json({ id: updated.id, name: updated.name, label: updated.name, role: updated.role });
+  } catch (err) {
+    console.error('PATCH /api/users/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update user' });
+  }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/users/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete user' });
   }
 });
 

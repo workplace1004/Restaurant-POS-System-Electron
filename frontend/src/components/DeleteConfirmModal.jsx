@@ -12,17 +12,17 @@ export function DeleteConfirmModal({ open, onClose, onConfirm, message = 'Are yo
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-confirm-title"
     >
       <div
-        className="bg-pos-bg rounded-2xl shadow-xl max-w-4xl h-[300px] w-full mx-4 p-8"
+        className="bg-pos-bg rounded-2xl shadow-xl max-w-4xl h-[300px] w-full mx-4 p-7"
         onClick={(e) => e.stopPropagation()}
       >
-        <p id="delete-confirm-title" className="text-center text-white text-4xl font-medium py-10">
+        <p id="delete-confirm-title" className="text-center text-white text-4xl font-medium py-8 leading-normal">
           {message}
         </p>
         <div className="flex justify-around mt-10 gap-12">
