@@ -11,7 +11,15 @@ const API = '/api';
 const CONTROL_SIDEBAR_ITEMS = [
   { id: 'personalize', label: 'Personalize Cash Register', icon: 'monitor' },
   { id: 'reports', label: 'Reports', icon: 'chart' },
-  { id: 'users', label: 'Users', icon: 'users' }
+  { id: 'users', label: 'Users', icon: 'users' },
+  { id: 'language', label: 'Language', icon: 'language' }
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: 'en', label: 'English' },
+  { value: 'nl', label: 'Dutch' },
+  { value: 'fr', label: 'French' },
+  { value: 'tr', label: 'Turkish' }
 ];
 
 const TOP_NAV_ITEMS = [
@@ -158,11 +166,30 @@ const PERIODIC_REPORT_TIME_OPTIONS = Array.from({ length: 25 }, (_, i) => {
 
 const USER_ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrator' },
-  { value: 'waiter', label: 'User' },
+  { value: 'waiter', label: 'Waiter' },
   { value: 'kitchen', label: 'Kitchen' }
 ];
 
 const USER_AVATAR_COLORS = ['#ef4444', '#22c55e', '#38bdf8', '#ec4899', '#a78bfa'];
+// User modal privilege avatars: blue, green, yellow, red, gray, dark gray, orange, magenta, pink
+const USER_PRIVILEGE_AVATAR_COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#9ca3af', '#4b5563', '#f97316', '#d946ef', '#f472b6'];
+
+const USER_PRIVILEGE_OPTIONS = [
+  { id: 'roundTables', label: 'Rounding tables:' },
+  { id: 'adjustCustomers', label: 'Customize customers:' },
+  { id: 'openDrawer', label: 'Open drawer:' },
+  { id: 'discount', label: 'Discount:' },
+  { id: 'tableReturns', label: 'Table returns:' },
+  { id: 'historyReturns', label: 'History of returns:' },
+  { id: 'looseReturns', label: 'Individual returns:' },
+  { id: 'showInSellerList', label: 'Show in seller list:' },
+  { id: 'cancelPlannedOrders', label: 'Canceling planned orders:' },
+  { id: 'cashMachineReceiveManually', label: 'With cash machine recieve cash manually:' },
+  { id: 'createNewCustomer', label: 'Create new customer:' },
+  { id: 'revenueVisible', label: 'Turnover visible:' }
+];
+
+const DEFAULT_USER_PRIVILEGES = Object.fromEntries(USER_PRIVILEGE_OPTIONS.map((p) => [p.id, true]));
 
 const DISCOUNT_TRIGGER_OPTIONS = [
   { value: 'number', label: 'Number' },
@@ -342,16 +369,24 @@ function IconMonitor({ className }) {
 
 function IconChart({ className }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    <svg className={className} viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+      <g fill="currentColor" fillRule="evenodd">
+        <rect x="15" rx="1" width="3" height="18" />
+        <rect x="10" y="5" width="3" height="13" rx="1" />
+        <rect x="5" y="9" width="3" height="9" rx="1" />
+        <rect y="13" width="3" height="5" rx="1.001" />
+      </g>
     </svg>
   );
 }
 
 function IconUsers({ className }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
     </svg>
   );
 }
@@ -416,6 +451,14 @@ function IconPerson({ className }) {
   );
 }
 
+function IconLanguage({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+    </svg>
+  );
+}
+
 function ReportTabIcon({ id, className }) {
   if (id === 'document') return <IconDocument className={className} />;
   if (id === 'person') return <IconPerson className={className} />;
@@ -428,6 +471,7 @@ function SidebarIcon({ id, className }) {
   if (id === 'monitor') return <IconMonitor className={className} />;
   if (id === 'chart') return <IconChart className={className} />;
   if (id === 'users') return <IconUsers className={className} />;
+  if (id === 'language') return <IconLanguage className={className} />;
   return null;
 }
 
@@ -442,6 +486,13 @@ function TopNavIcon({ id, className }) {
 export function ControlView({ currentUser, onLogout, onBack }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [controlSidebarId, setControlSidebarId] = useState('personalize');
+  const [appLanguage, setAppLanguage] = useState(() => {
+    try {
+      const saved = typeof localStorage !== 'undefined' && localStorage.getItem('pos-language');
+      if (saved && LANGUAGE_OPTIONS.some((o) => o.value === saved)) return saved;
+    } catch (_) {}
+    return 'en';
+  });
   const [topNavId, setTopNavId] = useState('categories-products');
   const [subNavId, setSubNavId] = useState('Price Groups');
   const [reportTabId, setReportTabId] = useState('financial');
@@ -468,6 +519,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [userPin, setUserPin] = useState('');
   const [savingUser, setSavingUser] = useState(false);
   const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
+  const [userModalTab, setUserModalTab] = useState('general');
+  const [userSocialSecurity, setUserSocialSecurity] = useState('');
+  const [userIdentification, setUserIdentification] = useState('');
+  const [userAvatarColorIndex, setUserAvatarColorIndex] = useState(0);
+  const [userModalActiveField, setUserModalActiveField] = useState(null);
+  const [userPrivileges, setUserPrivileges] = useState(() => ({ ...DEFAULT_USER_PRIVILEGES }));
+  const [usersPage, setUsersPage] = useState(0);
+  const USERS_PAGE_SIZE = 11;
 
   const [discounts, setDiscounts] = useState([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -1009,6 +1068,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   useEffect(() => {
     if (controlSidebarId === 'users') fetchUsers();
+    if (controlSidebarId !== 'users') setUsersPage(0);
   }, [controlSidebarId, fetchUsers]);
 
   const fetchSubproducts = useCallback(async (groupId) => {
@@ -2628,6 +2688,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setUserName('');
     setUserRole('waiter');
     setUserPin('');
+    setUserModalTab('general');
+    setUserSocialSecurity('');
+    setUserIdentification('');
+    setUserAvatarColorIndex(0);
+    setUserModalActiveField(null);
+    setUserPrivileges({ ...DEFAULT_USER_PRIVILEGES });
     setShowUserModal(true);
   };
 
@@ -2636,6 +2702,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setUserName(u.name || '');
     setUserRole(u.role === 'admin' ? 'admin' : u.role === 'kitchen' ? 'kitchen' : 'waiter');
     setUserPin('');
+    setUserModalTab('general');
+    setUserSocialSecurity('');
+    setUserIdentification('');
+    setUserAvatarColorIndex(0);
+    setUserModalActiveField(null);
+    setUserPrivileges({ ...DEFAULT_USER_PRIVILEGES });
     setShowUserModal(true);
   };
 
@@ -2645,6 +2717,20 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setUserName('');
     setUserRole('waiter');
     setUserPin('');
+    setUserModalTab('general');
+    setUserSocialSecurity('');
+    setUserIdentification('');
+    setUserAvatarColorIndex(0);
+    setUserModalActiveField(null);
+    setUserPrivileges({ ...DEFAULT_USER_PRIVILEGES });
+  };
+
+  const userModalKeyboardValue = userModalActiveField === 'name' ? userName : userModalActiveField === 'pincode' ? userPin : userModalActiveField === 'socialSecurity' ? userSocialSecurity : userModalActiveField === 'identification' ? userIdentification : '';
+  const userModalKeyboardOnChange = (v) => {
+    if (userModalActiveField === 'name') setUserName(v);
+    else if (userModalActiveField === 'pincode') setUserPin(v);
+    else if (userModalActiveField === 'socialSecurity') setUserSocialSecurity(v);
+    else if (userModalActiveField === 'identification') setUserIdentification(v);
   };
 
   const handleSaveUser = async () => {
@@ -2691,7 +2777,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setDeleteConfirmUserId(null);
   };
 
-  const roleLabel = (role) => USER_ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === 'admin' ? 'Administrator' : 'User');
+  const roleLabel = (role) => USER_ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === 'admin' ? 'Administrator' : 'Waiter');
 
   useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Discounts') return;
@@ -3002,7 +3088,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         )}
 
         {/* Content area */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-hidden p-6">
           {controlSidebarId === 'reports' ? (
             <div className="flex flex-col h-full gap-4">
               {reportTabId === 'financial' && (
@@ -3010,10 +3096,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <div className="shrink-0 flex justify-around gap-4 h-[70px] w-full items-center">
                     <span className="text-pos-text text-3xl font-medium">Z</span>
                     <span className="text-pos-text text-3xl font-medium">X</span>
+                    <button type="button" className="text-pos-text hover:underline text-3xl">History</button>
                   </div>
-                  <div className="relative grid grid-cols-[1fr_auto] flex-1 min-h-0 gap-10">
+                  <div className="relative grid grid-cols-2 flex-1 px-20 min-h-0 gap-10">
                     <div className="flex flex-col min-h-0 gap-5">
-                      <div className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
+                      <div id="financial-report-pospoint-scroll" className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
                         <div className="text-sm font-mono space-y-1 whitespace-pre-wrap text-center">
                           <div className="text-xl font-medium mb-2">pospoint demo</div>
                           <div className="mb-2">BE.0.0.0</div>
@@ -3085,18 +3172,28 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       </div>
                       <div className="flex items-center justify-between px-2 py-3 shrink-0">
                         <div className="flex-1" />
-                        <PaginationArrows canPrev={true} canNext={true} onPrev={() => {}} onNext={() => {}} className="relative py-0" />
+                        <PaginationArrows
+                          canPrev={true}
+                          canNext={true}
+                          onPrev={() => {
+                            const el = document.getElementById('financial-report-pospoint-scroll');
+                            if (el) el.scrollBy({ top: -200, behavior: 'smooth' });
+                          }}
+                          onNext={() => {
+                            const el = document.getElementById('financial-report-pospoint-scroll');
+                            if (el) el.scrollBy({ top: 200, behavior: 'smooth' });
+                          }}
+                          className="relative py-0"
+                        />
                         <div className="flex-1" />
                       </div>
                     </div>
-                    <div className="flex flex-col gap-4 w-[220px] shrink-0 justify-start items-center">
-                      <button type="button" className="text-pos-text hover:underline text-xl text-left w-full">Historiek</button>
-                      <div className="flex flex-col gap-2 w-full">
-                        <label className="text-pos-text text-xl shrink-0">Aanmaken tot :</label>
-                        <Dropdown options={REPORT_GENERATE_UNTIL_OPTIONS} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder="Huidige tijd" className="text-xl min-w-[140px]" />
+                    <div className="flex flex-col h-full gap-4 shrink-0 justify-center items-center">
+                      <div className="flex items-center gap-10 w-full justify-center">
+                        <label className="text-pos-text text-xl shrink-0">Create to :</label>
+                        <Dropdown options={REPORT_GENERATE_UNTIL_OPTIONS} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder="Current time" className="text-xl min-w-[240px] max-w-[240px]" />
                       </div>
-                      <div className="flex-1" />
-                      <button type="button" className="flex items-center gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl w-full justify-center">
+                      <button type="button" className="flex mt-10 items-center gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl justify-center w-[150px]">
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                         Print
                       </button>
@@ -3238,58 +3335,105 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
             </div>
-          ) : controlSidebarId === 'users' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[940px]">
-              <div className="flex items-center justify-center mb-6">
-                <button
-                  type="button"
-                  className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
-                  onClick={openNewUserModal}
-                >
-                  New
-                </button>
+          ) : controlSidebarId === 'users' ? (() => {
+            const sortedUsers = [...users].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            const totalUsersPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PAGE_SIZE));
+            const usersPageClamped = Math.min(usersPage, totalUsersPages - 1);
+            const paginatedUsers = sortedUsers.slice(usersPageClamped * USERS_PAGE_SIZE, (usersPageClamped + 1) * USERS_PAGE_SIZE);
+            const canPrevUsers = usersPageClamped > 0;
+            const canNextUsers = usersPageClamped < totalUsersPages - 1;
+            return (
+              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[1040px] pb-24">
+                <div className="flex items-center justify-center mb-6">
+                  <button
+                    type="button"
+                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                    onClick={openNewUserModal}
+                  >
+                    New user
+                  </button>
+                </div>
+                {usersLoading ? (
+                  <p className="text-pos-muted text-xl py-8 text-center">Loading users…</p>
+                ) : users.length === 0 ? (
+                  <p className="text-pos-muted text-xl py-8 text-center">No users yet.</p>
+                ) : (
+                  <>
+                    <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
+                      {paginatedUsers.map((u, idx) => (
+                        <li
+                          key={u.id}
+                          className="flex items-center justify-between w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors gap-4"
+                        >
+                          <div className='flex gap-5 items-center w-[400px]'>
+                            <div
+                              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0"
+                              style={{ backgroundColor: USER_AVATAR_COLORS[idx % USER_AVATAR_COLORS.length] }}
+                            >
+                              {(u.name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-pos-text text-xl font-medium block truncate">{u.name || '—'}</span>
+                            </div>
+                          </div>
+                          <div className='flex items-center'>
+                            <div className="text-xl w-[200px] pr-[500px]">{roleLabel(u.role)}</div>
+                            <button
+                              type="button"
+                              className="p-2 rounded text-pos-text pr-20 hover:bg-pos-bg"
+                              onClick={() => openEditUserModal(u)}
+                              aria-label="Edit"
+                            >
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="p-2 rounded text-pos-text hover:bg-pos-bg"
+                              onClick={() => setDeleteConfirmUserId(u.id)}
+                              aria-label="Delete"
+                            >
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <PaginationArrows
+                      canPrev={canPrevUsers}
+                      canNext={canNextUsers}
+                      onPrev={() => setUsersPage((p) => Math.max(0, p - 1))}
+                      onNext={() => setUsersPage((p) => Math.min(totalUsersPages - 1, p + 1))}
+                    />
+                  </>
+                )}
               </div>
-              {usersLoading ? (
-                <p className="text-pos-muted text-xl py-8 text-center">Loading users…</p>
-              ) : users.length === 0 ? (
-                <p className="text-pos-muted text-xl py-8 text-center">No users yet.</p>
-              ) : (
-                <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
-                  {users.map((u, idx) => (
-                    <li
-                      key={u.id}
-                      className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors gap-4"
-                    >
-                      <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0"
-                        style={{ backgroundColor: USER_AVATAR_COLORS[idx % USER_AVATAR_COLORS.length] }}
-                      >
-                        {(u.name || 'U').charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-pos-text text-xl font-medium block truncate">{u.name || '—'}</span>
-                        <span className="text-pos-muted text-xl">{roleLabel(u.role)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="p-2 rounded text-pos-text hover:bg-pos-bg"
-                        onClick={() => openEditUserModal(u)}
-                        aria-label="Edit"
-                      >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="p-2 rounded text-pos-text hover:bg-pos-bg"
-                        onClick={() => setDeleteConfirmUserId(u.id)}
-                        aria-label="Delete"
-                      >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            );
+          })() : controlSidebarId === 'language' ? (
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[400px]">
+              <h2 className="text-pos-text text-2xl font-medium mb-6">Language</h2>
+              <p className="text-pos-muted text-xl mb-8">Select the language for the application.</p>
+              <div className="flex flex-wrap gap-4">
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setAppLanguage(opt.value);
+                      try {
+                        if (typeof localStorage !== 'undefined') localStorage.setItem('pos-language', opt.value);
+                      } catch (_) {}
+                    }}
+                    className={`px-8 py-4 rounded-xl text-xl font-medium border-2 transition-colors ${
+                      appLanguage === opt.value
+                        ? 'bg-pos-panel border-green-500 text-green-400'
+                        : 'bg-pos-bg border-pos-border text-pos-text hover:border-pos-muted hover:bg-pos-panel/50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-pos-muted text-lg mt-8">Current language: {LANGUAGE_OPTIONS.find((o) => o.value === appLanguage)?.label ?? 'English'}</p>
             </div>
           ) : topNavId === 'cash-register' ? (
             <div className="rounded-xl p-8 pb-0 min-h-[300px]">
@@ -4423,48 +4567,121 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         message="Are you sure you want to delete this kitchen message?"
       />
 
-      {/* New / Edit user modal */}
+      {/* New / Edit user modal — General + Privileges tabs, keyboard like other modals */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeUserModal}>
-          <div className="relative bg-pos-panel rounded-xl border border-pos-border shadow-2xl max-w-[500px] w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeUserModal}>
+          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeUserModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-pos-border pr-14">
-              <span className="text-pos-text text-xl font-medium">{editingUserId ? 'Edit user' : 'New user'}</span>
+            <div className="flex justify-around mt-[50px] shrink-0">
+              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'general' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('general')}>General</button>
+              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'privileges' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('privileges')}>Privileges</button>
             </div>
-            <div className="p-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-pos-text text-xl font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="User name"
-                  className="w-full px-4 py-3 rounded-lg bg-pos-bg border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
-                />
-              </div>
-              <div>
-                <label className="block text-pos-text text-xl font-medium mb-1">Role</label>
-                <Dropdown options={USER_ROLE_OPTIONS} value={userRole} onChange={setUserRole} placeholder="Select role" className="w-full text-xl" />
-              </div>
-              <div>
-                <label className="block text-pos-text text-xl font-medium mb-1">PIN {editingUserId && <span className="text-pos-muted font-normal">(leave blank to keep current)</span>}</label>
-                <input
-                  type="password"
-                  value={userPin}
-                  onChange={(e) => setUserPin(e.target.value)}
-                  placeholder={editingUserId ? 'Leave blank to keep' : '0000'}
-                  className="w-full px-4 py-3 rounded-lg bg-pos-bg border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" className="px-4 py-2 rounded-lg border border-pos-border text-pos-text hover:bg-pos-bg" onClick={closeUserModal}>Cancel</button>
-                <button type="button" className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50" disabled={savingUser} onClick={handleSaveUser}>
-                  {savingUser ? 'Saving…' : 'Save'}
-                </button>
-              </div>
+            <div className="flex-1 overflow-hidden px-14 py-8">
+              {userModalTab === 'general' ? (
+                <div className="grid grid-cols-2 gap-16 max-w-[1100px] mx-auto">
+                  <div className="flex flex-col gap-6">
+                    <div className="flex items-center gap-6">
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Name:</label>
+                      <input
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        onFocus={() => setUserModalActiveField('name')}
+                        placeholder=""
+                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                      />
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Pincode:</label>
+                      <input
+                        type="text"
+                        value={userPin}
+                        onChange={(e) => setUserPin(e.target.value)}
+                        onFocus={() => setUserModalActiveField('pincode')}
+                        placeholder={editingUserId ? 'Leave blank to keep' : ''}
+                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Social security number:</label>
+                      <input
+                        type="text"
+                        value={userSocialSecurity}
+                        onChange={(e) => setUserSocialSecurity(e.target.value)}
+                        onFocus={() => setUserModalActiveField('socialSecurity')}
+                        placeholder=""
+                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                      />
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Identification:</label>
+                      <input
+                        type="text"
+                        value={userIdentification}
+                        onChange={(e) => setUserIdentification(e.target.value)}
+                        onFocus={() => setUserModalActiveField('identification')}
+                        placeholder=""
+                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                      />
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Role:</label>
+                      <Dropdown options={USER_ROLE_OPTIONS} value={userRole} onChange={setUserRole} placeholder="Administrator" className="text-xl min-w-[240px]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="text-pos-text text-xl font-medium mb-2">Privileges</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      {USER_PRIVILEGE_AVATAR_COLORS.map((color, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className={`w-20 h-20 rounded-full border-4 transition-colors ${userAvatarColorIndex === idx ? 'border-gray-400 ring-2 ring-offset-2 ring-offset-pos-bg ring-gray-300' : 'border-transparent hover:opacity-90'}`}
+                          style={{ backgroundColor: color }}
+                          onClick={() => setUserAvatarColorIndex(idx)}
+                          aria-label={`Avatar color ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="">
+                  <div className="grid grid-cols-3 gap-x-12 w-full gap-y-10">
+                    {USER_PRIVILEGE_OPTIONS.map((p) => (
+                      <label key={p.id} className="flex items-center gap-3 cursor-pointer">
+                        <span className="text-pos-text min-w-[350px] max-w-[300px] text-xl">{p.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={!!userPrivileges[p.id]}
+                          onChange={(e) => setUserPrivileges((prev) => ({ ...prev, [p.id]: e.target.checked }))}
+                          className="w-10 h-10 rounded border-pos-border bg-pos-panel text-green-600 focus:ring-green-500"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex justify-center mt-20">
+                    <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingUser} onClick={handleSaveUser}>
+                      <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+              {userModalTab === 'general' && (
+                <div className="flex justify-center mt-14">
+                  <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingUser} onClick={handleSaveUser}>
+                    <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                    Save
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 w-full flex justify-center">
+              <KeyboardWithNumpad value={userModalKeyboardValue} onChange={userModalKeyboardOnChange} />
             </div>
           </div>
         </div>
@@ -6216,33 +6433,13 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         );
       })()}
 
-      {/* Logout confirmation modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowLogoutModal(false)}>
-          <div className="relative bg-pos-panel border border-pos-border rounded-xl shadow-xl p-8 max-w-md w-full mx-4 pt-14" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-bg" onClick={() => setShowLogoutModal(false)} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <p className="text-pos-text text-xl mb-8 text-center">Are you sure you want to log out?</p>
-            <div className="flex gap-4 justify-center">
-              <button
-                type="button"
-                className="px-8 py-4 rounded-lg text-xl font-medium bg-pos-bg text-pos-text hover:bg-gray-700 border border-pos-border"
-                onClick={() => setShowLogoutModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="px-8 py-4 rounded-lg text-xl font-medium bg-red-600 text-white hover:bg-red-700"
-                onClick={handleLogoutConfirm}
-              >
-                Log out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Logout confirmation modal — same style as delete modal */}
+      <DeleteConfirmModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogoutConfirm}
+        message="Are you sure you want to log out?"
+      />
     </div>
   );
 }
