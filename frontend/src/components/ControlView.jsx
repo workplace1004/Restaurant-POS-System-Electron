@@ -3,6 +3,7 @@ import { Dropdown } from './Dropdown';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { KeyboardWithNumpad } from './KeyboardWithNumpad';
 import { CalendarModal } from './CalendarModal';
+import { PaginationArrows } from './PaginationArrows';
 
 const API = '/api';
 
@@ -247,15 +248,24 @@ const TICKET_VOUCHER_VALIDITY_OPTIONS = [
 ];
 
 const TICKET_SCHEDULED_PRINT_MODE_OPTIONS = [
-  { value: 'label-large', label: 'Large label' },
+  { value: 'Production ticket', label: 'Production ticket' },
   { value: 'label-small', label: 'Small label' },
-  { value: 'receipt', label: 'Receipt' }
+  { value: 'label-large', label: 'Large label' },
+  { value: 'label-Production ticket + Small label', label: 'Production ticket + Small label label' },
+  { value: 'Production ticket + Large label', label: 'Production ticket + Large label' },
 ];
 
 const TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS = [
   { value: 'as-registered', label: 'As Registered' },
-  { value: 'name', label: 'By name' },
-  { value: 'date', label: 'By date' }
+  { value: 'Alphabetical first name', label: 'Alphabetical first name' },
+  { value: 'Alphabetical last name', label: 'Alphabetical last name' }
+];
+
+const BARCODE_TYPE_OPTIONS = [
+  { value: 'Code39', label: 'Code39' },
+  { value: 'Code93', label: 'Code93' },
+  { value: 'Code128', label: 'Code128' },
+  { value: 'Interleaved2of5', label: 'Interleaved 2 of 5' }
 ];
 
 const TABLE_LOCATION_BACKGROUND_OPTIONS = [
@@ -263,6 +273,53 @@ const TABLE_LOCATION_BACKGROUND_OPTIONS = [
   { value: 'white', label: 'White' },
   { value: 'gray', label: 'Gray' },
   { value: 'blue', label: 'Blue' }
+];
+
+const PRINTER_FORM_TYPE_OPTIONS = [
+  { value: 'COM', label: 'COM' },
+  { value: 'USB', label: 'USB' },
+  { value: 'Network', label: 'Network' }
+];
+
+const PRINTER_FORM_COM_PORT_OPTIONS = [
+  { value: '', label: '—' },
+  { value: 'COM1', label: 'COM 1' },
+  { value: 'COM2', label: 'COM 2' },
+  { value: 'COM3', label: 'COM 3' },
+  { value: 'COM4', label: 'COM 4' },
+  { value: 'COM5', label: 'COM 5' },
+  { value: 'COM6', label: 'COM 6' },
+  { value: 'COM7', label: 'COM 7' },
+  { value: 'COM8', label: 'COM 8' }
+];
+
+const PRINTER_FORM_CHARACTERS_OPTIONS = [
+  { value: '48', label: '48' },
+  { value: '80', label: '80' },
+  { value: '96', label: '96' }
+];
+
+const PRINTER_FORM_TICKET_SIZE_OPTIONS = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'large', label: 'Large' },
+  { value: 'small', label: 'Small' }
+];
+
+const PRINTER_FORM_SPACE_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'small', label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large', label: 'Large' }
+];
+
+const PRINTER_FORM_LOGO_OPTIONS = [
+  { value: 'disable', label: 'Disable' },
+  { value: 'enable', label: 'Enable' }
+];
+
+const PRINTER_FORM_PRINTER_TYPE_OPTIONS = [
+  { value: 'Esc', label: 'Esc' },
+  { value: 'TSPL', label: 'TSPL' }
 ];
 
 const DEFAULT_PAYMENT_TYPES = [
@@ -468,6 +525,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   const [priceGroups, setPriceGroups] = useState([]);
   const [priceGroupsLoading, setPriceGroupsLoading] = useState(false);
+  const [priceGroupsPage, setPriceGroupsPage] = useState(0);
+  const PRICE_GROUPS_PAGE_SIZE = 8;
   const [showPriceGroupModal, setShowPriceGroupModal] = useState(false);
   const [editingPriceGroupId, setEditingPriceGroupId] = useState(null);
   const [priceGroupName, setPriceGroupName] = useState('');
@@ -654,6 +713,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [sysTicketVoucherValidity, setSysTicketVoucherValidity] = useState('3');
   const [sysTicketScheduledPrintMode, setSysTicketScheduledPrintMode] = useState('label-large');
   const [sysTicketScheduledCustomerSort, setSysTicketScheduledCustomerSort] = useState('as-registered');
+  const [sysBarcodeType, setSysBarcodeType] = useState('Code39');
 
   const [paymentTypes, setPaymentTypes] = useState(() => {
     try {
@@ -668,11 +728,18 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [showPaymentTypeModal, setShowPaymentTypeModal] = useState(false);
   const [editingPaymentTypeId, setEditingPaymentTypeId] = useState(null);
   const [paymentTypeName, setPaymentTypeName] = useState('');
+  const [paymentTypeActive, setPaymentTypeActive] = useState(true);
   const [savingPaymentType, setSavingPaymentType] = useState(false);
+  const [paymentTypesPage, setPaymentTypesPage] = useState(0);
+  const PAYMENT_TYPES_PAGE_SIZE = 5;
+  const PAYMENT_TYPES_PAGE_SIZE1 = 8;
 
   const [showProductionMessagesModal, setShowProductionMessagesModal] = useState(false);
   const [productionMessages, setProductionMessages] = useState([]);
   const [productionMessageInput, setProductionMessageInput] = useState('');
+  const [productionMessagesPage, setProductionMessagesPage] = useState(0);
+  const PRODUCTION_MESSAGES_PAGE_SIZE = 5;
+  const PRODUCTION_MESSAGES_PAGE_SIZE1 = 8;
   const [editingProductionMessageId, setEditingProductionMessageId] = useState(null);
   const [deleteConfirmProductionMessageId, setDeleteConfirmProductionMessageId] = useState(null);
 
@@ -690,7 +757,21 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [showPrinterModal, setShowPrinterModal] = useState(false);
   const [editingPrinterId, setEditingPrinterId] = useState(null);
   const [printerName, setPrinterName] = useState('');
+  const [printerModalTab, setPrinterModalTab] = useState('General');
+  const [printerFormType, setPrinterFormType] = useState('COM');
+  const [printerFormComPort, setPrinterFormComPort] = useState('');
+  const [printerFormBaudrate, setPrinterFormBaudrate] = useState('9600');
+  const [printerFormCharacters, setPrinterFormCharacters] = useState('48');
+  const [printerFormDefault, setPrinterFormDefault] = useState(false);
+  const [printerFormNumberOfPrints, setPrinterFormNumberOfPrints] = useState(1);
+  const [printerFormProductionTicketSize, setPrinterFormProductionTicketSize] = useState('normal');
+  const [printerFormVatTicketSize, setPrinterFormVatTicketSize] = useState('normal');
+  const [printerFormSpaceBetweenProducts, setPrinterFormSpaceBetweenProducts] = useState('none');
+  const [printerFormLogo, setPrinterFormLogo] = useState('disable');
+  const [printerFormPrinterType, setPrinterFormPrinterType] = useState('Esc');
   const [deleteConfirmPrinterId, setDeleteConfirmPrinterId] = useState(null);
+  const [printersPage, setPrintersPage] = useState(0);
+  const PRINTERS_PAGE_SIZE = 7;
 
   const [finalTicketsCompanyData1, setFinalTicketsCompanyData1] = useState('BE.0.0.0');
   const [finalTicketsCompanyData2, setFinalTicketsCompanyData2] = useState('');
@@ -1930,6 +2011,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       if (saved.ticketVoucherValidity != null) setSysTicketVoucherValidity(saved.ticketVoucherValidity);
       if (saved.ticketScheduledPrintMode != null) setSysTicketScheduledPrintMode(saved.ticketScheduledPrintMode);
       if (saved.ticketScheduledCustomerSort != null) setSysTicketScheduledCustomerSort(saved.ticketScheduledCustomerSort);
+      if (saved.barcodeType != null) setSysBarcodeType(saved.barcodeType);
     } catch (_) { }
   }, [showSystemSettingsModal, fetchPriceGroups]);
 
@@ -1964,7 +2046,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         savingsDiscount: sysSavingsDiscount,
         ticketVoucherValidity: sysTicketVoucherValidity,
         ticketScheduledPrintMode: sysTicketScheduledPrintMode,
-        ticketScheduledCustomerSort: sysTicketScheduledCustomerSort
+        ticketScheduledCustomerSort: sysTicketScheduledCustomerSort,
+        barcodeType: sysBarcodeType
       };
       if (typeof localStorage !== 'undefined') localStorage.setItem('pos_system_settings', JSON.stringify(payload));
       setShowSystemSettingsModal(false);
@@ -1983,12 +2066,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const openNewPaymentTypeModal = () => {
     setEditingPaymentTypeId(null);
     setPaymentTypeName('');
+    setPaymentTypeActive(true);
     setShowPaymentTypeModal(true);
   };
 
   const openEditPaymentTypeModal = (pt) => {
     setEditingPaymentTypeId(pt.id);
-    setPaymentTypeName(pt.name);
+    setPaymentTypeName(pt.name || '');
+    setPaymentTypeActive(pt.active !== false);
     setShowPaymentTypeModal(true);
   };
 
@@ -1996,6 +2081,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setShowPaymentTypeModal(false);
     setEditingPaymentTypeId(null);
     setPaymentTypeName('');
+    setPaymentTypeActive(true);
   };
 
   const handleSavePaymentType = () => {
@@ -2005,11 +2091,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     try {
       const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
       if (editingPaymentTypeId) {
-        const next = sorted.map((p) => (p.id === editingPaymentTypeId ? { ...p, name } : p));
+        const next = sorted.map((p) => (p.id === editingPaymentTypeId ? { ...p, name, active: paymentTypeActive } : p));
         persistPaymentTypes(next);
       } else {
         const newId = 'pt-' + Date.now();
-        const next = [...sorted, { id: newId, name, active: false, sortOrder: sorted.length }];
+        const next = [...sorted, { id: newId, name, active: paymentTypeActive, sortOrder: sorted.length }];
         persistPaymentTypes(next);
       }
       closePaymentTypeModal();
@@ -2108,12 +2194,36 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const openNewPrinterModal = () => {
     setEditingPrinterId(null);
     setPrinterName('');
+    setPrinterModalTab('General');
+    setPrinterFormType('COM');
+    setPrinterFormComPort('');
+    setPrinterFormBaudrate('9600');
+    setPrinterFormCharacters('48');
+    setPrinterFormDefault(false);
+    setPrinterFormNumberOfPrints(1);
+    setPrinterFormProductionTicketSize('normal');
+    setPrinterFormVatTicketSize('normal');
+    setPrinterFormSpaceBetweenProducts('none');
+    setPrinterFormLogo('disable');
+    setPrinterFormPrinterType('Esc');
     setShowPrinterModal(true);
   };
 
   const openEditPrinterModal = (p) => {
     setEditingPrinterId(p.id);
     setPrinterName(p.name || '');
+    setPrinterModalTab('General');
+    setPrinterFormType(p.type || 'COM');
+    setPrinterFormComPort(p.comPort || '');
+    setPrinterFormBaudrate(p.baudrate || '9600');
+    setPrinterFormCharacters(p.characters || '48');
+    setPrinterFormDefault(!!p.standard);
+    setPrinterFormNumberOfPrints(Number(p.numberOfPrints) || 1);
+    setPrinterFormProductionTicketSize(p.productionTicketSize || 'normal');
+    setPrinterFormVatTicketSize(p.vatTicketSize || 'normal');
+    setPrinterFormSpaceBetweenProducts(p.spaceBetweenProducts || 'none');
+    setPrinterFormLogo(p.logo || 'disable');
+    setPrinterFormPrinterType(p.printerType || 'Esc');
     setShowPrinterModal(true);
   };
 
@@ -2121,18 +2231,44 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setShowPrinterModal(false);
     setEditingPrinterId(null);
     setPrinterName('');
+    setPrinterModalTab('General');
+    setPrinterFormType('COM');
+    setPrinterFormComPort('');
+    setPrinterFormBaudrate('9600');
+    setPrinterFormCharacters('48');
+    setPrinterFormDefault(false);
+    setPrinterFormNumberOfPrints(1);
+    setPrinterFormProductionTicketSize('normal');
+    setPrinterFormVatTicketSize('normal');
+    setPrinterFormSpaceBetweenProducts('none');
+    setPrinterFormLogo('disable');
+    setPrinterFormPrinterType('Esc');
   };
 
   const handleSavePrinter = () => {
     const name = (printerName || '').trim();
     if (!name) return;
     const sorted = [...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const payload = {
+      name,
+      type: printerFormType,
+      comPort: printerFormComPort,
+      baudrate: printerFormBaudrate,
+      characters: printerFormCharacters,
+      standard: printerFormDefault,
+      numberOfPrints: printerFormNumberOfPrints,
+      productionTicketSize: printerFormProductionTicketSize,
+      vatTicketSize: printerFormVatTicketSize,
+      spaceBetweenProducts: printerFormSpaceBetweenProducts,
+      logo: printerFormLogo,
+      printerType: printerFormPrinterType
+    };
     if (editingPrinterId) {
-      const next = sorted.map((p) => (p.id === editingPrinterId ? { ...p, name } : p));
+      const next = sorted.map((p) => (p.id === editingPrinterId ? { ...p, ...payload } : p));
       persistPrinters(next);
     } else {
       const newId = 'prn-' + Date.now();
-      const next = [...sorted, { id: newId, name, isDefault: false, sortOrder: sorted.length }];
+      const next = [...sorted, { id: newId, ...payload, isDefault: false, sortOrder: sorted.length }];
       persistPrinters(next);
     }
     closePrinterModal();
@@ -3104,7 +3240,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               )}
             </div>
           ) : topNavId === 'cash-register' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
+            <div className="rounded-xl p-8 pb-0 min-h-[300px]">
               {subNavId === 'Template Settings' && (
                 <div className="flex flex-col items-center justify-center min-h-[600px] gap-20">
                   <div className="flex gap-20">
@@ -3149,95 +3285,75 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </button>
                 </div>
               )}
-              {subNavId === 'Device Settings' && (
-                <div className="flex flex-col items-center justify-center min-h-[200px]">
-                  <p className="text-pos-muted text-xl mb-4">Device Settings</p>
-                  <p className="text-pos-muted text-xl">Manage connected devices and peripherals.</p>
-                </div>
-              )}
-              {subNavId === 'System Settings' && (
-                <div className="flex flex-col items-center justify-center min-h-[200px]">
-                  <p className="text-pos-muted text-xl mb-4">System Settings</p>
-                  <p className="text-pos-muted text-xl">General system configuration.</p>
-                </div>
-              )}
               {subNavId === 'Payment types' && (
-                <div className="flex flex-col min-h-[300px]">
+                <div className="relative flex flex-col min-h-[300px] pb-24">
                   <div className="flex items-center justify-center mb-6">
                     <button
                       type="button"
                       className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
                       onClick={openNewPaymentTypeModal}
                     >
-                      Nieuwe Betaalmiddel
+                      New Payment Method
                     </button>
                   </div>
-                  <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
-                    {[...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((pt) => (
-                      <li
-                        key={pt.id}
-                        className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors"
-                      >
-                        <span className="flex-1 text-pos-text text-xl font-medium">{pt.name}</span>
-                        <button
-                          type="button"
-                          className="p-2 rounded text-pos-text hover:bg-pos-bg"
-                          aria-label={pt.active ? 'Deactivate' : 'Activate'}
-                          onClick={() => togglePaymentTypeActive(pt.id)}
-                        >
-                          {pt.active ? (
-                            <span className={'w-8 h-8 inline-flex justify-center items-center text-green-500 text-2xl'}>{'\u2713'}</span>
-                          ) : (
-                            <span className={'w-8 h-8 inline-block rounded-full border-2 border-pos-muted'} />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          className="p-2 rounded text-pos-text hover:bg-pos-bg ml-2"
-                          onClick={() => openEditPaymentTypeModal(pt)}
-                          aria-label="Edit"
-                        >
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex items-center justify-center gap-4 mt-6">
-                    <button
-                      type="button"
-                      className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg"
-                      onClick={() => {
-                        const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-                        if (sorted.length) movePaymentType(sorted[sorted.length - 1].id, 'up');
-                      }}
-                      aria-label="Move last up"
-                    >
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8l-4 4m0 0l4 4m-4-4h14" /></svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg"
-                      onClick={() => {
-                        const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-                        if (sorted.length) movePaymentType(sorted[0].id, 'down');
-                      }}
-                      aria-label="Move first down"
-                    >
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-              {subNavId === 'Production messages' && (
-                <div className="flex flex-col items-center justify-center min-h-[200px]">
-                  <p className="text-pos-muted text-xl mb-4">Production messages</p>
-                  <p className="text-pos-muted text-xl">Manage kitchen and production messages.</p>
+                  {(() => {
+                    const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                    const total = sorted.length;
+                    const totalPages = Math.max(1, Math.ceil(total / PAYMENT_TYPES_PAGE_SIZE1));
+                    const page = Math.min(paymentTypesPage, totalPages - 1);
+                    const start = page * PAYMENT_TYPES_PAGE_SIZE1;
+                    const paginated = sorted.slice(start, start + PAYMENT_TYPES_PAGE_SIZE1);
+                    const canPrev = page > 0;
+                    const canNext = page < totalPages - 1;
+                    return (
+                      <>
+                        <ul className="w-full flex relative flex-col border border-pos-border rounded-xl max-h-[680px] overflow-auto bg-pos-bg/50">
+                          {paginated.map((pt) => (
+                            <li
+                              key={pt.id}
+                              className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors"
+                            >
+                              <span className="flex-1 text-pos-text text-xl font-medium">{pt.name}</span>
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text hover:bg-pos-bg hover:rounded-full"
+                                aria-label={pt.active ? 'Deactivate' : 'Activate'}
+                                onClick={() => togglePaymentTypeActive(pt.id)}
+                              >
+                                {pt.active ? (
+                                  <span className={'w-8 h-8 inline-flex justify-center items-center text-green-500 text-2xl'}>{'\u2713'}</span>
+                                ) : (
+                                  <span className={'w-8 h-8 inline-block rounded-full border-2 border-pos-muted'} />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text pl-20 hover:bg-pos-bg ml-2"
+                                onClick={() => openEditPaymentTypeModal(pt)}
+                                aria-label="Edit"
+                              >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="fixed ml-[700px] mt-[850px]">
+                          <PaginationArrows
+                            canPrev={canPrev}
+                            canNext={canNext}
+                            onPrev={() => setPaymentTypesPage((p) => Math.max(0, p - 1))}
+                            onNext={() => setPaymentTypesPage((p) => Math.min(totalPages - 1, p + 1))}
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
           ) : topNavId === 'categories-products' && subNavId === 'Price Groups' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
-              <div className="flex items-center w-full  justify-center mb-6">
+            <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[400px] pb-24">
+              <div className="flex items-center w-full justify-center mb-6">
                 <button
                   type="button"
                   className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
@@ -3247,40 +3363,59 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   New price group
                 </button>
               </div>
-              <ul className="w-full flex justify-center items-center flex flex-col h-full">
-                {priceGroupsLoading ? (
-                  <li className="text-pos-muted text-xl py-4">Loading price groups…</li>
-                ) : priceGroups.length === 0 ? (
-                  <li className="text-pos-muted text-3xl py-4">No price groups yet.</li>
-                ) : (
-                  priceGroups.map((pg) => (
-                    <li
-                      key={pg.id}
-                      className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-y border-pos-panel text-pos-text text-xl"
-                    >
-                      <span className="font-medium">{pg.name}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="p-2 rounded text-pos-text mr-20 hover:bg-pos-panel"
-                          onClick={() => openEditPriceGroupModal(pg)}
-                          aria-label="Edit"
+              {(() => {
+                if (priceGroupsLoading) {
+                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl py-4">Loading price groups…</li></ul>;
+                }
+                if (priceGroups.length === 0) {
+                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-3xl py-4">No price groups yet.</li></ul>;
+                }
+                const total = priceGroups.length;
+                const totalPages = Math.max(1, Math.ceil(total / PRICE_GROUPS_PAGE_SIZE));
+                const page = Math.min(priceGroupsPage, totalPages - 1);
+                const start = page * PRICE_GROUPS_PAGE_SIZE;
+                const paginated = priceGroups.slice(start, start + PRICE_GROUPS_PAGE_SIZE);
+                const canPrev = page > 0;
+                const canNext = page < totalPages - 1;
+                return (
+                  <>
+                    <ul className="w-full flex flex-col">
+                      {paginated.map((pg) => (
+                        <li
+                          key={pg.id}
+                          className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-y border-pos-panel text-pos-text text-xl"
                         >
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                          onClick={() => setDeleteConfirmId(pg.id)}
-                          aria-label="Delete"
-                        >
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
-                    </li>
-                  ))
-                )}
-              </ul>
+                          <span className="font-medium">{pg.name}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="p-2 rounded text-pos-text mr-20 hover:bg-pos-panel"
+                              onClick={() => openEditPriceGroupModal(pg)}
+                              aria-label="Edit"
+                            >
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                              onClick={() => setDeleteConfirmId(pg.id)}
+                              aria-label="Delete"
+                            >
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <PaginationArrows
+                      canPrev={canPrev}
+                      canNext={canNext}
+                      onPrev={() => setPriceGroupsPage((p) => Math.max(0, p - 1))}
+                      onNext={() => setPriceGroupsPage((p) => Math.min(totalPages - 1, p + 1))}
+                    />
+                  </>
+                );
+              })()}
             </div>
           ) : topNavId === 'categories-products' && subNavId === 'Categories' ? (
             <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
@@ -3669,10 +3804,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               </p>
             </div>
           ) : topNavId === 'external-devices' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[880px]">
               {subNavId === 'Printer' && (
                 <div className="flex flex-col min-h-[300px]">
-                  <div className="flex border-b border-pos-border mb-6 shrink-0">
+                  <div className="flex justify-around mb-6 shrink-0">
                     {PRINTER_TABS.map((tab) => (
                       <button
                         key={tab}
@@ -3685,7 +3820,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     ))}
                   </div>
                   {printerTab === 'General' && (
-                    <>
+                    <div className="relative flex flex-col min-h-[300px] pb-24">
                       <div className="flex items-center justify-center mb-6">
                         <button
                           type="button"
@@ -3695,35 +3830,49 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           Add printer
                         </button>
                       </div>
-                      <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
-                        {[...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => (
-                          <li key={p.id} className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors">
-                            <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0" onClick={() => setDefaultPrinter(p.id)} aria-label={p.isDefault ? 'Default printer' : 'Set as default'}>
-                              {p.isDefault ? (
-                                <span className="w-8 h-8 inline-flex justify-center items-center text-green-500 text-2xl">{'\u2713'}</span>
-                              ) : (
-                                <span className="w-8 h-8 inline-block rounded-full border-2 border-pos-muted" />
-                              )}
-                            </button>
-                            <span className="flex-1 text-pos-text text-xl font-medium ml-2">{p.name}</span>
-                            <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => openEditPrinterModal(p)} aria-label="Edit">
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                            </button>
-                            <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg ml-2" onClick={() => setDeleteConfirmPrinterId(p.id)} aria-label="Delete">
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="flex items-center justify-center gap-4 mt-6">
-                        <button type="button" className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" onClick={() => { const s = [...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)); if (s.length) movePrinter(s[s.length - 1].id, 'up'); }} aria-label="Move last up">
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8l-4 4m0 0l4 4m-4-4h14" /></svg>
-                        </button>
-                        <button type="button" className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" onClick={() => { const s = [...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)); if (s.length) movePrinter(s[0].id, 'down'); }} aria-label="Move first down">
-                          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
-                        </button>
-                      </div>
-                    </>
+                      {(() => {
+                        const sorted = [...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                        const total = sorted.length;
+                        const totalPages = Math.max(1, Math.ceil(total / PRINTERS_PAGE_SIZE));
+                        const page = Math.min(printersPage, totalPages - 1);
+                        const start = page * PRINTERS_PAGE_SIZE;
+                        const paginated = sorted.slice(start, start + PRINTERS_PAGE_SIZE);
+                        const canPrev = page > 0;
+                        const canNext = page < totalPages - 1;
+                        return (
+                          <>
+                            <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50 max-h-[680px] overflow-auto">
+                              {paginated.map((p) => (
+                                <li key={p.id} className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors">
+                                  <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0" onClick={() => setDefaultPrinter(p.id)} aria-label={p.isDefault ? 'Default printer' : 'Set as default'}>
+                                    {p.isDefault ? (
+                                      <span className="w-8 h-8 inline-flex justify-center items-center text-green-500 text-2xl">{'\u2713'}</span>
+                                    ) : (
+                                      <span className="w-8 h-8 inline-block rounded-full border-2 border-pos-muted" />
+                                    )}
+                                  </button>
+                                  <span className="flex-1 text-pos-text text-xl font-medium ml-2">{p.name}</span>
+                                  <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => openEditPrinterModal(p)} aria-label="Edit">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                  </button>
+                                  <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg ml-2" onClick={() => setDeleteConfirmPrinterId(p.id)} aria-label="Delete">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className='fixed z-50 top-[95%] ml-[750px]'>
+                              <PaginationArrows
+                                canPrev={canPrev}
+                                canNext={canNext}
+                                onPrev={() => setPrintersPage((p) => Math.max(0, p - 1))}
+                                onNext={() => setPrintersPage((p) => Math.min(totalPages - 1, p + 1))}
+                              />
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   )}
                   {printerTab === 'Final tickets' && (
                     <div className="flex flex-col min-h-[400px]">
@@ -3883,33 +4032,33 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
               {subNavId === 'Price Display' && (
-                <div className="flex flex-col min-h-[400px]">
-                  <div className="flex flex-col gap-6 mb-6">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col min-h-[820px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
+                    <div className="flex items-center gap-10">
                       <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
                       <Dropdown options={PRICE_DISPLAY_TYPE_OPTIONS} value={priceDisplayType} onChange={setPriceDisplayType} placeholder="Uitgeschakeld" className="text-xl min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center">
-                      <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
+                    <div className="flex justify-center mt-[100px]">
+                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
                   </div>
-                  <div className="shrink-0 border-t border-pos-border pt-4">
+                  <div className="shrink-0 pt-4">
                     <KeyboardWithNumpad value={priceDisplayKeyboardValue} onChange={setPriceDisplayKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'RFID Reader' && (
-                <div className="flex flex-col min-h-[400px]">
-                  <div className="flex flex-col gap-6 mb-6">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col min-h-[820px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
+                    <div className="flex items-center gap-10">
                       <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
                       <Dropdown options={RFID_READER_TYPE_OPTIONS} value={rfidReaderType} onChange={setRfidReaderType} placeholder="Uitgeschakeld" className="text-xl min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center">
-                      <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingRfidReader} onClick={handleSaveRfidReader}>
+                    <div className="flex justify-center mt-[100px]">
+                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingRfidReader} onClick={handleSaveRfidReader}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
@@ -3921,91 +4070,91 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
               {subNavId === 'Barcode Scanner' && (
-                <div className="flex flex-col min-h-[400px]">
-                  <div className="flex flex-col gap-6 mb-6">
+                <div className="flex flex-col min-h-[820px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
                     <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
+                      <label className="block text-pos-text text-xl min-w-[100px] max-w-[100px] font-medium shrink-0">Type:</label>
                       <Dropdown options={BARCODE_SCANNER_TYPE_OPTIONS} value={barcodeScannerType} onChange={setBarcodeScannerType} placeholder="Uitgeschakeld" className="text-xl min-w-[220px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Port:</label>
+                      <label className="block text-pos-text text-xl font-medium shrink-0 min-w-[100px] max-w-[100px]">Port:</label>
                       <Dropdown options={BARCODE_SCANNER_PORT_OPTIONS} value={barcodeScannerPort} onChange={setBarcodeScannerPort} placeholder="COM 1" className="text-xl min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center">
-                      <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
+                    <div className="flex justify-center mt-[50px]">
+                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
                   </div>
-                  <div className="shrink-0 border-t border-pos-border pt-4">
+                  <div className="shrink-0 pt-4">
                     <KeyboardWithNumpad value={barcodeScannerKeyboardValue} onChange={setBarcodeScannerKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Credit Card' && (
-                <div className="flex flex-col min-h-[400px]">
-                  <div className="flex flex-col gap-6 mb-6">
-                    <div className="flex items-center gap-3">
+                <div className="flex flex-col min-h-[820px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
+                    <div className="flex items-center gap-10">
                       <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
                       <Dropdown options={CREDIT_CARD_TYPE_OPTIONS} value={creditCardType} onChange={setCreditCardType} placeholder="Disabled" className="text-xl min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center">
+                    <div className="flex justify-center mt-[100px]">
                       <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingCreditCard} onClick={handleSaveCreditCard}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
                   </div>
-                  <div className="shrink-0 border-t border-pos-border pt-4">
+                  <div className="shrink-0 pt-4">
                     <KeyboardWithNumpad value={creditCardKeyboardValue} onChange={setCreditCardKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Libra' && (
-                <div className="flex flex-col min-h-[400px]">
-                  <div className="flex flex-col gap-6 mb-6">
+                <div className="flex flex-col min-h-[820px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
                     <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Protocol / Type:</label>
+                      <label className="block text-pos-text text-xl font-medium shrink-0 min-w-[200px] max-w-[200px]">Protocol / Type:</label>
                       <Dropdown options={SCALE_TYPE_OPTIONS} value={scaleType} onChange={setScaleType} placeholder="Disabled" className="text-xl min-w-[220px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Port:</label>
+                      <label className="block text-pos-text min-w-[200px] max-w-[200px] text-xl font-medium shrink-0">Port:</label>
                       <Dropdown options={SCALE_PORT_OPTIONS} value={scalePort} onChange={setScalePort} placeholder="Select port" className="text-xl min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center">
-                      <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingScale} onClick={handleSaveScale}>
+                    <div className="flex justify-center mt-[50px]">
+                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingScale} onClick={handleSaveScale}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
                   </div>
-                  <div className="shrink-0 border-t border-pos-border pt-4">
+                  <div className="shrink-0 pt-4">
                     <KeyboardWithNumpad value={scaleKeyboardValue} onChange={setScaleKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Cashmatic' && (
-                <div className="flex flex-col min-h-[400px]">
+                <div className="flex flex-col min-h-[820px] justify-between items-center">
                   <div className="flex flex-col gap-6 mb-6">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center gap-10 mt-[50px]">
                       <label className="block text-pos-text text-xl font-medium shrink-0">Ip + Port:</label>
                       <input
                         type="text"
                         value={cashmaticIpPort}
                         onChange={(e) => setCashmaticIpPort(e.target.value)}
                         placeholder="e.g. 192.168.1.58:50301"
-                        className="flex-1 min-w-[280px] px-4 py-3 text-xl rounded-lg bg-pos-bg border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        className="min-w-[280px] px-4 py-3 text-xl rounded-lg bg-pos-bg border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
                       />
                     </div>
-                    <div className="flex justify-center">
-                      <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
+                    <div className="flex justify-center mt-[100px]">
+                      <button type="button" className="flex items-center text-2xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
                   </div>
-                  <div className="shrink-0 border-t border-pos-border pt-4">
+                  <div className="shrink-0 pt-4">
                     <KeyboardWithNumpad value={cashmaticIpPort} onChange={setCashmaticIpPort} />
                   </div>
                 </div>
@@ -4467,7 +4616,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       <input type="checkbox" checked={deviceAutoReturnToCounterSale} onChange={(e) => setDeviceAutoReturnToCounterSale(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                          <span className="text-pos-text w-[400px]">Ask to send to the kitchen screen:</span>
+                      <span className="text-pos-text w-[400px]">Ask to send to the kitchen screen:</span>
                       <input type="checkbox" checked={deviceAskSendToKitchen} onChange={(e) => setDeviceAskSendToKitchen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
                     </label>
                     <div className="flex items-center gap-3">
@@ -4861,16 +5010,42 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               {systemSettingsTab === 'Ticket' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
                   <div className="flex flex-col gap-8">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <span className="text-pos-text w-[400px]">Ask for VAT ticket printer:</span>
+                      <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <span className="text-pos-text w-[400px]">Production printer cascade:</span>
+                      <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <span className="text-pos-text w-[400px]">Display sub-products without price on VAT ticket:</span>
+                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <span className="text-pos-text w-[400px]">Price per kilo prints:</span>
+                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <span className="text-pos-text w-[400px]">Print unit price:</span>
+                      <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                    </label>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[500px] shrink-0">Validity period voucher:</span>
+                      <span className="text-pos-text w-[400px] shrink-0">Type barcode of generated barcode:</span>
+                      <Dropdown options={BARCODE_TYPE_OPTIONS} value={sysBarcodeType} onChange={setSysBarcodeType} placeholder="Code39" className="text-xl min-w-[180px]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-8">
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text w-[400px] shrink-0">Validity period voucher:</span>
                       <Dropdown options={TICKET_VOUCHER_VALIDITY_OPTIONS} value={sysTicketVoucherValidity} onChange={setSysTicketVoucherValidity} placeholder="Select" className="text-xl min-w-[180px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[500px] shrink-0">Scheduled orders print mode:</span>
+                      <span className="text-pos-text w-[400px] shrink-0">Scheduled orders print mode:</span>
                       <Dropdown options={TICKET_SCHEDULED_PRINT_MODE_OPTIONS} value={sysTicketScheduledPrintMode} onChange={setSysTicketScheduledPrintMode} placeholder="Select" className="text-xl min-w-[180px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[500px] shrink-0">Scheduled orders customer sort:</span>
+                      <span className="text-pos-text w-[400px] shrink-0">Scheduled orders customer sort:</span>
                       <Dropdown options={TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS} value={sysTicketScheduledCustomerSort} onChange={setSysTicketScheduledCustomerSort} placeholder="Select" className="text-xl min-w-[180px]" />
                     </div>
                   </div>
@@ -4897,33 +5072,42 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit payment type modal */}
       {showPaymentTypeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closePaymentTypeModal}>
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[500px] w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closePaymentTypeModal}>
+          <div className="relative flex flex-col bg-pos-bg justify-between items-center rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1000px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePaymentTypeModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="w-full flex items-center justify-between px-6 py-4 bg-pos-panel border-b border-pos-border pr-14">
-              <span className="text-xl font-medium text-pos-text">{editingPaymentTypeId ? 'Edit payment method' : 'Nieuwe Betaalmiddel'}</span>
+            <div className="p-6 flex flex-col gap-6 mt-[200px]">
+              <div className="flex items-center gap-4">
+                <span className="text-pos-text text-xl font-medium shrink-0 w-[120px]">Name :</span>
+                <input
+                  type="text"
+                  value={paymentTypeName}
+                  onChange={(e) => setPaymentTypeName(e.target.value)}
+                  placeholder="e.g. Cash, Bancontact"
+                  className="flex-1 max-w-[320px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-pos-text text-xl font-medium shrink-0 w-[120px]">Active :</span>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={paymentTypeActive} onChange={(e) => setPaymentTypeActive(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                </label>
+              </div>
+              <div className="flex justify-center right-0 left-0 top-[50%] absolute">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
+                  disabled={savingPaymentType || !(paymentTypeName || '').trim()}
+                  onClick={handleSavePaymentType}
+                >
+                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  Save
+                </button>
+              </div>
             </div>
-            <div className="p-6">
-              <label className="block text-pos-text text-xl font-medium mb-2">Name</label>
-              <input
-                type="text"
-                value={paymentTypeName}
-                onChange={(e) => setPaymentTypeName(e.target.value)}
-                placeholder="e.g. Cash, Bancontact"
-                className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl"
-                autoFocus
-              />
-              <button
-                type="button"
-                className="mt-6 flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
-                disabled={savingPaymentType || !(paymentTypeName || '').trim()}
-                onClick={handleSavePaymentType}
-              >
-                <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                Save
-              </button>
+            <div className="shrink-0">
+              <KeyboardWithNumpad value={paymentTypeName} onChange={setPaymentTypeName} />
             </div>
           </div>
         </div>
@@ -4931,33 +5115,105 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit printer modal */}
       {showPrinterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closePrinterModal}>
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[500px] w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closePrinterModal}>
+          <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1000px] max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePrinterModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="w-full flex items-center justify-between px-6 py-4 bg-pos-panel border-b border-pos-border pr-14">
-              <span className="text-xl font-medium text-pos-text">{editingPrinterId ? 'Edit printer' : 'Add printer'}</span>
+            <div className="flex mt-10 mb-4 px-6 w-full justify-center shrink-0 gap-20">
+              {['General', 'Production sorting'].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`px-4 py-3 text-xl font-medium border-b-2 transition-colors ${printerModalTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                  onClick={() => setPrinterModalTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
-            <div className="p-6">
-              <label className="block text-pos-text text-xl font-medium mb-2">Name</label>
-              <input
-                type="text"
-                value={printerName}
-                onChange={(e) => setPrinterName(e.target.value)}
-                placeholder="e.g. Kitchen printer"
-                className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl"
-                autoFocus
-              />
-              <button
-                type="button"
-                className="mt-6 flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
-                disabled={!(printerName || '').trim()}
-                onClick={handleSavePrinter}
-              >
-                <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                Save
-              </button>
+            <div className="p-6 overflow-hidden flex-1">
+              {printerModalTab === 'General' && (
+                <div className='grid grid-cols-3 w-full gap-6'>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">Name:</span>
+                      <input type="text" value={printerName} onChange={(e) => setPrinterName(e.target.value)} className="flex-1 min-w-0 max-w-[260px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">Type:</span>
+                      <Dropdown options={PRINTER_FORM_TYPE_OPTIONS} value={printerFormType} onChange={setPrinterFormType} placeholder="COM" className="text-xl min-w-[140px] max-w-[200px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">Com port:</span>
+                      <Dropdown options={PRINTER_FORM_COM_PORT_OPTIONS} value={printerFormComPort} onChange={setPrinterFormComPort} placeholder="Select" className="text-xl min-w-[140px] max-w-[200px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">Baudrate:</span>
+                      <input type="text" value={printerFormBaudrate} onChange={(e) => setPrinterFormBaudrate(e.target.value)} className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">Characters:</span>
+                      <Dropdown options={PRINTER_FORM_CHARACTERS_OPTIONS} value={printerFormCharacters} onChange={setPrinterFormCharacters} placeholder="48" className="text-xl min-w-[140px] max-w-[140px]" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <span className="text-pos-text text-xl min-w-[200px] max-w-[200px] shrink-0">Standard:</span>
+                      <input type="checkbox" checked={printerFormDefault} onChange={(e) => setPrinterFormDefault(e.target.checked)} className="w-8 h-8 rounded border-gray-400" />
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 min-w-[200px] max-w-[200px]">Number of prints:</span>
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="p-1 px-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setPrinterFormNumberOfPrints((n) => Math.max(1, n - 1))}>−</button>
+                        <input type="number" min={1} value={printerFormNumberOfPrints} onChange={(e) => setPrinterFormNumberOfPrints(Math.max(1, Number(e.target.value) || 1))} className="w-16 px-2 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
+                        <button type="button" className="p-1 px-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setPrinterFormNumberOfPrints((n) => n + 1)}>+</button>
+                      </div>
+                    </div>
+
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Text size Production ticket:</span>
+                      <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={printerFormProductionTicketSize} onChange={setPrinterFormProductionTicketSize} placeholder="Normal" className="text-xl min-w-[120px] max-w-[120px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Total amount of VAT ticket size:</span>
+                      <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={printerFormVatTicketSize} onChange={setPrinterFormVatTicketSize} placeholder="Normal" className="text-xl min-w-[120px] max-w-[120px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Space between products:</span>
+                      <Dropdown options={PRINTER_FORM_SPACE_OPTIONS} value={printerFormSpaceBetweenProducts} onChange={setPrinterFormSpaceBetweenProducts} placeholder="None" className="text-xl min-w-[120px] max-w-[120px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Logo:</span>
+                      <Dropdown options={PRINTER_FORM_LOGO_OPTIONS} value={printerFormLogo} onChange={setPrinterFormLogo} placeholder="Disable" className="text-xl min-w-[120px] max-w-[120px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Printer type:</span>
+                      <Dropdown options={PRINTER_FORM_PRINTER_TYPE_OPTIONS} value={printerFormPrinterType} onChange={setPrinterFormPrinterType} placeholder="Esc" className="text-xl min-w-[120px] max-w-[120px]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {printerModalTab === 'Production sorting' && (
+                <div>
+
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-20 mt-8">
+                <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg text-xl" onClick={() => { /* Test print */ }}>
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                  Test print
+                </button>
+                <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={!(printerName || '').trim()} onClick={handleSavePrinter}>
+                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  Save
+                </button>
+              </div>
+            </div>
+            <div className="shrink-0">
+              <KeyboardWithNumpad value={printerName} onChange={setPrinterName} />
             </div>
           </div>
         </div>
@@ -4999,19 +5255,19 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* Production messages modal */}
       {showProductionMessagesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowProductionMessagesModal(false); cancelEditProductionMessage(); }}>
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[900px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowProductionMessagesModal(false); cancelEditProductionMessage(); }} aria-label="Close">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowProductionMessagesModal(false); setProductionMessagesPage(0); cancelEditProductionMessage(); }}>
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] justify-center items-center w-full mx-4 overflow-hidden flex flex-col h-[1000px]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowProductionMessagesModal(false); setProductionMessagesPage(0); cancelEditProductionMessage(); }} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="w-full flex items-center justify-end gap-2 px-6 py-4 bg-pos-panel border-b border-pos-border shrink-0 pr-14">
-              <div className="flex-1 flex gap-2 items-center">
+            <div className="w-full flex items-center justify-center mt-[50px] px-6 gap-4 py-4 shrink-0 pr-14">
+              <div className="flex gap-2 items-center gap-[100px]">
                 <input
                   type="text"
                   readOnly
                   value={productionMessageInput}
                   placeholder="New message"
-                  className="flex-1 px-4 py-3 bg-pos-bg border border-pos-border rounded-lg text-pos-text text-xl"
+                  className="px-4 py-3 bg-pos-panel border border-pos-border rounded-lg min-w-[400px] text-pos-text text-xl"
                   onClick={() => { }}
                 />
                 <button
@@ -5024,28 +5280,42 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </button>
               </div>
             </div>
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ul className="flex-1 overflow-auto border-b border-pos-border p-2">
-                {[...productionMessages].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((m) => (
-                  <li key={m.id} className="flex items-center w-full px-4 py-3 border-b border-pos-border last:border-b-0">
-                    <span className="flex-1 text-pos-text text-xl truncate">{m.text || ''}</span>
-                    <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => startEditProductionMessage(m)} aria-label="Edit">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    </button>
-                    <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => setDeleteConfirmProductionMessageId(m.id)} aria-label="Delete">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center justify-center gap-4 py-3 shrink-0 bg-pos-panel/30">
-                <button type="button" className="p-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" onClick={() => { const s = [...productionMessages].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)); if (s.length) moveProductionMessage(s[s.length - 1].id, 'up'); }} aria-label="Move last up">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8l-4 4m0 0l4 4m-4-4h14" /></svg>
-                </button>
-                <button type="button" className="p-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" onClick={() => { const s = [...productionMessages].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)); if (s.length) moveProductionMessage(s[0].id, 'down'); }} aria-label="Move first down">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
-                </button>
-              </div>
+            <div className="flex-1 flex flex-col rounded-xl p-6 w-full min-h-0 overflow-hidden pb-24">
+              {(() => {
+                const sorted = [...productionMessages].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                const total = sorted.length;
+                const totalPages = Math.max(1, Math.ceil(total / PRODUCTION_MESSAGES_PAGE_SIZE));
+                const page = Math.min(productionMessagesPage, totalPages - 1);
+                const start = page * PRODUCTION_MESSAGES_PAGE_SIZE;
+                const paginated = sorted.slice(start, start + PRODUCTION_MESSAGES_PAGE_SIZE);
+                const canPrev = page > 0;
+                const canNext = page < totalPages - 1;
+                return (
+                  <>
+                    <ul className="overflow-auto min-h-[300px] mx-10 border border-gray-400 rounded-xl relative p-2">
+                      {paginated.map((m) => (
+                        <li key={m.id} className="flex items-center px-4 py-3 border-b border-gray-400 last:border-b-0">
+                          <span className="flex-1 text-pos-text text-xl truncate">{m.text || ''}</span>
+                          <button type="button" className="p-2 pr-20 rounded text-pos-text hover:bg-pos-bg" onClick={() => startEditProductionMessage(m)} aria-label="Edit">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                          <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => setDeleteConfirmProductionMessageId(m.id)} aria-label="Delete">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className='fixed top-[56%] right-0 left-0'>
+                      <PaginationArrows
+                        canPrev={canPrev}
+                        canNext={canNext}
+                        onPrev={() => setProductionMessagesPage((p) => Math.max(0, p - 1))}
+                        onNext={() => setProductionMessagesPage((p) => Math.min(totalPages - 1, p + 1))}
+                      />
+                    </div>
+                  </>
+                );
+              })()}
             </div>
             <div className="shrink-0">
               <KeyboardWithNumpad value={productionMessageInput} onChange={setProductionMessageInput} />
