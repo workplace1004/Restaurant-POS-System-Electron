@@ -3006,98 +3006,135 @@ export function ControlView({ currentUser, onLogout, onBack }) {
           {controlSidebarId === 'reports' ? (
             <div className="flex flex-col h-full gap-4">
               {reportTabId === 'financial' && (
-                <div className="flex gap-6 flex-1 min-h-0">
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
-                      <div className="text-sm font-mono space-y-1 whitespace-pre-wrap">
-                        <div className="font-semibold text-xl mb-4">Z Financial #2</div>
-                        <div>pospoint demo</div>
-                        <div>BE.0.0.0</div>
-                        <div>Date : {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</div>
-                        <div>Time: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>
-                        <div className="mt-4 font-medium">Terminals</div>
-                        <div>Kassa 2 — 16/01-08:26 → 25/01-11:04</div>
-                        <div>Kassa 4 — 16/01-08:26 → 25/01-11:04</div>
-                        <div className="mt-4 font-medium">VAT per rate</div>
-                        <table className="w-full border-collapse text-sm mt-1">
-                          <thead>
-                            <tr className="border-b border-gray-300">
-                              <th className="text-left py-1">MvH NS</th>
-                              <th className="text-left py-1">MvH NR</th>
-                              <th className="text-left py-1">VAT</th>
-                              <th className="text-left py-1">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b border-gray-200">
-                              <td className="py-1">333.73</td>
-                              <td className="py-1">2.83</td>
-                              <td className="py-1">19.85</td>
-                              <td className="py-1">350.75</td>
-                            </tr>
-                            <tr className="font-medium">
-                              <td className="py-1">Total</td>
-                              <td className="py-1"></td>
-                              <td className="py-1"></td>
-                              <td className="py-1">350.75</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <div className="mt-4 font-medium">Payments</div>
-                        <div>Cash — 174.75</div>
-                        <div>Credit Card — 117.00</div>
-                        <div>Visa — 59.00</div>
-                        <div className="font-medium">Total 350.75</div>
-                        <div className="mt-4 font-medium">Eat-in / Take-out</div>
-                        <div>10 Take-Out — 350.75</div>
-                        <div className="font-medium">Total 350.75</div>
-                        <div className="mt-4 font-medium">Ticket types</div>
-                        <div>11 Counter Sales — 350.75</div>
-                        <div className="font-medium">Total 350.75</div>
-                        <div className="mt-4 font-medium">Issued VAT tickets:</div>
-                        <div>NS: 10</div>
-                        <div>NR: 1</div>
-                        <div className="mt-2">Number of return tickets: 1</div>
-                        <div>Drawer opened without sale: 0</div>
-                        <div>Pro Forma tickets: 7</div>
-                        <div>Pro Forma returns: 0</div>
-                        <div>Pro Forma turnover (incl. VAT): 126.20</div>
-                        <div>Gift vouchers sold: 0</div>
-                        <div>Value of gift vouchers sold: 0.00</div>
-                        <div>Applied discounts: 0</div>
-                        <div>Total discount amount (incl. VAT): 0.00</div>
-                        <div>Total cash rounding amount: 0.00</div>
-                        <div>Credit top-up: 0.00</div>
-                        <div>Staff consumption: 0.00</div>
-                        <div>Online payment cash refunded: 0.00</div>
-                        <div>Number of online orders: 0.00</div>
-                        <div>Database ID: 2</div>
+                <div className="flex gap-6 flex-col min-h-0 flex-1 w-full">
+                  <div className="shrink-0 flex justify-around gap-4 h-[70px] w-full items-center">
+                    <span className="text-pos-text text-3xl font-medium">Z</span>
+                    <span className="text-pos-text text-3xl font-medium">X</span>
+                  </div>
+                  <div className="relative grid grid-cols-[1fr_auto] flex-1 min-h-0 gap-10">
+                    <div className="flex flex-col min-h-0 gap-5">
+                      <div className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
+                        <div className="text-sm font-mono space-y-1 whitespace-pre-wrap text-center">
+                          <div className="text-xl font-medium mb-2">pospoint demo</div>
+                          <div className="mb-2">BE.0.0.0</div>
+                          <div className="flex justify-between border-b border-dotted border-gray-400 pb-1 mb-2">
+                            <span>Date : {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</span>
+                            <span>Tijd: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+                          </div>
+                          <div className="border-b border-dotted border-gray-400 pb-2 mb-4 font-semibold text-lg">Z FINANCIEEL #2</div>
+                          <div className="text-left space-y-1">
+                            <div className="font-medium">Terminals:</div>
+                            <div>Kassa 2 — 16/01-08:26 =&gt; 25/01-11:04</div>
+                            <div>Kassa 4 — 13/01-19:07 =&gt; 25/02-14:27</div>
+                            <div className="mt-4 font-medium">BTW per tarief</div>
+                            <table className="w-full border-collapse text-sm mt-1 text-left">
+                              <thead>
+                                <tr className="border-b border-gray-300">
+                                  <th className="py-1">MvH NS</th>
+                                  <th className="py-1">MvH NR</th>
+                                  <th className="py-1">Btw</th>
+                                  <th className="py-1">Totaal</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="border-b border-gray-200">
+                                  <td className="py-1">333.73</td>
+                                  <td className="py-1">2.83</td>
+                                  <td className="py-1">19.85</td>
+                                  <td className="py-1">350.75</td>
+                                </tr>
+                                <tr className="font-medium">
+                                  <td className="py-1">Totaal</td>
+                                  <td className="py-1">333.73</td>
+                                  <td className="py-1">2.83</td>
+                                  <td className="py-1">350.75</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <div className="mt-4 font-medium">Betalingen</div>
+                            <div>Cash — 174.75</div>
+                            <div>Credit Card — 117.00</div>
+                            <div>Visa — 59.00</div>
+                            <div className="font-medium">Totaal 350.75</div>
+                            <div className="mt-4 font-medium">Eat-in / Take-out</div>
+                            <div>10 Take-Out — 350.75</div>
+                            <div className="font-medium">Totaal 350.75</div>
+                            <div className="mt-4 font-medium">Ticket types</div>
+                            <div>11 Counter Sales — 350.75</div>
+                            <div className="font-medium">Total 350.75</div>
+                            <div className="mt-4 font-medium">Issued VAT tickets:</div>
+                            <div>NS: 10</div>
+                            <div>NR: 1</div>
+                            <div className="mt-2">Number of return tickets: 1</div>
+                            <div>Drawer opened without sale: 0</div>
+                            <div>Pro Forma tickets: 7</div>
+                            <div>Pro Forma returns: 0</div>
+                            <div>Pro Forma turnover (incl. VAT): 126.20</div>
+                            <div>Gift vouchers sold: 0</div>
+                            <div>Value of gift vouchers sold: 0.00</div>
+                            <div>Applied discounts: 0</div>
+                            <div>Total discount amount (incl. VAT): 0.00</div>
+                            <div>Total cash rounding amount: 0.00</div>
+                            <div>Credit top-up: 0.00</div>
+                            <div>Staff consumption: 0.00</div>
+                            <div>Online payment cash refunded: 0.00</div>
+                            <div>Number of online orders: 0.00</div>
+                            <div>Database ID: 2</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between px-2 py-3 shrink-0">
+                        <div className="flex-1" />
+                        <PaginationArrows canPrev={true} canNext={true} onPrev={() => {}} onNext={() => {}} className="relative py-0" />
+                        <div className="flex-1" />
                       </div>
                     </div>
-                    <div className="flex items-center justify-center gap-2 py-2">
-                      <button type="button" className="p-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" aria-label="Scroll up">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                      </button>
-                      <button type="button" className="p-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" aria-label="Scroll down">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <div className="flex flex-col gap-4 w-[220px] shrink-0 justify-start items-center">
+                      <button type="button" className="text-pos-text hover:underline text-xl text-left w-full">Historiek</button>
+                      <div className="flex flex-col gap-2 w-full">
+                        <label className="text-pos-text text-xl shrink-0">Aanmaken tot :</label>
+                        <Dropdown options={REPORT_GENERATE_UNTIL_OPTIONS} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder="Huidige tijd" className="text-xl min-w-[140px]" />
+                      </div>
+                      <div className="flex-1" />
+                      <button type="button" className="flex items-center gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl w-full justify-center">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Print
                       </button>
                     </div>
-                  </div>
-                  <div className="shrink-0 flex flex-col gap-4 w-[220px]">
-                    <div className="flex items-center gap-2">
-                      <label className="text-pos-text text-xl shrink-0">Generate until :</label>
-                      <Dropdown options={REPORT_GENERATE_UNTIL_OPTIONS} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder="Current time" className="text-xl min-w-[140px]" />
-                    </div>
-                    <button type="button" className="flex items-center gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                      Print
-                    </button>
                   </div>
                 </div>
               )}
               {reportTabId === 'user' && (
-                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[940px] flex items-center justify-center">
-                  <p className="text-pos-muted text-xl">User Reports — content will be available here.</p>
+
+                <div className="flex gap-6 flex-col min-h-[940px] max-h-[940px] w-full">
+                  <div className="shrink-0 flex justify-around gap-4 h-[70px] w-full items-center">
+                    <span className="text-pos-text text-3xl font-medium">Z</span>
+                    <span className="text-pos-text text-3xl font-medium">X</span>
+                  </div>
+                  <div className="relative grid grid-cols-2 h-full gap-10">
+                    <div className='flex flex-col h-full gap-5'>
+                      <div className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
+                        <div className="">
+
+                        </div>
+
+                      </div>
+                      <div className="flex items-center justify-between px-2 py-3">
+                        <div className="flex-1" />
+                        <PaginationArrows canPrev={true} canNext={true} onPrev={() => { }} onNext={() => { }} className="relative py-0" />
+                        <div className="flex-1" />
+                      </div>
+
+                    </div>
+                    <div className='flex justify-center items-center'>
+                      <button type="button" className="flex items-center h-[60px] w-[150px] gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        Print
+                      </button>
+                    </div>
+                  </div>
+
+
                 </div>
               )}
               {reportTabId === 'periodic' && (
@@ -3121,7 +3158,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       </div>
                       <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
                         <div className="flex-1" />
-                        <PaginationArrows canPrev={true} canNext={true} onPrev={() => {}} onNext={() => {}} className="relative py-0" />
+                        <PaginationArrows canPrev={true} canNext={true} onPrev={() => { }} onNext={() => { }} className="relative py-0" />
                         <div className="flex-1 flex justify-end">
                           <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
@@ -4268,19 +4305,19 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     paginatedTableLocations.map((loc) => (
                       <li
                         key={loc.id}
-                        className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
+                        className="flex items-center w-full px-10 justify-between py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
                       >
                         <span className="font-medium">{loc.name}</span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            className="px-4 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
+                            className="px-4 pr-20 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
                           >
                             Set tables
                           </button>
                           <button
                             type="button"
-                            className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                            className="p-2 pr-20 rounded text-pos-text hover:bg-pos-panel"
                             onClick={() => openEditTableLocationModal(loc)}
                             aria-label="Edit"
                           >
