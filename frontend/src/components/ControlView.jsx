@@ -150,6 +150,12 @@ const REPORT_GENERATE_UNTIL_OPTIONS = [
   { value: 'current-time', label: 'Current time' }
 ];
 
+const PERIODIC_REPORT_TIME_OPTIONS = Array.from({ length: 25 }, (_, i) => {
+  const h = i === 24 ? '24' : String(i).padStart(2, '0');
+  const label = i === 24 ? '24:00' : `${h}:00`;
+  return { value: label, label };
+});
+
 const USER_ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrator' },
   { value: 'waiter', label: 'User' },
@@ -440,6 +446,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [subNavId, setSubNavId] = useState('Price Groups');
   const [reportTabId, setReportTabId] = useState('financial');
   const [reportGenerateUntil, setReportGenerateUntil] = useState('current-time');
+  const [periodicReportStartTime, setPeriodicReportStartTime] = useState('00:00');
+  const [periodicReportStartDate, setPeriodicReportStartDate] = useState(() => {
+    const d = new Date();
+    return [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('-');
+  });
+  const [periodicReportEndTime, setPeriodicReportEndTime] = useState('24:00');
+  const [periodicReportEndDate, setPeriodicReportEndDate] = useState(() => {
+    const d = new Date();
+    return [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('-');
+  });
   const [reportSettings, setReportSettings] = useState(() => ({ ...DEFAULT_REPORT_SETTINGS }));
   const [savingReportSettings, setSavingReportSettings] = useState(false);
 
@@ -584,6 +600,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [tableLocationTextColor, setTableLocationTextColor] = useState('light');
   const [savingTableLocation, setSavingTableLocation] = useState(false);
   const [deleteConfirmTableLocationId, setDeleteConfirmTableLocationId] = useState(null);
+  const [tableLocationsPage, setTableLocationsPage] = useState(0);
 
   const [templateTheme, setTemplateTheme] = useState(() => {
     try {
@@ -972,6 +989,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   useEffect(() => {
     if (topNavId === 'tables') fetchTableLocations();
   }, [topNavId, fetchTableLocations]);
+
+  useEffect(() => {
+    if (topNavId !== 'tables') setTableLocationsPage(0);
+  }, [topNavId]);
 
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -3075,17 +3096,54 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
               {reportTabId === 'user' && (
-                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px] flex items-center justify-center">
+                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[940px] flex items-center justify-center">
                   <p className="text-pos-muted text-xl">User Reports — content will be available here.</p>
                 </div>
               )}
               {reportTabId === 'periodic' && (
-                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px] flex items-center justify-center">
-                  <p className="text-pos-muted text-xl">Periodic Reports — content will be available here.</p>
+                <div className="flex flex-col gap-4 flex-1 min-h-0">
+                  {/* Date and time row */}
+                  <div className="flex flex-wrap items-center justify-around gap-4 shrink-0">
+                    <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportStartTime} onChange={setPeriodicReportStartTime} placeholder="00:00" className="text-xl min-w-[100px]" />
+                    <input type="text" value={periodicReportStartDate} onChange={(e) => setPeriodicReportStartDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    <span className="text-pos-text text-xl">to</span>
+                    <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportEndTime} onChange={setPeriodicReportEndTime} placeholder="24:00" className="text-xl min-w-[100px]" />
+                    <input type="text" value={periodicReportEndDate} onChange={(e) => setPeriodicReportEndDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl font-medium">
+                      Make report
+                    </button>
+                  </div>
+                  {/* Report area (left) + Info panel (right) */}
+                  <div className="flex gap-6 flex-1 min-h-0">
+                    <div className="relative flex-1 min-w-0 flex flex-col rounded-xl border border-pos-border bg-white min-h-[400px] overflow-hidden">
+                      <div className="flex-1 overflow-auto p-6 text-gray-800 min-h-[300px]">
+                        <p className="text-gray-500 text-lg">Select period and click &quot;Make report&quot; to generate the report.</p>
+                      </div>
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
+                        <div className="flex-1" />
+                        <PaginationArrows canPrev={true} canNext={true} onPrev={() => {}} onNext={() => {}} className="relative py-0" />
+                        <div className="flex-1 flex justify-end">
+                          <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            Print
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 w-[320px] rounded-xl border border-pos-border bg-white p-6 text-gray-800 text-lg leading-relaxed">
+                      <p className="font-medium text-gray-900 mb-2">In this new management system we work with 24:00 instead of 00:00 as the end point as in the web panel.</p>
+                      <p className="mb-2">Example,</p>
+                      <p className="mb-2">all turnover of 27-02-2026</p>
+                      <p className="font-medium mt-3 mb-1">Earlier:</p>
+                      <p className="mb-2">00:00 27-02-2026 to 00:00 28-02-2026</p>
+                      <p className="font-medium mt-3 mb-1">Not:</p>
+                      <p>00:00 27-02-2026 tot 24:00 27-02-2026</p>
+                    </div>
+                  </div>
                 </div>
               )}
               {reportTabId === 'settings' && (
-                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
+                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[940px]">
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-left">
                       <thead>
@@ -3105,7 +3163,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                                 type="checkbox"
                                 checked={reportSettings[row.id]?.z ?? false}
                                 onChange={(e) => setReportSetting(row.id, 'z', e.target.checked)}
-                                className="w-6 h-6 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
+                                className="w-10 h-10 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
                               />
                             </td>
                             <td className="py-3 px-4 text-center">
@@ -3113,7 +3171,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                                 type="checkbox"
                                 checked={reportSettings[row.id]?.x ?? false}
                                 onChange={(e) => setReportSetting(row.id, 'x', e.target.checked)}
-                                className="w-6 h-6 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
+                                className="w-10 h-10 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
                               />
                             </td>
                             <td className="py-3 px-4 text-center">
@@ -3121,7 +3179,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                                 type="checkbox"
                                 checked={reportSettings[row.id]?.periodic ?? false}
                                 onChange={(e) => setReportSetting(row.id, 'periodic', e.target.checked)}
-                                className="w-6 h-6 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
+                                className="w-10 h-10 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
                               />
                             </td>
                           </tr>
@@ -3129,10 +3187,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex justify-center mt-8">
+                  <div className="flex justify-center mt-[150px]">
                     <button
                       type="button"
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
+                      className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
                       disabled={savingReportSettings}
                       onClick={handleSaveReportSettings}
                     >
@@ -3144,7 +3202,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               )}
             </div>
           ) : controlSidebarId === 'users' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[940px]">
               <div className="flex items-center justify-center mb-6">
                 <button
                   type="button"
@@ -4182,60 +4240,76 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
             </div>
-          ) : topNavId === 'tables' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[300px]">
-              <div className="flex items-center w-full justify-center mb-6">
-                <button
-                  type="button"
-                  className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
-                  disabled={tableLocationsLoading}
-                  onClick={openTableLocationModal}
-                >
-                  New table location
-                </button>
-              </div>
-              <ul className="w-full flex flex-col">
-                {tableLocationsLoading ? (
-                  <li className="text-pos-muted text-xl py-4">Loading table locations…</li>
-                ) : tableLocations.length === 0 ? (
-                  <li className="text-pos-muted text-xl py-6 text-center">No table locations yet.</li>
-                ) : (
-                  tableLocations.map((loc) => (
-                    <li
-                      key={loc.id}
-                      className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
-                    >
-                      <span className="font-medium">{loc.name}</span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="px-4 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
-                        >
-                          Set tables
-                        </button>
-                        <button
-                          type="button"
-                          className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                          onClick={() => openEditTableLocationModal(loc)}
-                          aria-label="Edit"
-                        >
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                          onClick={() => setDeleteConfirmTableLocationId(loc.id)}
-                          aria-label="Delete"
-                        >
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                      </div>
-                    </li>
-                  ))
+          ) : topNavId === 'tables' ? (() => {
+            const TABLE_LOCATIONS_PER_PAGE = 11;
+            const totalTableLocationsPages = Math.max(1, Math.ceil(tableLocations.length / TABLE_LOCATIONS_PER_PAGE));
+            const tlPage = Math.min(tableLocationsPage, totalTableLocationsPages - 1);
+            const paginatedTableLocations = tableLocations.slice(tlPage * TABLE_LOCATIONS_PER_PAGE, (tlPage + 1) * TABLE_LOCATIONS_PER_PAGE);
+            const canPrevTl = tlPage > 0;
+            const canNextTl = tlPage < totalTableLocationsPages - 1;
+            return (
+              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[950px] pb-24">
+                <div className="flex items-center w-full justify-center mb-6">
+                  <button
+                    type="button"
+                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    disabled={tableLocationsLoading}
+                    onClick={openTableLocationModal}
+                  >
+                    New table
+                  </button>
+                </div>
+                <ul className="w-full flex flex-col">
+                  {tableLocationsLoading ? (
+                    <li className="text-pos-muted text-xl py-4">Loading table locations…</li>
+                  ) : tableLocations.length === 0 ? (
+                    <li className="text-pos-muted text-xl py-6 text-center">No table locations yet.</li>
+                  ) : (
+                    paginatedTableLocations.map((loc) => (
+                      <li
+                        key={loc.id}
+                        className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
+                      >
+                        <span className="font-medium">{loc.name}</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
+                          >
+                            Set tables
+                          </button>
+                          <button
+                            type="button"
+                            className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                            onClick={() => openEditTableLocationModal(loc)}
+                            aria-label="Edit"
+                          >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                            onClick={() => setDeleteConfirmTableLocationId(loc.id)}
+                            aria-label="Delete"
+                          >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  )}
+                </ul>
+                {tableLocations.length > 0 && (
+                  <PaginationArrows
+                    canPrev={canPrevTl}
+                    canNext={canNextTl}
+                    onPrev={() => setTableLocationsPage((p) => Math.max(0, p - 1))}
+                    onNext={() => setTableLocationsPage((p) => Math.min(totalTableLocationsPages - 1, p + 1))}
+                  />
                 )}
-              </ul>
-            </div>
-          ) : null}
+              </div>
+            );
+          })() : null}
         </main>
       </div>
 
@@ -4524,13 +4598,13 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       {/* New / Edit table location modal */}
       {showTableLocationModal && topNavId === 'tables' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeTableLocationModal}>
-          <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[600px] w-full overflow-hidden max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+          <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border justify-between items-center shadow-2xl max-w-[1430px] w-full overflow-hidden h-[1000px]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeTableLocationModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 overflow-auto flex-1 flex flex-col gap-6">
+            <div className="p-6 overflow-auto flex-1 flex flex-col gap-10 mt-[100px]">
               <div className="flex items-center gap-3">
-                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Location Name:</span>
+                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Table Name:</span>
                 <input
                   type="text"
                   readOnly
@@ -4562,10 +4636,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </label>
                 </div>
               </div>
-              <div className="flex justify-center pt-2">
+              <div className="flex justify-center pt-16">
                 <button
                   type="button"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
+                  className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
                   disabled={savingTableLocation}
                   onClick={handleSaveTableLocation}
                 >
