@@ -2753,7 +2753,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         const res = await fetch(`${API}/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: userName.trim() || 'New user', role: userRole, pin: userPin || '0000' })
+          body: JSON.stringify({ name: userName.trim() || 'New user', role: userRole, pin: userPin || '1234' })
         });
         const created = await res.json();
         if (res.ok && created) {

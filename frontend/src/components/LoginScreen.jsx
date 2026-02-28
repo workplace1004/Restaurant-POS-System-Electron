@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const API = '/api';
 const TOAST_DURATION_MS = 3500;
@@ -18,6 +18,14 @@ export function LoginScreen({ time, onLogin }) {
   const [pinInput, setPinInput] = useState('');
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
+  const rolesScrollRef = useRef(null);
+
+  const scrollRoles = (direction) => {
+    const el = rolesScrollRef.current;
+    if (!el) return;
+    const cardWidth = 350 + 24; // min-w + gap
+    el.scrollBy({ left: direction === 'left' ? -cardWidth : cardWidth, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +88,18 @@ export function LoginScreen({ time, onLogin }) {
 
       <div className="mt-10 flex flex-col items-center justify-center gap-8 p-6">
 
-        <div className="flex gap-6">
+        <div className="flex items-center gap-20 max-w-[1300px] w-full">
+          <button
+            type="button"
+            onClick={() => scrollRoles('left')}
+            className="flex-shrink-0 w-16 h-[320px] rounded-xl bg-pos-panel border-2 border-pos-border text-white hover:border-white/50 transition-all flex items-center justify-center"
+            aria-label="Previous users"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <div ref={rolesScrollRef} className="flex gap-6 overflow-x-auto flex-1 min-w-0 scroll-smooth">
           {loading ? (
             <p className="text-pos-muted text-2xl">Loading users…</p>
           ) : (
@@ -90,7 +109,7 @@ export function LoginScreen({ time, onLogin }) {
             <button
               key={user.id}
               type="button"
-              className={`flex w-[350px] h-[320px] flex-col items-center p-6 rounded-xl border-2 transition-all ${selectedUser?.id === user.id
+              className={`flex min-w-[350px] h-[320px] flex-col items-center p-6 rounded-xl border-2 transition-all ${selectedUser?.id === user.id
                 ? `${color} border-white text-white`
                 : 'bg-pos-panel border-pos-border text-pos-text hover:border-white/50'
                 }`}
@@ -141,6 +160,17 @@ export function LoginScreen({ time, onLogin }) {
             </button>
           ); })
           )}
+          </div>
+          <button
+            type="button"
+            onClick={() => scrollRoles('right')}
+            className="flex-shrink-0 w-16 h-[320px] rounded-xl bg-pos-panel border-2 border-pos-border text-white hover:border-white/50 transition-all flex items-center justify-center"
+            aria-label="Next users"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
         </div>
 
         <div className="bg-pos-panel rounded-xl shadow-xl p-6 w-full max-w-2xl">

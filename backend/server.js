@@ -571,7 +571,7 @@ app.post('/api/users', async (req, res) => {
       data: {
         name: name != null && String(name).trim() !== '' ? String(name).trim() : 'New user',
         role: role === 'admin' || role === 'kitchen' || role === 'waiter' ? role : 'waiter',
-        pin: pin != null ? String(pin) : '0000'
+        pin: pin != null ? String(pin) : '1234'
       }
     });
     res.status(201).json({ id: created.id, name: created.name, label: created.name, role: created.role });
