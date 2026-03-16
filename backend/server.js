@@ -494,6 +494,7 @@ app.delete('/api/discounts/:id', async (req, res) => {
 
 // REST: app settings (e.g. language)
 const SETTING_KEY_LANGUAGE = 'language';
+const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
 
 app.get('/api/settings/language', async (req, res) => {
   try {
@@ -519,6 +520,38 @@ app.put('/api/settings/language', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/language', err);
     res.status(500).json({ error: err.message || 'Failed to save language' });
+  }
+});
+
+app.get('/api/settings/product-positioning-layout', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_PRODUCT_POSITIONING_LAYOUT } });
+    if (!row?.value) {
+      res.json({ value: {} });
+      return;
+    }
+    const parsed = JSON.parse(row.value);
+    res.json({ value: parsed && typeof parsed === 'object' ? parsed : {} });
+  } catch (err) {
+    console.error('GET /api/settings/product-positioning-layout', err);
+    res.status(500).json({ error: err.message || 'Failed to get product positioning layout' });
+  }
+});
+
+app.put('/api/settings/product-positioning-layout', async (req, res) => {
+  try {
+    const incoming = req.body?.value;
+    const safeValue = incoming && typeof incoming === 'object' ? incoming : {};
+    const serialized = JSON.stringify(safeValue);
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_PRODUCT_POSITIONING_LAYOUT },
+      create: { key: SETTING_KEY_PRODUCT_POSITIONING_LAYOUT, value: serialized },
+      update: { value: serialized }
+    });
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('PUT /api/settings/product-positioning-layout', err);
+    res.status(500).json({ error: err.message || 'Failed to save product positioning layout' });
   }
 });
 
