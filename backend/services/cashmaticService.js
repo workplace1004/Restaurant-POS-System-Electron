@@ -209,10 +209,25 @@ export function createCashmaticService(terminal) {
       }
       return '';
     };
-    const ip = get('ip', 'ipAddress', 'ip_address', 'IP');
-    const username = get('username', 'userName', 'user_name', 'USERNAME');
-    const password = get('password', 'Password', 'PASSWORD');
-    const port = get('port', 'Port', 'PORT');
+    const urlValue = get('url', 'apiUrl', 'api_url', 'endpoint');
+    let parsedUrl = null;
+    if (urlValue) {
+      try {
+        parsedUrl = new URL(urlValue);
+      } catch {
+        parsedUrl = null;
+      }
+    }
+    const ip = get('ip', 'ipAddress', 'ip_address', 'IP') || parsedUrl?.hostname || '';
+    const username =
+      get('username', 'userName', 'user_name', 'USERNAME', 'user', 'login', 'account') ||
+      parsedUrl?.username ||
+      '';
+    const password =
+      get('password', 'Password', 'PASSWORD', 'pass', 'pwd', 'secret') ||
+      parsedUrl?.password ||
+      '';
+    const port = get('port', 'Port', 'PORT') || (parsedUrl?.port ? String(parsedUrl.port) : '');
     if (!ip) throw new Error('Cashmatic IP address not found in terminal configuration.');
     if (!username || !password) throw new Error('Cashmatic username/password not found in terminal configuration.');
     return new CashmaticServiceInstance({ ip, username, password, port: port || '50301' });

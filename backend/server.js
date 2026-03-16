@@ -4,6 +4,9 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import os from 'os';
+import net from 'net';
+import { execFile } from 'child_process';
+import { SerialPort } from 'serialport';
 import { createCashmaticService } from './services/cashmaticService.js';
 
 const prisma = new PrismaClient();
@@ -17,6 +20,46 @@ const io = new Server(httpServer, {
 
 app.use(cors());
 app.use(express.json());
+
+function serverLog(scope, message, meta = undefined) {
+  const prefix = `[${new Date().toISOString()}] [${scope}]`;
+  if (meta === undefined) {
+    console.log(`${prefix} ${message}`);
+    return;
+  }
+  console.log(`${prefix} ${message}`, meta);
+}
+
+function summarizeCashmaticConnection(connectionString) {
+  const raw = String(connectionString || '').trim();
+  if (!raw) return { configured: false };
+  try {
+    const parsed = JSON.parse(raw);
+    const url = parsed?.url ? String(parsed.url) : '';
+    let urlHost = '';
+    let urlPort = '';
+    if (url) {
+      try {
+        const u = new URL(url);
+        urlHost = u.hostname || '';
+        urlPort = u.port || '';
+      } catch {
+        // ignore invalid URL
+      }
+    }
+    return {
+      configured: true,
+      ip: parsed?.ip || parsed?.ipAddress || '',
+      port: parsed?.port || '',
+      urlHost,
+      urlPort,
+      hasUsername: !!(parsed?.username || parsed?.userName || parsed?.user || parsed?.login),
+      hasPassword: !!(parsed?.password || parsed?.pass || parsed?.pwd || parsed?.secret),
+    };
+  } catch {
+    return { configured: true, raw };
+  }
+}
 
 // REST: categories
 app.get('/api/categories', async (req, res) => {
@@ -990,6 +1033,205 @@ function printerToApi(p) {
   };
 }
 
+function validatePrinterConnection(type, connectionString) {
+  const safeType = String(type || '').trim().toLowerCase();
+  const safeConnection = String(connectionString || '').trim();
+  if (!safeConnection) return { ok: false, error: 'connection_string is required' };
+
+  if (safeType === 'serial') {
+    if (!safeConnection.startsWith('serial://') && !safeConnection.startsWith('\\\\.\\')) {
+      return { ok: false, error: 'Invalid serial printer connection string' };
+    }
+    return { ok: true };
+  }
+
+  if (safeType === 'windows') {
+    if (safeConnection.startsWith('tcp://')) {
+      const [ip, port] = safeConnection.substring(6).split(':');
+      if (!ip || !port) return { ok: false, error: 'Invalid network printer address' };
+      return { ok: true };
+    }
+    return { ok: true };
+  }
+
+  return { ok: false, error: 'Unsupported printer type' };
+}
+
+function formatEuroAmount(value) {
+  return `€${(Math.round((Number(value) || 0) * 100) / 100).toFixed(2)}`;
+}
+
+function parseTcpTarget(connectionString) {
+  const s = String(connectionString || '').trim();
+  if (!s.startsWith('tcp://')) {
+    throw new Error('Printer connection_string is not tcp:// format.');
+  }
+  const [host = '', port = '9100'] = s.substring(6).split(':');
+  const safeHost = host.trim();
+  const safePort = Number.parseInt(String(port || '9100').trim(), 10);
+  if (!safeHost || !Number.isInteger(safePort) || safePort <= 0 || safePort > 65535) {
+    throw new Error(`Invalid TCP printer target: ${s}`);
+  }
+  return { host: safeHost, port: safePort };
+}
+
+function parseSerialPath(connectionString) {
+  const s = String(connectionString || '').trim();
+  if (!s) throw new Error('Serial printer connection string is empty.');
+  if (s.startsWith('serial://')) return (s.substring(9).split('?')[0] || '').trim();
+  if (s.startsWith('\\\\.\\')) return s;
+  return s;
+}
+
+function buildEscPosPayload(receiptLines) {
+  const text = `${Array.isArray(receiptLines) ? receiptLines.join('\n') : String(receiptLines || '')}\n`;
+  const init = Buffer.from([0x1b, 0x40]); // ESC @ (initialize)
+  const body = Buffer.from(text, 'ascii'); // keep ASCII for broad ESC/POS compatibility
+  const feed = Buffer.from([0x1b, 0x64, 0x04]); // ESC d n (feed 4 lines)
+  const cut = Buffer.from([0x1d, 0x56, 0x00]); // GS V 0 (full cut)
+  return Buffer.concat([init, body, feed, cut]);
+}
+
+function sendTcpPrint(connectionString, payload) {
+  const { host, port } = parseTcpTarget(connectionString);
+  const payloadBuffer = Buffer.isBuffer(payload) ? payload : Buffer.from(payload || '');
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let receivedBytes = 0;
+    const socket = net.createConnection({ host, port });
+    const finish = (err, details = undefined) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve(details);
+    };
+    socket.setTimeout(7000);
+    socket.on('connect', () => {
+      serverLog('printer', 'TCP connected', { host, port });
+      serverLog('printer', 'TCP send command', {
+        host,
+        port,
+        bytes: payloadBuffer.length,
+        previewHex: payloadBuffer.subarray(0, Math.min(64, payloadBuffer.length)).toString('hex'),
+      });
+      socket.write(payloadBuffer, (err) => {
+        if (err) {
+          socket.destroy();
+          return finish(err);
+        }
+        socket.end();
+      });
+    });
+    socket.on('data', (chunk) => {
+      receivedBytes += chunk.length;
+      serverLog('printer', 'TCP receive response', { host, port, bytes: chunk.length });
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      finish(new Error(`Printer TCP timeout (${host}:${port})`));
+    });
+    socket.on('error', (err) => {
+      finish(err);
+    });
+    socket.on('close', (hadError) => {
+      serverLog('printer', 'TCP connection closed', { host, port, hadError, receivedBytes });
+      if (!hadError) {
+        finish(null, { transport: 'tcp', host, port, sentBytes: payloadBuffer.length, receivedBytes });
+      }
+    });
+  });
+}
+
+function sendSerialPrint(connectionString, baudRate, payload) {
+  const path = parseSerialPath(connectionString);
+  const baud = Number.parseInt(String(baudRate || 9600), 10) || 9600;
+  const payloadBuffer = Buffer.isBuffer(payload) ? payload : Buffer.from(payload || '');
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (err, details = undefined) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve(details);
+    };
+    const serial = new SerialPort({ path, baudRate: baud, autoOpen: false });
+    serial.on('open', () => {
+      serverLog('printer', 'Serial connected', { path, baudRate: baud });
+      serverLog('printer', 'Serial send command', {
+        path,
+        bytes: payloadBuffer.length,
+        previewHex: payloadBuffer.subarray(0, Math.min(64, payloadBuffer.length)).toString('hex'),
+      });
+      serial.write(payloadBuffer, (writeErr) => {
+        if (writeErr) {
+          serial.close(() => finish(writeErr));
+          return;
+        }
+        serial.drain((drainErr) => {
+          serial.close((closeErr) => {
+            if (drainErr) return finish(drainErr);
+            if (closeErr) return finish(closeErr);
+            finish(null, { transport: 'serial', path, baudRate: baud, sentBytes: payloadBuffer.length, receivedBytes: 0 });
+          });
+        });
+      });
+    });
+    serial.on('data', (chunk) => {
+      serverLog('printer', 'Serial receive response', { path, bytes: chunk.length });
+    });
+    serial.on('error', (err) => {
+      finish(err);
+    });
+    serial.open((err) => {
+      if (err) finish(err);
+    });
+  });
+}
+
+async function sendToPrinter(printer, receiptLines) {
+  const safeType = String(printer?.type || '').trim().toLowerCase();
+  const connectionString = String(printer?.connectionString || '').trim();
+  const payload = buildEscPosPayload(receiptLines);
+  if (safeType === 'serial') {
+    return sendSerialPrint(connectionString, printer?.baudRate, payload);
+  }
+  if (safeType === 'windows') {
+    if (connectionString.startsWith('tcp://')) {
+      return sendTcpPrint(connectionString, payload);
+    }
+    const printerName = connectionString;
+    if (!printerName) throw new Error('Windows printer name is empty.');
+    if (process.platform !== 'win32') {
+      throw new Error(`Windows printer-name transport is only supported on Windows host. Current platform: ${process.platform}`);
+    }
+    const text = `${Array.isArray(receiptLines) ? receiptLines.join('\n') : String(receiptLines || '')}\n\n\n`;
+    const escapedPrinterName = printerName.replace(/'/g, "''");
+    const script =
+      `$printerName = '${escapedPrinterName}';\n` +
+      `$text = @'\n${text}\n'@;\n` +
+      `$text | Out-Printer -Name $printerName`;
+    serverLog('printer', 'Windows queue send command', { printerName, bytes: Buffer.byteLength(text, 'utf8') });
+    await new Promise((resolve, reject) => {
+      execFile(
+        'powershell',
+        ['-NoProfile', '-Command', script],
+        { timeout: 12000, windowsHide: true },
+        (err, stdout, stderr) => {
+          if (stdout) serverLog('printer', 'Windows queue stdout', { printerName, stdout: String(stdout).trim() });
+          if (stderr) serverLog('printer', 'Windows queue stderr', { printerName, stderr: String(stderr).trim() });
+          if (err) {
+            reject(new Error(`Out-Printer failed for "${printerName}": ${err.message}`));
+            return;
+          }
+          resolve();
+        }
+      );
+    });
+    return { transport: 'windows-queue', printerName, sentBytes: Buffer.byteLength(text, 'utf8'), receivedBytes: 0 };
+  }
+  throw new Error(`Unsupported printer type for send: ${safeType}`);
+}
+
 app.get('/api/printers', async (req, res) => {
   try {
     const list = await prisma.printer.findMany({
@@ -1107,6 +1349,123 @@ app.delete('/api/printers/:id', async (req, res) => {
   }
 });
 
+app.post('/api/printers/receipt', async (req, res) => {
+  try {
+    const orderId = String(req.body?.orderId || '').trim();
+    if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+    serverLog('printer', 'Receipt print requested', { orderId });
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: true } }, table: true, customer: true }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!Array.isArray(order.items) || order.items.length === 0) {
+      return res.status(400).json({ error: 'Order has no items to print' });
+    }
+
+    const dbTotal = Math.round(order.items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0) * 100) / 100;
+    const paymentBreakdown = req.body?.paymentBreakdown || {};
+    const cash = Math.max(0, Number(paymentBreakdown.cash) || 0);
+    const bancontact = Math.max(0, Number(paymentBreakdown.bancontact) || 0);
+    const visa = Math.max(0, Number(paymentBreakdown.visa) || 0);
+    const paidTotalRaw = cash + bancontact + visa;
+    const paidTotal = Math.round((paidTotalRaw > 0 ? paidTotalRaw : dbTotal) * 100) / 100;
+    if (Math.abs(paidTotal - dbTotal) > 0.009) {
+      return res.status(400).json({ error: `Paid total (${formatEuroAmount(paidTotal)}) must match order total (${formatEuroAmount(dbTotal)}).` });
+    }
+    const paymentMethodLines = [
+      cash > 0 ? `CASHMATIC: ${formatEuroAmount(cash)}` : null,
+      bancontact > 0 ? `BANCONTACT: ${formatEuroAmount(bancontact)}` : null,
+      visa > 0 ? `VISA: ${formatEuroAmount(visa)}` : null,
+    ].filter(Boolean);
+
+    const requestedPrinterId = req.body?.printerId ? String(req.body.printerId) : null;
+    const printer = requestedPrinterId
+      ? await prisma.printer.findUnique({ where: { id: requestedPrinterId } })
+      : await prisma.printer.findFirst({
+          where: { enabled: 1 },
+          orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }]
+        });
+
+    if (!printer || printer.enabled !== 1) {
+      return res.status(400).json({ error: 'No enabled printer configured for receipt printing.' });
+    }
+    serverLog('printer', 'Receipt printer selected', {
+      orderId,
+      printerId: printer.id,
+      printerName: printer.name,
+      printerType: printer.type,
+    });
+
+    const validation = validatePrinterConnection(printer.type, printer.connectionString);
+    if (!validation.ok) return res.status(400).json({ error: validation.error });
+
+    const itemLines = order.items.map((item) => {
+      const productName = item?.product?.name || 'Unknown item';
+      const note = item?.notes ? ` (${String(item.notes).trim()})` : '';
+      const qty = Math.max(1, Number(item.quantity) || 1);
+      const unitPrice = Math.round((Number(item.price) || 0) * 100) / 100;
+      const lineTotal = Math.round(unitPrice * qty * 100) / 100;
+      return {
+        product: `${productName}${note}`,
+        quantity: qty,
+        unitPrice,
+        lineTotal
+      };
+    });
+
+    const printedAt = new Date().toISOString();
+    const receiptLines = [
+      `Receipt ${order.id}`,
+      `Printed at ${printedAt}`,
+      `Table: ${order.table?.name || '-'}`,
+      `Customer: ${order.customer?.name || '-'}`,
+      '------------------------------',
+      ...itemLines.map((line) => `${line.quantity}x ${line.product}  ${formatEuroAmount(line.lineTotal)}`),
+      '------------------------------',
+      `TOTAL: ${formatEuroAmount(dbTotal)}`,
+      `PAID: ${formatEuroAmount(paidTotal)}`,
+      ...paymentMethodLines
+    ];
+
+    const sendResult = await sendToPrinter(printer, receiptLines);
+    serverLog('printer', 'Receipt sent to printer', {
+      orderId: order.id,
+      printerId: printer.id,
+      transport: sendResult?.transport || 'unknown',
+      sentBytes: sendResult?.sentBytes ?? 0,
+      receivedBytes: sendResult?.receivedBytes ?? 0,
+    });
+    serverLog('printer', 'Receipt payload prepared', {
+      orderId: order.id,
+      items: itemLines.length,
+      total: dbTotal,
+      paidTotal,
+      paymentMethods: { cash, bancontact, visa },
+    });
+    return res.json({
+      success: true,
+      message: `Receipt print request sent for order "${order.id}"`,
+      data: {
+        orderId: order.id,
+        printerId: printer.id,
+        printerName: printer.name,
+        total: dbTotal,
+        paidTotal,
+        paymentMethods: { cash, bancontact, visa },
+        items: itemLines,
+        receipt_text: receiptLines.join('\n'),
+        printed: true,
+        ...sendResult,
+      }
+    });
+  } catch (err) {
+    console.error('POST /api/printers/receipt', err);
+    return res.status(500).json({ error: err.message || 'Failed to print receipt' });
+  }
+});
+
 app.post('/api/printers/test', async (req, res) => {
   try {
     const body = req.body || {};
@@ -1114,25 +1473,23 @@ app.post('/api/printers/test', async (req, res) => {
     const type = String(body.type || '').trim().toLowerCase();
     const connectionString = String(body.connection_string || '').trim();
     if (!name || !type) return res.status(400).json({ error: 'name and type are required' });
-    if (!connectionString) return res.status(400).json({ error: 'connection_string is required' });
+    const validation = validatePrinterConnection(type, connectionString);
+    if (!validation.ok) return res.status(400).json({ error: validation.error });
 
-    if (type === 'serial') {
-      if (!connectionString.startsWith('serial://') && !connectionString.startsWith('\\\\.\\')) {
-        return res.status(400).json({ error: 'Invalid serial printer connection string' });
-      }
-    } else if (type === 'windows') {
-      if (connectionString.startsWith('tcp://')) {
-        const [ip, port] = connectionString.substring(6).split(':');
-        if (!ip || !port) return res.status(400).json({ error: 'Invalid network printer address' });
-      } else if (!connectionString) {
-        return res.status(400).json({ error: 'Printer name is required for USB printer' });
-      }
-    } else {
-      return res.status(400).json({ error: 'Unsupported printer type' });
-    }
-
-    // Placeholder for physical printer integration; verifies current config and accepts test request.
-    return res.json({ success: true, message: `Test print request sent for "${name}"` });
+    const receiptLines = [
+      `TEST PRINT - ${name}`,
+      `Type: ${type}`,
+      `Time: ${new Date().toISOString()}`,
+      '------------------------------',
+      'If this is printed, printer transport works.',
+    ];
+    const sendResult = await sendToPrinter({ type, connectionString, baudRate: body.baud_rate }, receiptLines);
+    serverLog('printer', 'Test print sent', { name, type, connectionString, ...sendResult });
+    return res.json({
+      success: true,
+      message: `Test print sent for "${name}"`,
+      data: { printed: true, ...sendResult },
+    });
   } catch (err) {
     console.error('POST /api/printers/test', err);
     return res.status(500).json({ error: err.message || 'Failed to test printer' });
@@ -1144,21 +1501,35 @@ app.post('/api/cashmatic/start', async (req, res) => {
   try {
     const amount = req.body?.amount;
     if (!amount || amount <= 0) return res.status(400).json({ error: 'amount should be greater than 0' });
+    serverLog('cashmatic', 'Start payment requested', { amount });
     const terminal = await prisma.paymentTerminal.findFirst({ where: { type: 'cashmatic', enabled: 1 }, orderBy: { isMain: 'desc' } });
     if (!terminal) {
       return res.status(503).json({ error: 'Cashmatic terminal not configured or not enabled.' });
     }
+    serverLog('cashmatic', 'Using terminal configuration', {
+      terminalId: terminal.id,
+      terminalName: terminal.name,
+      connectionType: terminal.connectionType,
+      connection: summarizeCashmaticConnection(terminal.connectionString),
+    });
     const terminalForService = { connection_string: terminal.connectionString };
     const service = createCashmaticService(terminalForService);
     const result = await service.createSession(amount);
     if (!result?.success) {
       return res.status(500).json({ error: result?.message || 'Failed to start Cashmatic payment' });
     }
+    serverLog('cashmatic', 'Payment session started', { sessionId: result.sessionId, amount });
     res.json({ data: { sessionId: result.sessionId } });
   } catch (err) {
     console.error('POST /api/cashmatic/start', err);
-    const code = err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND' ? 503 : 500;
-    res.status(code).json({ error: err.message || 'Failed to start Cashmatic payment' });
+    const networkErrorCodes = new Set(['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ENETUNREACH', 'EHOSTUNREACH', 'EAI_AGAIN']);
+    const code = networkErrorCodes.has(err.code) ? 503 : 500;
+    const isNetworkError = networkErrorCodes.has(err.code);
+    const message = isNetworkError
+      ? `Unable to connect to Cashmatic terminal. Please verify IP/port and network connectivity. (${err.message || err.code})`
+      : (err.message || 'Failed to start Cashmatic payment');
+    serverLog('cashmatic', 'Start payment failed', { code: err.code || 'UNKNOWN', message: err.message || String(err) });
+    res.status(code).json({ error: message });
   }
 });
 
@@ -1172,7 +1543,16 @@ app.get('/api/cashmatic/status/:sessionId', async (req, res) => {
     const service = createCashmaticService({ connection_string: terminal.connectionString });
     const result = await service.getSessionStatus(sessionId);
     if (!result?.success) {
+      serverLog('cashmatic', 'Status lookup failed', { sessionId, message: result?.message || 'Session not found' });
       return res.status(404).json({ success: false, error: result?.message || 'Session not found' });
+    }
+    if (['PAID', 'FINISHED', 'FINISHED_MANUAL', 'CANCELLED', 'ERROR'].includes(String(result.state || '').toUpperCase())) {
+      serverLog('cashmatic', 'Status update', {
+        sessionId,
+        state: result.state,
+        requestedAmount: result.requestedAmount ?? 0,
+        insertedAmount: result.insertedAmount ?? 0,
+      });
     }
     res.json({
       success: true,
@@ -1193,6 +1573,7 @@ app.get('/api/cashmatic/status/:sessionId', async (req, res) => {
 app.post('/api/cashmatic/finish/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
+    serverLog('cashmatic', 'Finish payment requested', { sessionId });
     const terminal = await prisma.paymentTerminal.findFirst({ where: { type: 'cashmatic', enabled: 1 }, orderBy: { isMain: 'desc' } });
     if (!terminal) {
       return res.status(503).json({ success: false, error: 'Cashmatic terminal not configured or not enabled.' });
@@ -1202,6 +1583,7 @@ app.post('/api/cashmatic/finish/:sessionId', async (req, res) => {
     if (!result?.success) {
       return res.status(404).json({ success: false, error: result?.message || 'Session not found' });
     }
+    serverLog('cashmatic', 'Finish payment succeeded', { sessionId });
     res.json({ success: true, data: result });
   } catch (err) {
     console.error('POST /api/cashmatic/finish/:sessionId', err);
@@ -1212,12 +1594,14 @@ app.post('/api/cashmatic/finish/:sessionId', async (req, res) => {
 app.post('/api/cashmatic/cancel/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
+    serverLog('cashmatic', 'Cancel payment requested', { sessionId });
     const terminal = await prisma.paymentTerminal.findFirst({ where: { type: 'cashmatic', enabled: 1 }, orderBy: { isMain: 'desc' } });
     if (!terminal) {
       return res.status(503).json({ success: false, error: 'Cashmatic terminal not configured or not enabled.' });
     }
     const service = createCashmaticService({ connection_string: terminal.connectionString });
     const result = await service.cancelSession(sessionId);
+    serverLog('cashmatic', 'Cancel payment completed', { sessionId, state: result?.state || 'CANCELLED' });
     res.json({ success: true, data: result });
   } catch (err) {
     console.error('POST /api/cashmatic/cancel/:sessionId', err);
