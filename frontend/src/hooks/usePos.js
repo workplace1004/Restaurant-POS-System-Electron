@@ -66,6 +66,16 @@ export function usePos(API, socket) {
     if (Array.isArray(data)) setHistoryOrders(data);
   }, [API]);
 
+  const fetchSubproductsForProduct = useCallback(
+    async (productId) => {
+      if (!productId) return [];
+      const res = await fetch(`${API}/products/${productId}/subproducts`);
+      const data = await safeJson(res);
+      return Array.isArray(data) ? data : [];
+    },
+    [API]
+  );
+
   useEffect(() => {
     if (!socket?.on) return;
     const handler = (order) => {
@@ -84,16 +94,17 @@ export function usePos(API, socket) {
     };
   }, [socket]);
 
-  const currentOrder = orders.find((o) => o.status === 'open') || orders[0] || null;
+  const currentOrder = orders.find((o) => o.status === 'open') || null;
 
   const addItemToOrder = useCallback(
     async (product, quantity = 1) => {
+      const notes = product?.subproductName || undefined;
       let orderId = currentOrder?.id;
       if (!orderId) {
         const createRes = await fetch(`${API}/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: [{ productId: product.id, quantity, price: product.price }] })
+          body: JSON.stringify({ items: [{ productId: product.id, quantity, price: product.price, notes }] })
         });
         const created = await safeJson(createRes);
         if (created?.id) {
@@ -105,7 +116,7 @@ export function usePos(API, socket) {
       await fetch(`${API}/orders/${orderId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: product.id, quantity, price: product.price })
+        body: JSON.stringify({ productId: product.id, quantity, price: product.price, notes })
       });
       const res = await fetch(`${API}/orders`);
       const list = await safeJson(res);
@@ -151,14 +162,17 @@ export function usePos(API, socket) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
-      if (status === 'in_planning') {
+      if (status === 'in_planning' || status === 'paid') {
         fetchInPlanningCount();
+      }
+      if (status === 'paid') {
+        fetchWebordersCount();
       }
       const res = await fetch(`${API}/orders`);
       const list = await safeJson(res);
       if (Array.isArray(list)) setOrders(list);
     },
-    [API, fetchInPlanningCount]
+    [API, fetchInPlanningCount, fetchWebordersCount]
   );
 
   const createOrder = useCallback(async () => {
@@ -219,6 +233,7 @@ export function usePos(API, socket) {
     fetchInPlanningCount,
     fetchTables,
     historyOrders,
-    fetchOrderHistory
+    fetchOrderHistory,
+    fetchSubproductsForProduct
   };
 }

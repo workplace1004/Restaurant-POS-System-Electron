@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const SortIcon = () => (
   <span className="inline-block ml-1 text-gray-500 font-normal align-middle" aria-hidden>v</span>
@@ -14,6 +15,7 @@ export function WebordersModal({
   onCancelOrder,
   loading = false
 }) {
+  const { t } = useLanguage();
   const listRef = useRef(null);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -48,7 +50,7 @@ export function WebordersModal({
   };
 
   const orderNumber = (id) => (id ? id.slice(-8) : '–');
-  const deliveryCollection = () => 'Collection';
+  const deliveryCollection = () => t('webordersCollection');
 
   const list = activeTab === 'new' ? weborders : inPlanningOrders;
   const isEmpty = !Array.isArray(list) || list.length === 0;
@@ -81,7 +83,7 @@ export function WebordersModal({
               }`}
             onClick={() => setActiveTab('new')}
           >
-            New orders
+            {t('webordersNewOrders')}
           </button>
           <button
             type="button"
@@ -91,24 +93,24 @@ export function WebordersModal({
               }`}
             onClick={() => setActiveTab('onHold')}
           >
-            On hold
+            {t('webordersOnHold')}
           </button>
         </div>
 
         {/* Table headers: New orders = Time, Customer, Amount only; On hold = full columns */}
         {activeTab === 'new' ? (
           <div className="flex gap-8 px-4 py-2 text-2xl font-medium text-white px-[200px] w-full justify-between">
-            <span>Time:</span>
-            <span>Customer:</span>
-            <span>Amount:</span>
+            <span>{t('webordersTime')}:</span>
+            <span>{t('webordersCustomer')}:</span>
+            <span>{t('webordersAmount')}:</span>
           </div>
         ) : (
           <div className="flex gap-2 px-20 py-2 text-2xl font-medium text-white w-full justify-between">
-            <span>Order number</span>
-            <span>Delivery / collection</span>
-            <span>Delivery/collection time</span>
-            <span>Customer</span>
-            <span>Amount</span>
+            <span>{t('webordersOrderNumber')}</span>
+            <span>{t('webordersDeliveryCollection')}</span>
+            <span>{t('webordersDeliveryCollectionTime')}</span>
+            <span>{t('webordersCustomer')}</span>
+            <span>{t('webordersAmount')}</span>
           </div>
         )}
 
@@ -188,7 +190,7 @@ export function WebordersModal({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18" className="opacity-60" />
               </svg>
               <span className="text-3xl text-center">
-                {activeTab === 'new' ? 'No new orders' : 'No orders on hold'}
+                {activeTab === 'new' ? t('webordersNoNewOrders') : t('webordersNoOrdersOnHold')}
               </span>
             </div>
           )}
@@ -225,7 +227,7 @@ export function WebordersModal({
             className="h-[80px] w-[240px] py-3 px-4 rounded bg-gray-300 text-gray-700 text-3xl font-medium hover:bg-gray-500"
             onClick={onClose}
           >
-            Close
+            {t('webordersClose')}
           </button>
           {activeTab === 'onHold' && (
             <button
@@ -234,7 +236,7 @@ export function WebordersModal({
               onClick={handleCancelOrder}
               disabled={!selectedOrderId}
             >
-              Cancel order
+              {t('webordersCancelOrder')}
             </button>
           )}
           <button
@@ -243,7 +245,7 @@ export function WebordersModal({
             onClick={() => { onConfirm?.(); onClose?.(); }}
             disabled={loading}
           >
-            {loading ? 'Loading...' : 'Confirm'}
+            {loading ? t('webordersLoading') : t('webordersConfirm')}
           </button>
         </div>
       </div>

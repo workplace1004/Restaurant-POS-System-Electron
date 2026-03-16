@@ -6,6 +6,7 @@ import { ProductArea } from './components/ProductArea';
 import { OrderPanel } from './components/OrderPanel';
 import { Footer } from './components/Footer';
 import { CustomersView } from './components/CustomersView';
+import { TablesView } from './components/TablesView';
 import { WebordersModal } from './components/WebordersModal';
 import { InPlanningModal } from './components/InPlanningModal';
 import { HistoryModal } from './components/HistoryModal';
@@ -16,7 +17,7 @@ import { usePos } from './hooks/usePos';
 const API = '/api';
 const USER_STORAGE_KEY = 'pos-user';
 const VIEW_STORAGE_KEY = 'pos-view';
-const VALID_VIEWS = ['pos', 'control', 'customers'];
+const VALID_VIEWS = ['pos', 'control', 'tables'];
 
 function loadStoredUser() {
   try {
@@ -43,6 +44,7 @@ const socket = io(window.location.origin, { path: '/socket.io' });
 export default function App() {
   const [user, setUser] = useState(loadStoredUser);
   const [view, setView] = useState(loadStoredView);
+  const [selectedTable, setSelectedTable] = useState(null);
 
   const setViewAndPersist = useCallback((nextView) => {
     setView(nextView);
@@ -53,6 +55,7 @@ export default function App() {
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [ordersModalTab, setOrdersModalTab] = useState('new');
   const [showInPlanningModal, setShowInPlanningModal] = useState(false);
+  const [showCustomersModal, setShowCustomersModal] = useState(false);
   const [showSubtotalView, setShowSubtotalView] = useState(false);
   const [subtotalBreaks, setSubtotalBreaks] = useState([]); // after each click: item count at which we inserted a subtotal
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -85,7 +88,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchInPlanningCount,
     fetchTables,
     historyOrders,
-    fetchOrderHistory
+    fetchOrderHistory,
+    fetchSubproductsForProduct
   } = usePos(API, socket);
 
   useEffect(() => {
@@ -123,6 +127,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
 
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
+    setViewAndPersist('pos');
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
     } catch {}
@@ -135,6 +140,14 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     } catch {}
   };
 
+  const handleSelectTable = useCallback(
+    (table) => {
+      setSelectedTable(table);
+      setViewAndPersist('pos');
+    },
+    [setViewAndPersist]
+  );
+
   if (!user) {
     return (
       <LoginScreen
@@ -144,16 +157,14 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     );
   }
 
-  if (view === 'customers') {
+  if (view === 'tables') {
     return (
-      <CustomersView
-        time={time}
-        categories={categories}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
-        webordersCount={webordersCount}
-        inPlanningCount={inPlanningCount}
+      <TablesView
+        tables={tables}
+        selectedTableId={selectedTable?.id ?? null}
+        onSelectTable={handleSelectTable}
         onBack={() => setViewAndPersist('pos')}
+        time={time}
       />
     );
   }
@@ -183,6 +194,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           time={time}
           webordersCount={webordersCount}
           inPlanningCount={inPlanningCount}
+          selectedTable={selectedTable}
+          onOpenTables={() => setViewAndPersist('tables')}
           onOpenWeborders={() => {
             setOrdersModalTab('new');
             setShowOrdersModal(true);
@@ -200,10 +213,11 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           onSelectCategory={setSelectedCategoryId}
           onAddProduct={addItemToOrder}
           currentOrderId={currentOrder?.id}
+          fetchSubproductsForProduct={fetchSubproductsForProduct}
         />
         <Footer
-          view={view}
-          onViewChange={setViewAndPersist}
+          customersActive={showCustomersModal}
+          onCustomersClick={() => setShowCustomersModal(true)}
           showSubtotalView={showSubtotalView}
           subtotalButtonDisabled={subtotalButtonDisabled}
           onSubtotalClick={handleSubtotalClick}
@@ -221,6 +235,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         tables={tables}
         showSubtotalView={showSubtotalView}
         subtotalBreaks={subtotalBreaks}
+        onPaymentCompleted={() => fetchOrderHistory()}
       />
       <WebordersModal
         open={showOrdersModal}
@@ -246,6 +261,21 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         historyOrders={historyOrders || []}
         onFetchHistory={fetchOrderHistory}
       />
+      {showCustomersModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowCustomersModal(false)}
+        >
+          <div
+            className="h-[92vh] w-[96vw] max-w-[1410px] rounded-xl overflow-hidden border border-pos-border shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CustomersView onBack={() => setShowCustomersModal(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

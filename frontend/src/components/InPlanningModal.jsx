@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { CalendarModal } from './CalendarModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const SortIcon = () => (
   <span className="ml-0.5 align-middle" aria-hidden>^</span>
@@ -60,6 +61,7 @@ function MonthPickerModal({ open, onClose, value, onChange }) {
 }
 
 export function InPlanningModal({ open, onClose, orders = [] }) {
+  const { t } = useLanguage();
   const leftListRef = useRef(null);
   const rightListRef = useRef(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -150,7 +152,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
         const no = orderNo(o.id).toLowerCase();
         const name = customerName(o).toLowerCase();
         const time = formatTime(o.createdAt).toLowerCase();
-        const type = 'collection';
+        const type = t('webordersCollection').toLowerCase();
         const amount = formatAmount(o.total).toLowerCase();
         const origin = (o.source || 'pos').toLowerCase();
         const q = searchQuery;
@@ -196,8 +198,8 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 className="text-left"
                 onClick={() => setDateViewActive((prev) => !prev)}
               >
-                <div className={`font-semibold text-3xl ${dateViewActive ? 'text-white' : 'text-green-400'}`}>Date</div>
-                {!historyMode && <div className={`text-xl ${dateViewActive ? 'text-green-400' : 'text-white'}`}>Full list</div>}
+                <div className={`font-semibold text-3xl ${dateViewActive ? 'text-white' : 'text-green-400'}`}>{t('inPlanningDate')}</div>
+                {!historyMode && <div className={`text-xl ${dateViewActive ? 'text-green-400' : 'text-white'}`}>{t('inPlanningFullList')}</div>}
               </button>
               {!dateViewActive ? (
                 <>
@@ -244,19 +246,19 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                   }
                 }}
               >
-                History
+                {t('history')}
               </button>
             </div>
 
             <div className="flex w-full gap-1 px-2 py-2 text-2xl justify-around font-medium text-white">
-              <span>No.</span>
-              <span>Delivery time</span>
-              <span>Name</span>
-              <span>Type</span>
-              <span>Amount</span>
-              <span>Printed</span>
-              <span>Paid</span>
-              <span>Origin</span>
+              <span>{t('inPlanningNo')}</span>
+              <span>{t('inPlanningDeliveryTime')}</span>
+              <span>{t('name')}</span>
+              <span>{t('inPlanningType')}</span>
+              <span>{t('inPlanningAmount')}</span>
+              <span>{t('inPlanningPrinted')}</span>
+              <span>{t('inPlanningPaid')}</span>
+              <span>{t('inPlanningOrigin')}</span>
             </div>
             <div
               ref={leftListRef}
@@ -289,7 +291,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                         </td>
                         <td className="p-3 min-w-[110px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            Collection
+                            {t('webordersCollection')}
                           </div>
                         </td>
                         <td className="p-3 min-w-[150px] whitespace-nowrap">
@@ -299,12 +301,12 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                         </td>
                         <td className="p-3 min-w-[130px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            No
+                            {t('no')}
                           </div>
                         </td>
                         <td className="p-3 min-w-[110px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            {order.status === 'paid' ? 'Yes' : 'No'}
+                            {order.status === 'paid' ? t('yes') : t('no')}
                           </div>
                         </td>
                         <td className="p-3 min-w-[123px] whitespace-nowrap">
@@ -322,9 +324,9 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
                   {searchQuery ? (
-                    <span className="text-xl">No orders match &quot;{keyboardInputValue.trim()}&quot;</span>
+                    <span className="text-xl">{t('inPlanningNoOrdersMatch')} &quot;{keyboardInputValue.trim()}&quot;</span>
                   ) : (
-                    <span className="text-xl">{historyMode ? 'No orders for selected month' : 'No orders for selected date'}</span>
+                    <span className="text-xl">{historyMode ? t('inPlanningNoOrdersForMonth') : t('inPlanningNoOrdersForDate')}</span>
                   )}
                 </div>
               )}
@@ -348,7 +350,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 className={`px-1.5 py-1.5 w-[100px] rounded text-xl ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70'
                   }`}
               >
-                Production print
+                {t('inPlanningProductionPrint')}
               </button>
               <button
                 type="button"
@@ -356,9 +358,9 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 className={`px-1.5 py-1.5 w-[100px] rounded text-xl ${historyMode ? 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
                 onClick={() => !historyMode && setShowPrintOptionsModal(true)}
               >
-                Print all production
+                {t('inPlanningPrintAllProduction')}
               </button>
-              <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300">Print totals</button>
+              <button type="button" className="px-1.5 py-1.5 w-[100px] rounded bg-gray-200 text-gray-800 text-xl hover:bg-gray-300">{t('inPlanningPrintTotals')}</button>
             </div>
             <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white" />
             <div className="flex justify-around w-full gap-2 py-5">
@@ -424,10 +426,10 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
             </div>
             {/* Action buttons */}
             <div className="flex flex-col gap-2 text-xl w-[242px] justify-center items-center ml-2">
-              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>Load</button>
-              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>Add recurring order</button>
-              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>Cancel order</button>
-              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-400 text-gray-800 font-medium hover:bg-gray-500" onClick={onClose}>Close</button>
+              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>{t('inPlanningLoad')}</button>
+              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>{t('inPlanningAddRecurringOrder')}</button>
+              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>{t('webordersCancelOrder')}</button>
+              <button type="button" className="w-48 h-[70px] px-3 rounded bg-gray-400 text-gray-800 font-medium hover:bg-gray-500" onClick={onClose}>{t('webordersClose')}</button>
             </div>
           </div>
         </div>
@@ -471,14 +473,14 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300 text-center"
                 onClick={() => setShowPrintOptionsModal(false)}
               >
-                Print All
+                {t('inPlanningPrintAll')}
               </button>
               <button
                 type="button"
                 className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300 text-center"
                 onClick={() => setShowPrintOptionsModal(false)}
               >
-                Print new orders
+                {t('inPlanningPrintNewOrders')}
               </button>
             </div>
             <div className="flex justify-center items-center">
@@ -487,7 +489,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300"
                 onClick={() => setShowPrintOptionsModal(false)}
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>

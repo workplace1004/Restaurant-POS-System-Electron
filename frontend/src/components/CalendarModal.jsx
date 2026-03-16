@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export function CalendarModal({ open, onClose, value, onChange }) {
+  const { t } = useLanguage();
   const initial = value ? new Date(value) : new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
@@ -91,7 +93,7 @@ export function CalendarModal({ open, onClose, value, onChange }) {
         <div className="p-3">
           <div className="grid grid-cols-7 gap-0.5 text-center text-gray-500 text-3xl mb-2">
             {DAYS.map((d) => (
-              <div key={d} className="py-1">{d}</div>
+              <div key={d} className="py-1">{t(`calendarDay${d}`)}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-0.5">
@@ -110,7 +112,7 @@ export function CalendarModal({ open, onClose, value, onChange }) {
                   } ${selectedCell && todayCell ? 'ring-2 ring-blue-400 ring-offset-2' : ''}`}
                   onClick={() => handleSelect(cell)}
                 >
-                  {todayCell && <span className="absolute -mt-[72px] text-[20px] font-medium text-white leading-tight">Today</span>}
+                  {todayCell && <span className="absolute -mt-[72px] text-[20px] font-medium text-white leading-tight">{t('calendarToday')}</span>}
                   <span>{cell.day}</span>
                 </button>
               );

@@ -5,6 +5,7 @@ import { KeyboardWithNumpad } from './KeyboardWithNumpad';
 import { CalendarModal } from './CalendarModal';
 import { PaginationArrows } from './PaginationArrows';
 import { PrinterModal } from './PrinterModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const API = '/api';
 
@@ -34,7 +35,6 @@ const SUB_NAV_ITEMS = [
   'Categories',
   'Products',
   'Subproducts',
-  'Kitchen messages',
   'Discounts'
 ];
 
@@ -163,12 +163,6 @@ const PERIODIC_REPORT_TIME_OPTIONS = Array.from({ length: 25 }, (_, i) => {
   const label = i === 24 ? '24:00' : `${h}:00`;
   return { value: label, label };
 });
-
-const USER_ROLE_OPTIONS = [
-  { value: 'admin', label: 'Administrator' },
-  { value: 'waiter', label: 'Waiter' },
-  { value: 'kitchen', label: 'Kitchen' }
-];
 
 const USER_AVATAR_COLORS = ['#ef4444', '#22c55e', '#38bdf8', '#ec4899', '#a78bfa'];
 // User modal privilege avatars: blue, green, yellow, red, gray, dark gray, orange, magenta, pink
@@ -484,15 +478,12 @@ function TopNavIcon({ id, className }) {
 }
 
 export function ControlView({ currentUser, onLogout, onBack }) {
+  const { lang, setLang, t } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [toast, setToast] = useState(null);
   const [controlSidebarId, setControlSidebarId] = useState('personalize');
-  const [appLanguage, setAppLanguage] = useState(() => {
-    try {
-      const saved = typeof localStorage !== 'undefined' && localStorage.getItem('pos-language');
-      if (saved && LANGUAGE_OPTIONS.some((o) => o.value === saved)) return saved;
-    } catch (_) {}
-    return 'en';
-  });
+  const [appLanguage, setAppLanguage] = useState(() => (LANGUAGE_OPTIONS.some((o) => o.value === lang) ? lang : 'en'));
+  const [savingAppLanguage, setSavingAppLanguage] = useState(false);
   const [topNavId, setTopNavId] = useState('categories-products');
   const [subNavId, setSubNavId] = useState('Price Groups');
   const [reportTabId, setReportTabId] = useState('financial');
@@ -515,13 +506,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [userName, setUserName] = useState('');
-  const [userRole, setUserRole] = useState('waiter');
   const [userPin, setUserPin] = useState('');
   const [savingUser, setSavingUser] = useState(false);
   const [deleteConfirmUserId, setDeleteConfirmUserId] = useState(null);
   const [userModalTab, setUserModalTab] = useState('general');
-  const [userSocialSecurity, setUserSocialSecurity] = useState('');
-  const [userIdentification, setUserIdentification] = useState('');
   const [userAvatarColorIndex, setUserAvatarColorIndex] = useState(0);
   const [userModalActiveField, setUserModalActiveField] = useState(null);
   const [userPrivileges, setUserPrivileges] = useState(() => ({ ...DEFAULT_USER_PRIVILEGES }));
@@ -583,7 +571,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState(null);
-  const [productTab, setProductTab] = useState('General');
+  const [productTab, setProductTab] = useState('general');
   const [productTabsUnlocked, setProductTabsUnlocked] = useState(false);
   const [productDisplayNumber, setProductDisplayNumber] = useState(null);
   const [productName, setProductName] = useState('');
@@ -868,7 +856,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [scaleKeyboardValue, setScaleKeyboardValue] = useState('');
   const [savingScale, setSavingScale] = useState(false);
 
-  const [cashmaticIpPort, setCashmaticIpPort] = useState('');
+  const [cashmaticName, setCashmaticName] = useState('Cashmatic Terminal');
+  const [cashmaticConnectionType, setCashmaticConnectionType] = useState('tcp');
+  const [cashmaticIpAddress, setCashmaticIpAddress] = useState('');
+  const [cashmaticPort, setCashmaticPort] = useState('');
+  const [cashmaticUsername, setCashmaticUsername] = useState('');
+  const [cashmaticPassword, setCashmaticPassword] = useState('');
+  const [cashmaticUrl, setCashmaticUrl] = useState('');
+  const [cashmaticActiveField, setCashmaticActiveField] = useState('name');
   const [savingCashmatic, setSavingCashmatic] = useState(false);
 
   const [subproductGroups, setSubproductGroups] = useState([]);
@@ -900,6 +895,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [deleteConfirmGroupId, setDeleteConfirmGroupId] = useState(null);
   const [savingGroup, setSavingGroup] = useState(false);
   const [selectedManageGroupId, setSelectedManageGroupId] = useState(null);
+
+  const showToast = useCallback((type, text) => {
+    setToast({ id: Date.now(), type, text });
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const fetchPriceGroups = useCallback(async () => {
     setPriceGroupsLoading(true);
@@ -955,6 +960,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   useEffect(() => { setSubproductsPage(0); }, [selectedSubproductGroupId]);
   useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Kitchen messages') setKitchenMessagesPage(0);
+  }, [topNavId, subNavId]);
+  useEffect(() => {
+    if (topNavId === 'categories-products' && subNavId === 'Kitchen messages') {
+      setSubNavId('Price Groups');
+    }
   }, [topNavId, subNavId]);
   useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Discounts') setDiscountsPage(0);
@@ -1101,6 +1111,25 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const handleLogoutConfirm = () => {
     setShowLogoutModal(false);
     onLogout?.();
+  };
+
+  const tr = useCallback((key, fallback) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  }, [t]);
+
+  useEffect(() => {
+    if (LANGUAGE_OPTIONS.some((o) => o.value === lang)) setAppLanguage(lang);
+  }, [lang]);
+
+  const handleSaveAppLanguage = () => {
+    setSavingAppLanguage(true);
+    try {
+      setLang(appLanguage);
+      showToast('success', tr('control.languageUpdated', 'Language updated.'));
+    } finally {
+      setSavingAppLanguage(false);
+    }
   };
 
   const openPriceGroupModal = () => {
@@ -1277,7 +1306,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   const openProductModal = () => {
     setEditingProductId(null);
-    setProductTab('General');
+    setProductTab('general');
     setProductName('');
     setProductKeyName('');
     setProductProductionName('');
@@ -1299,7 +1328,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   const openEditProductModal = (product) => {
     setEditingProductId(product.id);
-    setProductTab('General');
+    setProductTab('general');
     setProductName(product.name || '');
     setProductKeyName(product.keyName ?? '');
     setProductProductionName(product.productionName ?? '');
@@ -2248,6 +2277,134 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     } catch (_) { }
   };
 
+  const parseSerialComPort = (connectionString = '') => {
+    const s = String(connectionString || '').trim();
+    if (!s) return '';
+    if (s.startsWith('serial://')) return (s.substring(9).split('?')[0] || '').trim().toUpperCase();
+    if (s.startsWith('\\\\.\\')) return s.substring(4).trim().toUpperCase();
+    return s.trim().toUpperCase();
+  };
+
+  const parseNetworkAddress = (connectionString = '') => {
+    const s = String(connectionString || '').trim();
+    if (!s.startsWith('tcp://')) return { ipAddress: '', port: '9100' };
+    const [ipAddress = '', port = '9100'] = s.substring(6).split(':');
+    return { ipAddress: ipAddress.trim(), port: String(port || '9100').trim() };
+  };
+
+  const mapApiPrinterToUi = (p, index) => {
+    const apiType = String(p?.type || '').toLowerCase();
+    const connection = String(p?.connection_string || '');
+    if (apiType === 'serial') {
+      return {
+        id: p.id,
+        name: p.name || '',
+        type: 'COM',
+        comPort: parseSerialComPort(connection),
+        baudrate: String(p?.baud_rate ?? '9600'),
+        characters: '48',
+        printerName: '',
+        ipAddress: '',
+        port: '',
+        standard: p?.is_main === 1,
+        isDefault: p?.is_main === 1,
+        numberOfPrints: 1,
+        productionTicketSize: 'normal',
+        vatTicketSize: 'normal',
+        spaceBetweenProducts: 'none',
+        logo: 'disable',
+        printerType: 'Esc',
+        sortOrder: index,
+      };
+    }
+    if (apiType === 'windows') {
+      if (connection.startsWith('tcp://')) {
+        const { ipAddress, port } = parseNetworkAddress(connection);
+        return {
+          id: p.id,
+          name: p.name || '',
+          type: 'Network',
+          comPort: '',
+          baudrate: '9600',
+          characters: '48',
+          printerName: '',
+          ipAddress,
+          port,
+          standard: p?.is_main === 1,
+          isDefault: p?.is_main === 1,
+          numberOfPrints: 1,
+          productionTicketSize: 'normal',
+          vatTicketSize: 'normal',
+          spaceBetweenProducts: 'none',
+          logo: 'disable',
+          printerType: 'Esc',
+          sortOrder: index,
+        };
+      }
+      return {
+        id: p.id,
+        name: p.name || '',
+        type: 'USB',
+        comPort: '',
+        baudrate: '9600',
+        characters: '48',
+        printerName: connection || '',
+        ipAddress: '',
+        port: '',
+        standard: p?.is_main === 1,
+        isDefault: p?.is_main === 1,
+        numberOfPrints: 1,
+        productionTicketSize: 'normal',
+        vatTicketSize: 'normal',
+        spaceBetweenProducts: 'none',
+        logo: 'disable',
+        printerType: 'Esc',
+        sortOrder: index,
+      };
+    }
+    return {
+      id: p?.id ?? `p-${index}`,
+      name: p?.name || '',
+      type: 'COM',
+      comPort: '',
+      baudrate: '9600',
+      characters: '48',
+      printerName: '',
+      ipAddress: '',
+      port: '',
+      standard: false,
+      isDefault: false,
+      numberOfPrints: 1,
+      productionTicketSize: 'normal',
+      vatTicketSize: 'normal',
+      spaceBetweenProducts: 'none',
+      logo: 'disable',
+      printerType: 'Esc',
+      sortOrder: index,
+    };
+  };
+
+  const fetchPrintersFromDb = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/printers`);
+      const data = await res.json().catch(() => null);
+      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+      if (!Array.isArray(list)) return;
+      const mapped = list.map((p, i) => mapApiPrinterToUi(p, i));
+      if (mapped.length) {
+        persistPrinters(mapped);
+      } else {
+        persistPrinters([]);
+      }
+    } catch {
+      // Keep existing local state when backend is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrintersFromDb();
+  }, [fetchPrintersFromDb]);
+
   const openNewPrinterModal = () => {
     setEditingPrinterId(null);
     setShowPrinterModal(true);
@@ -2263,28 +2420,84 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setEditingPrinterId(null);
   };
 
-  const handleSavePrinterPayload = (payload) => {
+  const handleSavePrinterPayload = async (payload) => {
     const sorted = [...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    if (editingPrinterId) {
-      const next = sorted.map((p) => (p.id === editingPrinterId ? { ...p, ...payload } : p));
-      persistPrinters(next);
-    } else {
-      const newId = 'prn-' + Date.now();
-      const next = [...sorted, { id: newId, ...payload, isDefault: false, sortOrder: sorted.length }];
-      persistPrinters(next);
+    const type = String(payload?.type || 'COM');
+    const apiType = type === 'COM' ? 'serial' : 'windows';
+    const connectionString =
+      type === 'COM'
+        ? `serial://${(payload?.comPort || '').trim().toUpperCase()}`
+        : type === 'USB'
+          ? String(payload?.printerName || '').trim()
+          : `tcp://${String(payload?.ipAddress || '').trim()}:${String(payload?.port || '9100').trim()}`;
+    const requestBody = {
+      name: String(payload?.name || '').trim(),
+      type: apiType,
+      connection_string: connectionString,
+      baud_rate: type === 'COM' ? payload?.baudrate : null,
+      data_bits: null,
+      parity: null,
+      stop_bits: null,
+      is_main: payload?.standard ? 1 : 0,
+      enabled: 1,
+    };
+    try {
+      const endpoint = editingPrinterId ? `${API}/printers/${editingPrinterId}` : `${API}/printers`;
+      const method = editingPrinterId ? 'PUT' : 'POST';
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchPrintersFromDb();
+      showToast('success', 'Printer saved to database.');
+      closePrinterModal();
+    } catch {
+      // Fallback to old local-only behavior if DB save fails.
+      if (editingPrinterId) {
+        const next = sorted.map((p) => (p.id === editingPrinterId ? { ...p, ...payload } : p));
+        persistPrinters(next);
+      } else {
+        const newId = 'prn-' + Date.now();
+        const next = [...sorted, { id: newId, ...payload, isDefault: false, sortOrder: sorted.length }];
+        persistPrinters(next);
+      }
+      showToast('error', 'Failed to save printer to database. Saved locally only.');
+      closePrinterModal();
     }
-    closePrinterModal();
   };
 
-  const setDefaultPrinter = (id) => {
-    const next = printers.map((p) => ({ ...p, isDefault: p.id === id }));
-    persistPrinters(next);
+  const setDefaultPrinter = async (id) => {
+    try {
+      const res = await fetch(`${API}/printers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_main: 1 }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchPrintersFromDb();
+      showToast('success', 'Default printer updated.');
+    } catch {
+      const next = printers.map((p) => ({ ...p, isDefault: p.id === id }));
+      persistPrinters(next);
+      showToast('error', 'Failed to update default printer in database. Updated locally only.');
+    }
   };
 
-  const handleDeletePrinter = (id) => {
-    const next = printers.filter((p) => p.id !== id).map((p, i) => ({ ...p, sortOrder: i }));
-    persistPrinters(next);
-    setDeleteConfirmPrinterId(null);
+  const handleDeletePrinter = async (id) => {
+    try {
+      const res = await fetch(`${API}/printers/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+      await fetchPrintersFromDb();
+      setDeleteConfirmPrinterId(null);
+      showToast('success', 'Printer deleted.');
+    } catch {
+      const next = printers.filter((p) => p.id !== id).map((p, i) => ({ ...p, sortOrder: i }));
+      persistPrinters(next);
+      setDeleteConfirmPrinterId(null);
+      showToast('error', 'Failed to delete printer from database. Deleted locally only.');
+    }
   };
 
   const movePrinter = (id, direction) => {
@@ -2597,7 +2810,19 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_cashmatic');
       if (raw) {
         const s = JSON.parse(raw);
-        if (s.ipPort != null) setCashmaticIpPort(s.ipPort);
+        if (s.name != null) setCashmaticName(String(s.name));
+        if (s.connectionType != null) setCashmaticConnectionType(String(s.connectionType).toLowerCase() === 'api' ? 'api' : 'tcp');
+        if (s.ip != null) setCashmaticIpAddress(String(s.ip));
+        if (s.port != null) setCashmaticPort(String(s.port));
+        if (s.username != null) setCashmaticUsername(String(s.username));
+        if (s.password != null) setCashmaticPassword(String(s.password));
+        if (s.url != null) setCashmaticUrl(String(s.url));
+        // Backward compatibility with old "ipPort" format
+        if ((s.ip == null || s.port == null) && s.ipPort) {
+          const [ip, port] = String(s.ipPort).split(':');
+          if (ip && s.ip == null) setCashmaticIpAddress(ip);
+          if (port && s.port == null) setCashmaticPort(port);
+        }
       }
     } catch (_) { }
   }, [topNavId, subNavId]);
@@ -2661,10 +2886,40 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const handleSaveCashmatic = () => {
     setSavingCashmatic(true);
     try {
-      if (typeof localStorage !== 'undefined') localStorage.setItem('pos_cashmatic', JSON.stringify({ ipPort: cashmaticIpPort }));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pos_cashmatic', JSON.stringify({
+          name: cashmaticName,
+          connectionType: cashmaticConnectionType,
+          ip: cashmaticIpAddress,
+          port: cashmaticPort,
+          username: cashmaticUsername,
+          password: cashmaticPassword,
+          url: cashmaticUrl,
+          ipPort: `${cashmaticIpAddress}${cashmaticPort ? `:${cashmaticPort}` : ''}`,
+        }));
+      }
+      showToast('success', 'Cashmatic settings saved.');
     } finally {
       setSavingCashmatic(false);
     }
+  };
+
+  const cashmaticKeyboardValue =
+    cashmaticActiveField === 'name' ? cashmaticName
+      : cashmaticActiveField === 'ip' ? cashmaticIpAddress
+        : cashmaticActiveField === 'port' ? cashmaticPort
+          : cashmaticActiveField === 'username' ? cashmaticUsername
+            : cashmaticActiveField === 'password' ? cashmaticPassword
+              : cashmaticActiveField === 'url' ? cashmaticUrl
+                : '';
+
+  const cashmaticKeyboardOnChange = (v) => {
+    if (cashmaticActiveField === 'name') setCashmaticName(v);
+    else if (cashmaticActiveField === 'ip') setCashmaticIpAddress(v);
+    else if (cashmaticActiveField === 'port') setCashmaticPort(v);
+    else if (cashmaticActiveField === 'username') setCashmaticUsername(v);
+    else if (cashmaticActiveField === 'password') setCashmaticPassword(v);
+    else if (cashmaticActiveField === 'url') setCashmaticUrl(v);
   };
 
   const setReportSetting = (rowId, column, value) => {
@@ -2686,28 +2941,34 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const openNewUserModal = () => {
     setEditingUserId(null);
     setUserName('');
-    setUserRole('waiter');
     setUserPin('');
     setUserModalTab('general');
-    setUserSocialSecurity('');
-    setUserIdentification('');
     setUserAvatarColorIndex(0);
     setUserModalActiveField(null);
     setUserPrivileges({ ...DEFAULT_USER_PRIVILEGES });
     setShowUserModal(true);
   };
 
-  const openEditUserModal = (u) => {
+  const openEditUserModal = async (u) => {
     setEditingUserId(u.id);
     setUserName(u.name || '');
-    setUserRole(u.role === 'admin' ? 'admin' : u.role === 'kitchen' ? 'kitchen' : 'waiter');
     setUserPin('');
     setUserModalTab('general');
-    setUserSocialSecurity('');
-    setUserIdentification('');
     setUserAvatarColorIndex(0);
     setUserModalActiveField(null);
     setUserPrivileges({ ...DEFAULT_USER_PRIVILEGES });
+    try {
+      const res = await fetch(`${API}/users/${u.id}`);
+      const data = await res.json();
+      if (res.ok && data) {
+        setUserName(data.name || '');
+        setUserPin(data.pin != null ? String(data.pin) : '');
+      } else {
+        showToast('error', data?.error || 'Failed to load user details');
+      }
+    } catch {
+      showToast('error', 'Failed to load user details');
+    }
     setShowUserModal(true);
   };
 
@@ -2715,29 +2976,24 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setShowUserModal(false);
     setEditingUserId(null);
     setUserName('');
-    setUserRole('waiter');
     setUserPin('');
     setUserModalTab('general');
-    setUserSocialSecurity('');
-    setUserIdentification('');
     setUserAvatarColorIndex(0);
     setUserModalActiveField(null);
     setUserPrivileges({ ...DEFAULT_USER_PRIVILEGES });
   };
 
-  const userModalKeyboardValue = userModalActiveField === 'name' ? userName : userModalActiveField === 'pincode' ? userPin : userModalActiveField === 'socialSecurity' ? userSocialSecurity : userModalActiveField === 'identification' ? userIdentification : '';
+  const userModalKeyboardValue = userModalActiveField === 'name' ? userName : userModalActiveField === 'pincode' ? userPin : '';
   const userModalKeyboardOnChange = (v) => {
     if (userModalActiveField === 'name') setUserName(v);
     else if (userModalActiveField === 'pincode') setUserPin(v);
-    else if (userModalActiveField === 'socialSecurity') setUserSocialSecurity(v);
-    else if (userModalActiveField === 'identification') setUserIdentification(v);
   };
 
   const handleSaveUser = async () => {
     setSavingUser(true);
     try {
       if (editingUserId) {
-        const body = { name: userName.trim() || 'New user', role: userRole };
+        const body = { name: userName.trim() || 'New user' };
         if (userPin !== '') body.pin = userPin;
         const res = await fetch(`${API}/users/${editingUserId}`, {
           method: 'PATCH',
@@ -2753,7 +3009,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         const res = await fetch(`${API}/users`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: userName.trim() || 'New user', role: userRole, pin: userPin || '1234' })
+          body: JSON.stringify({ name: userName.trim() || 'New user', pin: userPin || '1234' })
         });
         const created = await res.json();
         if (res.ok && created) {
@@ -2776,8 +3032,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     }
     setDeleteConfirmUserId(null);
   };
-
-  const roleLabel = (role) => USER_ROLE_OPTIONS.find((o) => o.value === role)?.label ?? (role === 'admin' ? 'Administrator' : 'Waiter');
 
   useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Discounts') return;
@@ -2937,7 +3191,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               onClick={() => setControlSidebarId(item.id)}
             >
               <SidebarIcon id={item.icon} className="w-8 h-8 shrink-0" />
-              {item.label}
+              {tr(`control.sidebar.${item.id}`, item.label)}
             </button>
           ))}
         </nav>
@@ -2949,30 +3203,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
             <button
               type="button"
               className="text-left px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
-              onClick={() => setShowLogoutModal(true)}
+              onClick={() => onBack?.()}
             >
-              Log out
+              {tr('backName', 'Back')}
             </button>
-          </div>
-          <div className="px-16 mt-10 py-3 flex justify-center border-t border-gray-500">
             <button
               type="button"
               className="text-left px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
-              onClick={onBack}
+              onClick={() => setShowLogoutModal(true)}
             >
-              Back
-            </button>
-
-          </div>
-          <div className="flex flex-wrap gap-2 text-xl font-semibold text-white">
-            <button type="button" className="px-3.5 py-2.5 rounded-md bg-pos-bg hover:text-pos-text border border-pos-border">
-              Info
-            </button>
-            <button type="button" className="px-3.5 py-2.5 rounded-md bg-pos-bg hover:text-pos-text border border-pos-border">
-              Changelog
-            </button>
-            <button type="button" className="px-3.5 py-2.5 rounded-md bg-pos-bg hover:text-pos-text border border-pos-border">
-              Backup
+              {tr('logOut', 'Log out')}
             </button>
           </div>
         </div>
@@ -2999,7 +3239,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 }}
               >
                 <TopNavIcon id={item.icon} className="w-8 h-8 shrink-0" />
-                {item.label}
+                {tr(`control.topNav.${item.id}`, item.label)}
               </button>
             ))}
           </div>
@@ -3019,7 +3259,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 onClick={() => setReportTabId(item.id)}
               >
                 <ReportTabIcon id={item.icon} className="w-8 h-8 shrink-0" />
-                {item.label}
+                {tr(`control.reportTabs.${item.id}`, item.label)}
               </button>
             ))}
           </div>
@@ -3038,7 +3278,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   }`}
                 onClick={() => setSubNavId(label)}
               >
-                {label}
+                {tr(`control.subNav.${label}`, label)}
               </button>
             ))}
           </div>
@@ -3062,7 +3302,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   if (label === 'Production messages') setShowProductionMessagesModal(true);
                 }}
               >
-                {label}
+                {tr(`control.subNav.${label}`, label)}
               </button>
             ))}
           </div>
@@ -3081,7 +3321,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   }`}
                 onClick={() => setSubNavId(label)}
               >
-                {label}
+                {tr(`control.subNav.${label}`, label)}
               </button>
             ))}
           </div>
@@ -3354,9 +3594,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </button>
                 </div>
                 {usersLoading ? (
-                  <p className="text-pos-muted text-xl py-8 text-center">Loading users…</p>
+                  <p className="text-pos-muted text-xl py-8 text-center">{tr('loginLoadingUsers', 'Loading users...')}</p>
                 ) : users.length === 0 ? (
-                  <p className="text-pos-muted text-xl py-8 text-center">No users yet.</p>
+                  <p className="text-pos-muted text-xl py-8 text-center">{tr('control.users.empty', 'No users yet.')}</p>
                 ) : (
                   <>
                     <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
@@ -3377,7 +3617,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             </div>
                           </div>
                           <div className='flex items-center'>
-                            <div className="text-xl w-[200px] pr-[500px]">{roleLabel(u.role)}</div>
                             <button
                               type="button"
                               className="p-2 rounded text-pos-text pr-20 hover:bg-pos-bg"
@@ -3409,31 +3648,36 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               </div>
             );
           })() : controlSidebarId === 'language' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[400px]">
-              <h2 className="text-pos-text text-2xl font-medium mb-6">Language</h2>
-              <p className="text-pos-muted text-xl mb-8">Select the language for the application.</p>
-              <div className="flex flex-wrap gap-4">
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[700px]">
+              <h2 className="text-pos-text text-2xl font-medium mb-6">{tr('control.languageTitle', 'Language')}</h2>
+              <p className="text-pos-muted text-xl mb-8">{tr('control.languageDescription', 'Select the language for the application.')}</p>
+              <div className="flex flex-wrap gap-4 w-full flex justify-center min-h-[200px] items-center">
                 {LANGUAGE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => {
-                      setAppLanguage(opt.value);
-                      try {
-                        if (typeof localStorage !== 'undefined') localStorage.setItem('pos-language', opt.value);
-                      } catch (_) {}
-                    }}
-                    className={`px-8 py-4 rounded-xl text-xl font-medium border-2 transition-colors ${
-                      appLanguage === opt.value
-                        ? 'bg-pos-panel border-green-500 text-green-400'
-                        : 'bg-pos-bg border-pos-border text-pos-text hover:border-pos-muted hover:bg-pos-panel/50'
-                    }`}
+                    onClick={() => setAppLanguage(opt.value)}
+                    className={`px-8 py-4 rounded-xl text-xl font-medium border-2 transition-colors ${appLanguage === opt.value
+                      ? 'bg-pos-panel border-green-500 text-green-400'
+                      : 'bg-pos-bg border-pos-border text-pos-text hover:border-pos-muted hover:bg-pos-panel/50'
+                      }`}
                   >
-                    {opt.label}
+                    {tr(`control.languageOption.${opt.value}`, opt.label)}
                   </button>
                 ))}
               </div>
-              <p className="text-pos-muted text-lg mt-8">Current language: {LANGUAGE_OPTIONS.find((o) => o.value === appLanguage)?.label ?? 'English'}</p>
+              <div className="mt-10 flex w-full justify-center">
+                <button
+                  type="button"
+                  className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
+                  disabled={savingAppLanguage || appLanguage === lang}
+                  onClick={handleSaveAppLanguage}
+                >
+                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  {tr('control.save', 'Save')}
+                </button>
+              </div>
+              <p className="text-pos-muted text-lg mt-8 text-center">{tr('control.currentLanguage', 'Current language')}: {tr(`control.languageOption.${appLanguage}`, LANGUAGE_OPTIONS.find((o) => o.value === appLanguage)?.label ?? 'English')}</p>
             </div>
           ) : topNavId === 'cash-register' ? (
             <div className="rounded-xl p-8 pb-0 min-h-[300px]">
@@ -3556,15 +3800,15 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   disabled={priceGroupsLoading}
                   onClick={openPriceGroupModal}
                 >
-                  New price group
+                  {tr('control.priceGroups.new', 'New price group')}
                 </button>
               </div>
               {(() => {
                 if (priceGroupsLoading) {
-                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl py-4">Loading price groups…</li></ul>;
+                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl py-4">{tr('control.priceGroups.loading', 'Loading price groups...')}</li></ul>;
                 }
                 if (priceGroups.length === 0) {
-                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-3xl py-4">No price groups yet.</li></ul>;
+                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-3xl py-4">{tr('control.priceGroups.empty', 'No price groups yet.')}</li></ul>;
                 }
                 const total = priceGroups.length;
                 const totalPages = Math.max(1, Math.ceil(total / PRICE_GROUPS_PAGE_SIZE));
@@ -3630,14 +3874,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     disabled={categoriesLoading}
                     onClick={openCategoryModal}
                   >
-                    New category
+                    {tr('control.categories.new', 'New category')}
                   </button>
                 </div>
                 <ul className="w-full flex flex-col justify-center items-center">
                   {categoriesLoading ? (
-                    <li className="text-pos-muted text-xl py-4">Loading categories…</li>
+                    <li className="text-pos-muted text-xl py-4">{tr('control.categories.loading', 'Loading categories...')}</li>
                   ) : sortedCategories.length === 0 ? (
-                    <li className="text-pos-muted text-3xl py-4">No categories yet.</li>
+                    <li className="text-pos-muted text-3xl py-4">{tr('control.categories.empty', 'No categories yet.')}</li>
                   ) : (
                     paginatedCategories.map((cat, index) => {
                       const globalIndex = page * CATEGORIES_PER_PAGE + index;
@@ -3719,19 +3963,19 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     onClick={openProductModal}
                     className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                   >
-                    New Product
+                    {tr('control.products.new', 'New Product')}
                   </button>
                   <button
                     type="button"
                     className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                   >
-                    Positioning
+                    {tr('control.products.positioning', 'Positioning')}
                   </button>
                   <input
                     type="text"
                     readOnly
                     value={productSearch}
-                    placeholder="Search products"
+                    placeholder={tr('control.products.searchPlaceholder', 'Search products')}
                     onClick={() => setShowProductSearchKeyboard(true)}
                     onFocus={() => setShowProductSearchKeyboard(true)}
                     className="px-4 py-2 rounded-lg bg-pos-bg border border-pos-border text-pos-text text-xl min-w-[200px] placeholder:text-pos-muted cursor-pointer"
@@ -3782,11 +4026,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 {/* Product list: name (left), Subproducts (center), Edit/Delete (right) */}
                 <div className="flex-1 overflow-auto border border-pos-border rounded-lg bg-pos-bg">
                   {!selectedCategoryId ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">Select a category or add one in Categories.</p>
+                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.products.selectCategoryHint', 'Select a category or add one in Categories.')}</p>
                   ) : productsLoading ? (
-                    <p className="text-pos-muted text-xl p-6">Loading products…</p>
+                    <p className="text-pos-muted text-xl p-6">{tr('control.products.loading', 'Loading products...')}</p>
                   ) : filteredProducts.length === 0 ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">No products in this category yet.</p>
+                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.products.emptyInCategory', 'No products in this category yet.')}</p>
                   ) : (
                     <ul className="w-full">
                       {paginatedProducts.map((product) => (
@@ -3799,7 +4043,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             {product.name}
                           </span>
                           <span className="flex-shrink-0 min-w-[30%] text-center text-pos-muted text-xl">
-                            Subproducts
+                            {tr('control.products.subproductsColumn', 'Subproducts')}
                           </span>
                           <div className="flex items-center justify-end min-w-[40%] gap-10 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
@@ -3850,14 +4094,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     disabled={subproductsLoading}
                     onClick={openSubproductModal}
                   >
-                    New subproduct
+                    {tr('control.subproducts.new', 'New subproduct')}
                   </button>
                   <button
                     type="button"
                     className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
                     onClick={() => setShowManageGroupsModal(true)}
                   >
-                    Manage Groups
+                    {tr('control.subproducts.manageGroups', 'Manage Groups')}
                   </button>
                 </div>
                 {subproductGroups.length > 0 && (
@@ -3894,13 +4138,13 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 )}
                 <div className="flex-1 overflow-auto border border-gray-400 rounded-lg min-h-[200px]">
                   {!selectedSubproductGroupId ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">Select a group or add one via Manage Groups.</p>
+                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.subproducts.selectGroupHint', 'Select a group or add one via Manage Groups.')}</p>
                   ) : subproductGroupsLoading ? (
-                    <p className="text-pos-muted text-xl p-6">Loading groups…</p>
+                    <p className="text-pos-muted text-xl p-6">{tr('control.subproducts.loadingGroups', 'Loading groups...')}</p>
                   ) : subproductsLoading ? (
-                    <p className="text-pos-muted text-xl p-6">Loading subproducts…</p>
+                    <p className="text-pos-muted text-xl p-6">{tr('control.subproducts.loading', 'Loading subproducts...')}</p>
                   ) : subproducts.length === 0 ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">No subproducts in this group yet.</p>
+                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.subproducts.empty', 'No subproducts in this group yet.')}</p>
                   ) : (
                     <ul className="w-full">
                       {paginatedSubproducts.map((sp) => (
@@ -3950,7 +4194,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </button>
                 </div>
                 {kitchenMessages.length === 0 ? (
-                  <p className="text-pos-muted text-xl py-14 text-center">No kitchen messages yet.</p>
+                  <p className="text-pos-muted text-xl py-14 text-center">{tr('control.kitchenMessages.empty', 'No kitchen messages yet.')}</p>
                 ) : (
                   <>
                     <ul className="w-full flex flex-col border rounded-lg border-pos-border overflow-hidden bg-pos-bg/50">
@@ -4004,11 +4248,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
                     onClick={openNewDiscountModal}
                   >
-                    New discount
+                    {tr('control.discounts.new', 'New discount')}
                   </button>
                 </div>
                 {discounts.length === 0 ? (
-                  <p className="text-pos-muted text-xl py-8 text-center">No discounts yet.</p>
+                  <p className="text-pos-muted text-xl py-8 text-center">{tr('control.discounts.empty', 'No discounts yet.')}</p>
                 ) : (
                   <>
                     <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
@@ -4396,27 +4640,116 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
               {subNavId === 'Cashmatic' && (
-                <div className="flex flex-col min-h-[820px] justify-between items-center">
-                  <div className="flex flex-col gap-6 mb-6">
-                    <div className="flex items-center justify-center gap-10 mt-[50px]">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Ip + Port:</label>
+                <div className="flex flex-col min-h-[820px] justify-between relative">
+                  <div className="flex flex-col gap-6 mb-6 mt-[30px] px-[200px]">
+                    <div className="flex items-center gap-8">
+                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Name *</label>
                       <input
                         type="text"
-                        value={cashmaticIpPort}
-                        onChange={(e) => setCashmaticIpPort(e.target.value)}
-                        placeholder="e.g. 192.168.1.58:50301"
-                        className="min-w-[280px] px-4 py-3 text-xl rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        value={cashmaticName}
+                        onChange={(e) => setCashmaticName(e.target.value)}
+                        onFocus={() => setCashmaticActiveField('name')}
+                        onClick={() => setCashmaticActiveField('name')}
+                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
                       />
                     </div>
-                    <div className="flex justify-center mt-[100px]">
+                    <div className="flex items-center gap-8">
+                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Connection type *</label>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          className={`px-8 py-3 text-2xl font-medium ${cashmaticConnectionType === 'tcp' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text'}`}
+                          onClick={() => setCashmaticConnectionType('tcp')}
+                        >
+                          TCP/IP
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-8 py-3 text-2xl font-medium ${cashmaticConnectionType === 'api' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text'}`}
+                          onClick={() => setCashmaticConnectionType('api')}
+                        >
+                          API
+                        </button>
+                      </div>
+                    </div>
+                    {cashmaticConnectionType === 'tcp' ? (
+                      <>
+                        <div className="flex-col flex gap-8">
+                          <div className="flex items-center gap-8">
+                            <div className="flex items-center gap-8">
+                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">IP address *</label>
+                              <input
+                                type="text"
+                                value={cashmaticIpAddress}
+                                onChange={(e) => setCashmaticIpAddress(e.target.value)}
+                                onFocus={() => setCashmaticActiveField('ip')}
+                                onClick={() => setCashmaticActiveField('ip')}
+                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-8">
+                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Port *</label>
+                              <input
+                                type="text"
+                                value={cashmaticPort}
+                                onChange={(e) => setCashmaticPort(e.target.value)}
+                                onFocus={() => setCashmaticActiveField('port')}
+                                onClick={() => setCashmaticActiveField('port')}
+                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-8">
+                            <div className="flex items-center gap-8">
+                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Username</label>
+                              <input
+                                type="text"
+                                value={cashmaticUsername}
+                                onChange={(e) => setCashmaticUsername(e.target.value)}
+                                onFocus={() => setCashmaticActiveField('username')}
+                                onClick={() => setCashmaticActiveField('username')}
+                                placeholder="Optional"
+                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-8">
+                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Password</label>
+                              <input
+                                type="text"
+                                value={cashmaticPassword}
+                                onChange={(e) => setCashmaticPassword(e.target.value)}
+                                onFocus={() => setCashmaticActiveField('password')}
+                                onClick={() => setCashmaticActiveField('password')}
+                                placeholder="Optional"
+                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-8">
+                        <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">URL *</label>
+                        <input
+                          type="text"
+                          value={cashmaticUrl}
+                          onChange={(e) => setCashmaticUrl(e.target.value)}
+                          onFocus={() => setCashmaticActiveField('url')}
+                          onClick={() => setCashmaticActiveField('url')}
+                          placeholder="https://api.example.com"
+                          className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        />
+                      </div>
+                    )}
+                    <div className="flex justify-center mt-[10px]">
                       <button type="button" className="flex items-center text-2xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
                         <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
                   </div>
-                  <div className="shrink-0 pt-4">
-                    <KeyboardWithNumpad value={cashmaticIpPort} onChange={setCashmaticIpPort} />
+                  <div className="shrink-0 w-full justify-center flex absolute bottom-0 left-0 right-0 -mb-10">
+                    <KeyboardWithNumpad value={cashmaticKeyboardValue} onChange={cashmaticKeyboardOnChange} />
                   </div>
                 </div>
               )}
@@ -4437,14 +4770,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     disabled={tableLocationsLoading}
                     onClick={openTableLocationModal}
                   >
-                    New table
+                    {tr('control.tables.new', 'New table')}
                   </button>
                 </div>
                 <ul className="w-full flex flex-col">
                   {tableLocationsLoading ? (
-                    <li className="text-pos-muted text-xl py-4">Loading table locations…</li>
+                    <li className="text-pos-muted text-xl py-4">{tr('control.tables.loading', 'Loading table locations...')}</li>
                   ) : tableLocations.length === 0 ? (
-                    <li className="text-pos-muted text-xl py-6 text-center">No table locations yet.</li>
+                    <li className="text-pos-muted text-xl py-6 text-center">{tr('control.tables.empty', 'No table locations yet.')}</li>
                   ) : (
                     paginatedTableLocations.map((loc) => (
                       <li
@@ -4457,7 +4790,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             type="button"
                             className="px-4 pr-20 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
                           >
-                            Set tables
+                            {tr('control.tables.setTables', 'Set tables')}
                           </button>
                           <button
                             type="button"
@@ -4498,73 +4831,73 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         open={deleteConfirmId !== null}
         onClose={() => setDeleteConfirmId(null)}
         onConfirm={() => handleDeletePriceGroup(deleteConfirmId)}
-        message="Are you sure you want to delete this price group?"
+        message={tr('control.confirm.deletePriceGroup', 'Are you sure you want to delete this price group?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmCategoryId !== null}
         onClose={() => setDeleteConfirmCategoryId(null)}
         onConfirm={() => handleDeleteCategory(deleteConfirmCategoryId)}
-        message="Are you sure you want to delete this category?"
+        message={tr('control.confirm.deleteCategory', 'Are you sure you want to delete this category?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmProductId !== null}
         onClose={() => setDeleteConfirmProductId(null)}
         onConfirm={() => handleDeleteProduct(deleteConfirmProductId)}
-        message="Are you sure you want to delete this product?"
+        message={tr('control.confirm.deleteProduct', 'Are you sure you want to delete this product?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmSubproductId !== null}
         onClose={() => setDeleteConfirmSubproductId(null)}
         onConfirm={() => handleDeleteSubproduct(deleteConfirmSubproductId)}
-        message="Are you sure you want to delete this subproduct?"
+        message={tr('control.confirm.deleteSubproduct', 'Are you sure you want to delete this subproduct?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmGroupId !== null}
         onClose={() => setDeleteConfirmGroupId(null)}
         onConfirm={() => handleDeleteGroup(deleteConfirmGroupId)}
-        message="Are you sure you want to delete this group? Subproducts in it will also be deleted."
+        message={tr('control.confirm.deleteGroup', 'Are you sure you want to delete this group? Subproducts in it will also be deleted.')}
       />
       <DeleteConfirmModal
         open={deleteConfirmTableLocationId !== null}
         onClose={() => setDeleteConfirmTableLocationId(null)}
         onConfirm={() => handleDeleteTableLocation(deleteConfirmTableLocationId)}
-        message="Are you sure you want to delete this table location?"
+        message={tr('control.confirm.deleteTableLocation', 'Are you sure you want to delete this table location?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmProductionMessageId !== null}
         onClose={() => setDeleteConfirmProductionMessageId(null)}
         onConfirm={() => handleDeleteProductionMessage(deleteConfirmProductionMessageId)}
-        message="Are you sure you want to delete this production message?"
+        message={tr('control.confirm.deleteProductionMessage', 'Are you sure you want to delete this production message?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmPrinterId !== null}
         onClose={() => setDeleteConfirmPrinterId(null)}
         onConfirm={() => handleDeletePrinter(deleteConfirmPrinterId)}
-        message="Are you sure you want to delete this printer?"
+        message={tr('control.confirm.deletePrinter', 'Are you sure you want to delete this printer?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmLabelId !== null}
         onClose={() => setDeleteConfirmLabelId(null)}
         onConfirm={() => handleDeleteLabel(deleteConfirmLabelId)}
-        message="Are you sure you want to delete this label?"
+        message={tr('control.confirm.deleteLabel', 'Are you sure you want to delete this label?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmUserId !== null}
         onClose={() => setDeleteConfirmUserId(null)}
         onConfirm={() => handleDeleteUser(deleteConfirmUserId)}
-        message="Are you sure you want to delete this user?"
+        message={tr('control.confirm.deleteUser', 'Are you sure you want to delete this user?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmDiscountId !== null}
         onClose={() => setDeleteConfirmDiscountId(null)}
         onConfirm={() => handleDeleteDiscount(deleteConfirmDiscountId)}
-        message="Are you sure you want to delete this discount?"
+        message={tr('control.confirm.deleteDiscount', 'Are you sure you want to delete this discount?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmKitchenMessageId !== null}
         onClose={() => setDeleteConfirmKitchenMessageId(null)}
         onConfirm={() => handleDeleteKitchenMessage(deleteConfirmKitchenMessageId)}
-        message="Are you sure you want to delete this kitchen message?"
+        message={tr('control.confirm.deleteKitchenMessage', 'Are you sure you want to delete this kitchen message?')}
       />
 
       {/* New / Edit user modal — General + Privileges tabs, keyboard like other modals */}
@@ -4575,15 +4908,15 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex justify-around mt-[50px] shrink-0">
-              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'general' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('general')}>General</button>
-              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'privileges' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('privileges')}>Privileges</button>
+              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'general' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('general')}>{tr('control.userModal.general', 'General')}</button>
+              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'privileges' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('privileges')}>{tr('control.userModal.privileges', 'Privileges')}</button>
             </div>
             <div className="flex-1 overflow-hidden px-14 py-8">
               {userModalTab === 'general' ? (
                 <div className="grid grid-cols-2 gap-16 max-w-[1100px] mx-auto">
                   <div className="flex flex-col gap-6">
                     <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Name:</label>
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">{tr('name', 'Name')}:</label>
                       <input
                         type="text"
                         value={userName}
@@ -4594,46 +4927,20 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       />
                     </div>
                     <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Pincode:</label>
+                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">{tr('control.userModal.pincode', 'Pincode')}:</label>
                       <input
                         type="text"
                         value={userPin}
                         onChange={(e) => setUserPin(e.target.value)}
                         onFocus={() => setUserModalActiveField('pincode')}
-                        placeholder={editingUserId ? 'Leave blank to keep' : ''}
+                        placeholder=""
                         className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
                         autoComplete="new-password"
                       />
                     </div>
-                    <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Social security number:</label>
-                      <input
-                        type="text"
-                        value={userSocialSecurity}
-                        onChange={(e) => setUserSocialSecurity(e.target.value)}
-                        onFocus={() => setUserModalActiveField('socialSecurity')}
-                        placeholder=""
-                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
-                      />
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Identification:</label>
-                      <input
-                        type="text"
-                        value={userIdentification}
-                        onChange={(e) => setUserIdentification(e.target.value)}
-                        onFocus={() => setUserModalActiveField('identification')}
-                        placeholder=""
-                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
-                      />
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">Role:</label>
-                      <Dropdown options={USER_ROLE_OPTIONS} value={userRole} onChange={setUserRole} placeholder="Administrator" className="text-xl min-w-[240px]" />
-                    </div>
                   </div>
                   <div className="flex flex-col gap-4">
-                    <div className="text-pos-text text-xl font-medium mb-2">Privileges</div>
+                    <div className="text-pos-text text-xl font-medium mb-2">{tr('control.userModal.privileges', 'Privileges')}</div>
                     <div className="grid grid-cols-3 gap-4">
                       {USER_PRIVILEGE_AVATAR_COLORS.map((color, idx) => (
                         <button
@@ -4863,7 +5170,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   type="text"
                   readOnly
                   value={tableLocationName}
-                  placeholder="e.g. zaal 1"
+                  placeholder="e.g. room 1"
                   className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
                 />
               </div>
@@ -5460,11 +5767,25 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         </div>
       )}
 
+      {toast ? (
+        <div className="fixed top-6 right-6 z-[100] pointer-events-none">
+          <div
+            className={`min-w-[320px] max-w-[520px] px-4 py-3 rounded-lg shadow-xl border text-xl ${toast.type === 'success'
+              ? 'bg-emerald-700/90 border-emerald-500 text-emerald-100'
+              : 'bg-rose-700/90 border-rose-500 text-rose-100'
+              }`}
+          >
+            {toast.text}
+          </div>
+        </div>
+      ) : null}
+
       <PrinterModal
         open={showPrinterModal}
         initialPrinter={editingPrinterId ? (printers.find((p) => p.id === editingPrinterId) ?? null) : null}
         onClose={closePrinterModal}
         onSave={handleSavePrinterPayload}
+        onNotify={showToast}
       />
 
       {/* New / Edit label modal */}
@@ -5610,22 +5931,22 @@ export function ControlView({ currentUser, onLogout, onBack }) {
             <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-14">
               <div className='w-full flex flex-col h-[400px] justify-center items-center gap-10'>
                 <div className="flex gap-2 w-full items-center justify-center h-[100px]">
-                  <label className="block text-3xl pr-[50px] font-medium text-gray-200 mb-2">Name : </label>
+                  <label className="block text-3xl pr-[50px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
                     readOnly
                     value={priceGroupName}
-                    placeholder="Enter name"
+                    placeholder={tr('control.enterName', 'Enter name')}
                     className="px-4 w-[300px] bg-pos-panel h-[60px] py-3 text-xl border border-gray-300 rounded-lg text-gray-200"
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center h-[100px]">
-                  <label className="block text-3xl pr-[80px] font-medium text-gray-200 mb-2">VAT : </label>
+                  <label className="block text-3xl pr-[80px] font-medium text-gray-200 mb-2">{tr('control.vat', 'VAT')} : </label>
                   <Dropdown
-                    options={VAT_OPTIONS}
+                    options={VAT_OPTIONS.map((o) => ({ ...o, label: tr(`vatOption.${o.value}`, o.label) }))}
                     value={priceGroupTax}
                     onChange={setPriceGroupTax}
-                    placeholder="Select VAT"
+                    placeholder={tr('control.selectVat', 'Select VAT')}
                     className="text-xl min-w-[300px]"
                   />
                 </div>
@@ -5640,7 +5961,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <svg fill="#ffffff" width="30px" height="30px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
                     <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                   </svg>
-                  Save
+                  {tr('control.save', 'Save')}
                 </button>
               </div>
             </div>
@@ -5659,7 +5980,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
             <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center overflow-auto pt-14">
               <div className="w-full flex flex-col justify-center items-center gap-6 max-w-2xl">
                 <div className="flex gap-2 w-full items-center mt-8">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">Name :</label>
+                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('name', 'Name')} :</label>
                   <input
                     type="text"
                     readOnly
@@ -5670,7 +5991,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">In webshop :</label>
+                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('control.inWebshop', 'In webshop')} :</label>
                   <input
                     type="checkbox"
                     checked={categoryInWebshop}
@@ -5679,7 +6000,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">Display on this cash register :</label>
+                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('control.displayOnThisCashRegister', 'Display on this cash register')} :</label>
                   <input
                     type="checkbox"
                     checked={categoryDisplayOnCashRegister}
@@ -5688,7 +6009,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">Next course :</label>
+                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('nextCourse', 'Next course')} :</label>
                   <input
                     type="text"
                     readOnly
@@ -5709,7 +6030,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <svg fill="#ffffff" width="30px" height="30px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
                     <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                   </svg>
-                  Save
+                  {tr('control.save', 'Save')}
                 </button>
               </div>
             </div>
@@ -5729,49 +6050,56 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex gap-1 w-full justify-around px-4 py-2 py-5 shrink-0 pr-14">
-              {['General', 'Advanced', 'Extra prices', 'Purchase and stock', 'Webshop', 'Kiosk'].map((tab) => {
-                const isLocked = tab !== 'General' && !productTabsUnlocked;
+              {[
+                { id: 'general', label: tr('control.productModal.tab.general', 'General') },
+                { id: 'advanced', label: tr('control.productModal.tab.advanced', 'Advanced') },
+                { id: 'extra_prices', label: tr('control.productModal.tab.extraPrices', 'Extra prices') },
+                { id: 'purchase_stock', label: tr('control.productModal.tab.purchaseStock', 'Purchase and stock') },
+                { id: 'webshop', label: tr('control.productModal.tab.webshop', 'Webshop') },
+                { id: 'kiosk', label: tr('control.productModal.tab.kiosk', 'Kiosk') },
+              ].map((tab) => {
+                const isLocked = tab.id !== 'general' && !productTabsUnlocked;
                 return (
                   <button
-                    key={tab}
+                    key={tab.id}
                     type="button"
                     disabled={isLocked}
-                    className={`px-4 py-2 rounded-lg text-xl font-medium transition-colors ${productTab === tab ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
-                    onClick={() => !isLocked && setProductTab(tab)}
+                    className={`px-4 py-2 rounded-lg text-xl font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
+                    onClick={() => !isLocked && setProductTab(tab.id)}
                   >
-                    {tab}
+                    {tab.label}
                   </button>
                 );
               })}
             </div>
             {/* Single scrollable area for all tabs so keyboard stays fixed at bottom */}
             <div className="flex-1 min-h-0 overflow-auto">
-              {productTab === 'General' && (
+              {productTab === 'general' && (
                 <div className="p-6 pb-0">
                   <div className="grid grid-cols-3 gap-6">
                     <div className="flex text-xl flex-col gap-4">
                       <div className="flex items-center gap-1">
-                        <label className="text-xl font-medium text-gray-200 w-[300px]">Name:</label>
+                        <label className="text-xl font-medium text-gray-200 w-[300px]">{tr('name', 'Name')}:</label>
                         <input type="text" readOnly value={productName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[300px] font-medium text-gray-200">Test name:</label>
+                        <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.testName', 'Test name')}:</label>
                         <input type="text" readOnly value={productKeyName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[300px] font-medium text-gray-200">Production name:</label>
+                        <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.productionName', 'Production name')}:</label>
                         <input type="text" readOnly value={productProductionName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[170px] font-medium text-gray-200">Price:</label>
+                        <label className="w-[170px] font-medium text-gray-200">{tr('control.productModal.price', 'Price')}:</label>
                         <input type="text" readOnly value={productPrice} className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="min-w-[170px] font-medium text-gray-200">VAT Take out:</label>
+                        <label className="min-w-[170px] font-medium text-gray-200">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
                         <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatTakeOut} onChange={(v) => { setProductVatTakeOut(v); setProductFieldErrors((e) => ({ ...e, vatTakeOut: false })); }} placeholder="--" className={`text-xl min-w-[150px] ${productFieldErrors.vatTakeOut ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="min-w-[170px] font-medium text-gray-200">VAT Eat in:</label>
+                        <label className="min-w-[170px] font-medium text-gray-200">{tr('control.productModal.vatEatIn', 'VAT Eat in')}:</label>
                         <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatEatIn} onChange={(v) => { setProductVatEatIn(v); setProductFieldErrors((e) => ({ ...e, vatEatIn: false })); }} placeholder="--" className={`text-xl min-w-[150px] ${productFieldErrors.vatEatIn ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
                       </div>
                       {productTabsUnlocked ? (
@@ -5813,7 +6141,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           const optionsForI = i === 0 ? categories : categories.filter((c) => !prevIds.includes(c.id));
                           return (
                             <div key={i} className="flex gap-1 w-full h-[50px]">
-                              <label className="pr-5 font-medium text-xl items-center justify-center flex h-[50px] text-gray-200">Category:</label>
+                              <label className="pr-5 font-medium text-xl items-center justify-center flex h-[50px] text-gray-200">{tr('control.productModal.category', 'Category')}:</label>
                               <Dropdown
                                 options={optionsForI.map((c) => ({ value: c.id, label: c.name }))}
                                 value={ids[i] || ''}
@@ -5837,11 +6165,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     </div>
                     <div className="flex flex-col gap-4">
                       <div className="flex gap-1 items-center w-full">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">Addition:</label>
-                        <Dropdown options={[{ value: 'Subproducts', label: 'Subproducts' }]} value={productAddition} onChange={setProductAddition} placeholder="--" className="text-xl w-full min-w-[320px]" />
+                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.addition', 'Addition')}:</label>
+                        <Dropdown options={[{ value: 'Subproducts', label: tr('control.productModal.subproducts', 'Subproducts') }]} value={productAddition} onChange={setProductAddition} placeholder="--" className="text-xl w-full min-w-[320px]" />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="min-w-[100px] font-medium text-xl text-gray-200">Barcode:</label>
+                        <label className="min-w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
                         <div className="flex gap-2 items-center w-full">
                           <input type="text" readOnly value={productBarcode} className="flex-1 px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl " onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
                           <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
@@ -5850,16 +6178,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         </div>
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">Printer 1:</label>
-                        <Dropdown options={[{ value: 'Disabled', label: 'Disabled' }]} value={productPrinter1} onChange={setProductPrinter1} className="text-xl w-full min-w-[320px]" />
+                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer1', 'Printer 1')}:</label>
+                        <Dropdown options={[{ value: 'Disabled', label: tr('control.productModal.disabled', 'Disabled') }]} value={productPrinter1} onChange={setProductPrinter1} className="text-xl w-full min-w-[320px]" />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">Printer 2:</label>
-                        <Dropdown options={[{ value: 'Disabled', label: 'Disabled' }]} value={productPrinter2} onChange={setProductPrinter2} className="text-xl w-full min-w-[320px]" />
+                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer2', 'Printer 2')}:</label>
+                        <Dropdown options={[{ value: 'Disabled', label: tr('control.productModal.disabled', 'Disabled') }]} value={productPrinter2} onChange={setProductPrinter2} className="text-xl w-full min-w-[320px]" />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">Printer 3:</label>
-                        <Dropdown options={[{ value: 'Disabled', label: 'Disabled' }]} value={productPrinter3} onChange={setProductPrinter3} className="text-xl w-full min-w-[320px]" />
+                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer3', 'Printer 3')}:</label>
+                        <Dropdown options={[{ value: 'Disabled', label: tr('control.productModal.disabled', 'Disabled') }]} value={productPrinter3} onChange={setProductPrinter3} className="text-xl w-full min-w-[320px]" />
                       </div>
                     </div>
                   </div>
@@ -5876,16 +6204,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       }
                     }}>
                       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      Complete further
+                      {tr('control.productModal.completeFurther', 'Complete further')}
                     </button>
                     <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingProduct} onClick={handleSaveProduct}>
                       <svg fill="#ffffff" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Add and close
+                      {tr('control.productModal.addAndClose', 'Add and close')}
                     </button>
                   </div>
                 </div>
               )}
-              {productTab === 'Advanced' && (
+              {productTab === 'advanced' && (
                 <div className="p-6 pb-0 flex flex-col gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="flex flex-col gap-4">
@@ -5978,12 +6306,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <div className="flex text-2xl justify-center absolute top-[50%] left-0 right-0">
                     <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Save
+                      {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
-              {productTab === 'Extra prices' && (
+              {productTab === 'extra_prices' && (
                 <div className="p-6 flex flex-col gap-5">
                   <div className="overflow-x-auto">
                     <div className="flex gap-4 text-xl w-full justify-around mb-5 text-pos-text">
@@ -6038,12 +6366,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <div className="flex justify-center">
                     <button type="button" className="flex items-center gap-4 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 text-2xl" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Save
+                      {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
-              {productTab === 'Purchase and stock' && (
+              {productTab === 'purchase_stock' && (
                 <div className="p-6 flex flex-col gap-6 text-xl">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="flex flex-col gap-6">
@@ -6114,12 +6442,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <div className="flex justify-center absolute top-[50%] left-0 right-0">
                     <button type="button" className="flex text-2xl items-center gap-4 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Save
+                      {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
-              {productTab === 'Webshop' && (
+              {productTab === 'webshop' && (
                 <div className="p-6 flex flex-col gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex text-xl flex-col gap-4">
@@ -6160,12 +6488,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <div className="flex justify-center">
                     <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Save
+                      {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
-              {productTab === 'Kiosk' && (
+              {productTab === 'kiosk' && (
                 <div className="p-6 flex flex-col  gap-6">
                   <div className="grid grid-cols-2 gap-4 text-xl">
                     <div className='flex flex-col gap-5'>
@@ -6211,7 +6539,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   <div className="flex justify-center">
                     <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Save
+                      {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
@@ -6438,7 +6766,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         open={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogoutConfirm}
-        message="Are you sure you want to log out?"
+        message={tr('logoutConfirm', 'Are you sure you want to log out?')}
       />
     </div>
   );

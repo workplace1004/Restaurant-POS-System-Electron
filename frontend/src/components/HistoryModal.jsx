@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const formatHistoryAmount = (n) => `€ ${Number(n).toFixed(2).replace('.', ',')}`;
 
@@ -14,6 +15,7 @@ const formatHistoryDate = (d) => {
 };
 
 export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory }) {
+  const { t } = useLanguage();
   const listRef = useRef(null);
   const [selectedId, setSelectedId] = useState(null);
 
@@ -37,38 +39,38 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
       onClick={onClose}
     >
       <div
-        className="bg-gray-200 rounded-lg shadow-xl flex flex-col border border-gray-400 w-full max-w-2xl max-h-[90vh] overflow-hidden"
+        className="bg-gray-200 min-h-[800px] p-5 bg-pos-panel rounded-lg shadow-xl flex flex-col border border-gray-400 w-full max-w-7xl max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-gray-400 bg-gray-100">
-          <h2 className="text-xl font-semibold text-gray-800">Order history</h2>
+        <div className="p-4 border-b border-pos-border">
+          <h2 className="text-3xl font-semibold text-pos-text">{t('historyOrderTitle')}</h2>
         </div>
 
         <div
           ref={listRef}
-          className="flex-1 overflow-auto min-h-[280px] border-b border-gray-400"
+          className="flex-1 overflow-auto min-h-[280px] border-b border-pos-border"
         >
-          <table className="w-full text-left text-gray-800">
-            <thead className="bg-gray-100 sticky top-0">
-              <tr className="text-sm font-semibold">
-                <th className="p-2">Bonnummer:</th>
-                <th className="p-2">Tijdstip:</th>
-                <th className="p-2 border-l border-dotted border-gray-500">Bedrag:</th>
-                <th className="p-2 border-l border-dotted border-gray-500">Tafel:</th>
+          <table className="w-full text-left text-pos-text">
+            <thead className="bg-pos-bg sticky top-0">
+              <tr className="text-2xl font-semibold">
+                <th className="p-2">{t('historyReceiptNo')}:</th>
+                <th className="p-2">{t('historyTime')}:</th>
+                <th className="p-2 border-l border-dotted border-gray-500">{t('historyAmount')}:</th>
+                <th className="p-2 border-l border-dotted border-gray-500">{t('table')}:</th>
               </tr>
             </thead>
             <tbody>
               {historyOrders.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="p-4 text-center text-gray-500">
-                    No order history
+                    {t('historyNoOrders')}
                   </td>
                 </tr>
               ) : (
                 historyOrders.map((order, index) => (
                   <tr
                     key={order.id}
-                    className={`border-t border-gray-300 ${selectedId === order.id ? 'bg-gray-300' : 'hover:bg-gray-100'}`}
+                    className={`border-t text-xl bg-pos-bg border-pos-border ${selectedId === order.id ? 'bg-pos-bg/50' : 'hover:bg-pos-bg/70'}`}
                     onClick={() => setSelectedId(selectedId === order.id ? null : order.id)}
                   >
                     <td className="p-2 font-medium">
@@ -88,10 +90,10 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
           </table>
         </div>
 
-        <div className="flex justify-center gap-2 py-3 border-b border-gray-400 bg-gray-100">
+        <div className="flex justify-around text-2xl gap-2 py-3 border-b border-pos-border bg-pos-bg">
           <button
             type="button"
-            className="p-2 text-gray-700 hover:bg-gray-200 rounded"
+            className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
             onClick={() => scroll(-1)}
             aria-label="Scroll up"
           >
@@ -101,7 +103,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
           </button>
           <button
             type="button"
-            className="p-2 text-gray-700 hover:bg-gray-200 rounded"
+            className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
             onClick={() => scroll(1)}
             aria-label="Scroll down"
           >
@@ -111,41 +113,41 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2 p-4 bg-gray-100">
+        <div className="flex flex-wrap gap-2 p-4 text-3xl justify-around bg-pos-bg">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-400 text-gray-900 font-medium hover:bg-gray-500"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
             onClick={onClose}
           >
-            Terug
+            {t('backName')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-medium hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
             onClick={() => {}}
           >
-            Bekijken
+            {t('historyView')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-medium hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
             onClick={() => {}}
           >
-            Terugnemen
+            {t('historyTakeBack')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-medium hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
             onClick={() => {}}
           >
-            Terugnemen + Again inladen
+            {t('historyTakeBackAgain')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-medium hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
             onClick={() => {}}
           >
-            Ticket herdrukken
+            {t('historyReprintTicket')}
           </button>
         </div>
       </div>

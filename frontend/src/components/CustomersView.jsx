@@ -1,33 +1,43 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Header } from './Header';
-import { LeftSidebar } from './LeftSidebar';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const API = '/api';
-
-const ROW1 = 'q w e r t y u i o p';
-const ROW2 = 'a s d f g h j k l';
-const ROW3 = 'z x c v b n m , €';
-const NUMPAD = [
-  ['7', '8', '9'],
-  ['4', '5', '6'],
-  ['1', '2', '3'],
-  ['-', '0', '.']
-];
+const ROW1_KEYS = 'a z e r t y u i o p'.split(' ');
+const ROW2_KEYS = 'q s d f g h j k l m'.split(' ');
+const ROW3_KEYS = 'w x c v b n , €'.split(' ');
+const NUMPAD_KEYS = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
+const KEY_STYLE = 'w-[100px] h-[60px] bg-pos-panel rounded text-white text-4xl hover:bg-pos-panel/80 border border-transparent transition-colors';
+const INPUT_STYLE = 'w-full py-3 px-3 bg-pos-bg border border-pos-panel text-pos-text outline-none';
+const EMPTY_NEW_CUSTOMER = {
+  companyName: '',
+  firstName: '',
+  lastName: '',
+  phone: '',
+  email: '',
+  discount: '',
+  priceGroup: 'Uitgeschakeld',
+  streetHouseNumber: '',
+  postalCode: '',
+  city: '',
+  vatNumber: '',
+  loyaltyBarcode: '',
+  loyaltyTag: ''
+};
 
 export function CustomersView({
-  time,
-  categories,
-  selectedCategoryId,
-  onSelectCategory,
-  webordersCount,
-  inPlanningCount,
   onBack
 }) {
+  const { t } = useLanguage();
+  const [uppercase, setUppercase] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [search, setSearch] = useState({ companyName: '', name: '', street: '', phone: '' });
-  const activeInputRef = React.useRef(null);
-  const [listScroll, setListScroll] = useState(0);
+  const [quickSearch, setQuickSearch] = useState('');
+  const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState(EMPTY_NEW_CUSTOMER);
+  const activeInputRef = useRef(null);
+  const listRef = useRef(null);
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -48,211 +58,332 @@ export function CustomersView({
     fetchCustomers();
   }, [fetchCustomers]);
 
-  const handleKey = (key) => {
-    const el = activeInputRef.current;
-    if (!el) return;
-    if (key === '←' || key === '<—') {
-      el.value = el.value.slice(0, -1);
-    } else if (key.length === 1) {
-      const start = el.selectionStart ?? el.value.length;
-      const end = el.selectionEnd ?? el.value.length;
-      const next = el.value.slice(0, start) + key + el.value.slice(end);
-      el.value = next;
-      el.setSelectionRange(start + 1, start + 1);
-    }
-    const name = el.name;
-    if (name) setSearch((s) => ({ ...s, [name]: el.value }));
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  };
-
   const setActiveInput = (e) => {
     activeInputRef.current = e.target;
   };
 
+  const handleKeyboardChange = (nextValue) => {
+    const el = activeInputRef.current;
+    if (!el) return;
+    const name = el.name;
+    if (!name) return;
+    if (name === 'quickSearch') {
+      setQuickSearch(nextValue);
+      return;
+    }
+    if (isNewCustomerMode) {
+      setNewCustomerForm((s) => ({ ...s, [name]: nextValue }));
+      return;
+    }
+    setSearch((s) => ({ ...s, [name]: nextValue }));
+  };
+
+  const activeValue = activeInputRef.current?.name
+    ? (activeInputRef.current.name === 'quickSearch'
+      ? quickSearch
+      : isNewCustomerMode
+      ? (newCustomerForm[activeInputRef.current.name] || '')
+      : (search[activeInputRef.current.name] || ''))
+    : '';
+
+  const displayKey = (key) => (/^[a-z]$/.test(key) ? (uppercase ? key.toUpperCase() : key) : key);
+
+  const pressKey = (key) => {
+    if (key === 'Backspace') {
+      handleKeyboardChange(activeValue.slice(0, -1));
+      return;
+    }
+    handleKeyboardChange(activeValue + key);
+  };
+
+  const pressLetterOrSymbol = (key) => {
+    if (/^[a-z]$/.test(key)) {
+      pressKey(uppercase ? key.toUpperCase() : key);
+      return;
+    }
+    pressKey(key);
+  };
+
+  const scrollList = (direction) => {
+    if (!listRef.current) return;
+    listRef.current.scrollBy({ top: direction * 120, behavior: 'smooth' });
+  };
+
+  const openNewCustomerMode = () => {
+    activeInputRef.current = null;
+    setNewCustomerForm(EMPTY_NEW_CUSTOMER);
+    setIsNewCustomerMode(true);
+  };
+
+  const cancelNewCustomerMode = () => {
+    activeInputRef.current = null;
+    setIsNewCustomerMode(false);
+    setIsSavingCustomer(false);
+    setNewCustomerForm(EMPTY_NEW_CUSTOMER);
+  };
+
+  const saveNewCustomer = async () => {
+    if (isSavingCustomer) return;
+    setIsSavingCustomer(true);
+    try {
+      const fullName = `${newCustomerForm.firstName} ${newCustomerForm.lastName}`.trim();
+      const payload = {
+        companyName: newCustomerForm.companyName.trim(),
+        name: fullName || 'New customer',
+        street: [newCustomerForm.streetHouseNumber, newCustomerForm.postalCode, newCustomerForm.city]
+          .map((v) => v.trim())
+          .filter(Boolean)
+          .join(' '),
+        phone: newCustomerForm.phone.trim()
+      };
+      const response = await fetch(`${API}/customers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Failed to save customer');
+      await fetchCustomers();
+      cancelNewCustomerMode();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSavingCustomer(false);
+    }
+  };
+
+  const normalizedQuickSearch = quickSearch.trim().toLowerCase();
+  const visibleCustomers = normalizedQuickSearch
+    ? customers.filter((customer) => [customer.companyName, customer.name, customer.street, customer.phone]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(normalizedQuickSearch)))
+    : customers;
+
   return (
-    <div className="flex flex-col h-full bg-pos-bg text-pos-text">
-      <Header
-        time={time}
-        webordersCount={webordersCount}
-        inPlanningCount={inPlanningCount}
-      />
-      <div className="flex flex-1 min-h-0">
-        <LeftSidebar
-          categories={categories}
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={onSelectCategory}
-        />
+    <div className="flex flex-col h-full bg-pos-bg text-pos-text p-3 gap-3">
+      <div className="flex flex-1 min-h-0 gap-3">
+        <main className="flex-1 min-w-0 flex flex-col">
+          {isNewCustomerMode ? (
+            <div className="flex-1 min-h-0 border border-pos-panel rounded-md p-6">
+              <div className="grid grid-cols-3 gap-8 h-full">
+                <div>
+                  <div>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1 pb-1">Firmanaam:</label>
+                    <input name="companyName" value={newCustomerForm.companyName} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, companyName: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Voornaam:</label>
+                    <input name="firstName" value={newCustomerForm.firstName} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, firstName: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Naam:</label>
+                    <input name="lastName" value={newCustomerForm.lastName} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, lastName: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Telefoon:</label>
+                    <input name="phone" value={newCustomerForm.phone} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, phone: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">E-mail:</label>
+                    <input name="email" value={newCustomerForm.email} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, email: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Korting:</label>
+                    <input name="discount" value={newCustomerForm.discount} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, discount: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Prijsgroep:</label>
+                    <select name="priceGroup" value={newCustomerForm.priceGroup} onChange={(e) => setNewCustomerForm((s) => ({ ...s, priceGroup: e.target.value }))} className={INPUT_STYLE}>
+                      <option value="Uitgeschakeld">Uitgeschakeld</option>
+                    </select>
+                  </div>
+                </div>
 
-        <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg">
-          <div className="grid grid-cols-[auto_1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-x-4 gap-y-2 mb-3 text-base">
-            <label className="whitespace-nowrap">Company Name:</label>
-            <input
-              type="text"
-              name="companyName"
-              value={search.companyName}
-              onChange={(e) => setSearch((s) => ({ ...s, companyName: e.target.value }))}
-              onFocus={setActiveInput}
-              className="min-w-[100px] py-2 px-3 bg-pos-panel border border-pos-inputBorder rounded text-pos-text text-base"
-            />
-            <label className="whitespace-nowrap">Name:</label>
-            <input
-              type="text"
-              name="name"
-              value={search.name}
-              onChange={(e) => setSearch((s) => ({ ...s, name: e.target.value }))}
-              onFocus={setActiveInput}
-              className="min-w-[100px] py-2 px-3 bg-pos-panel border border-pos-inputBorder rounded text-pos-text text-base"
-            />
-            <label className="whitespace-nowrap">Street + House Number:</label>
-            <input
-              type="text"
-              name="street"
-              value={search.street}
-              onChange={(e) => setSearch((s) => ({ ...s, street: e.target.value }))}
-              onFocus={setActiveInput}
-              className="min-w-[100px] py-2 px-3 bg-pos-panel border border-pos-inputBorder rounded text-pos-text text-base"
-            />
-            <label className="whitespace-nowrap">Phone:</label>
-            <input
-              type="text"
-              name="phone"
-              value={search.phone}
-              onChange={(e) => setSearch((s) => ({ ...s, phone: e.target.value }))}
-              onFocus={setActiveInput}
-              className="min-w-[100px] py-2 px-3 bg-pos-panel border border-pos-inputBorder rounded text-pos-text text-base"
-            />
-          </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Straat + Huisnummer:</label>
+                    <input name="streetHouseNumber" value={newCustomerForm.streetHouseNumber} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, streetHouseNumber: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Postcode:</label>
+                    <input name="postalCode" value={newCustomerForm.postalCode} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, postalCode: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Gemeente:</label>
+                    <input name="city" value={newCustomerForm.city} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, city: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">BTW nummer:</label>
+                    <input name="vatNumber" value={newCustomerForm.vatNumber} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, vatNumber: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Spaarkaart barcode:</label>
+                    <input name="loyaltyBarcode" value={newCustomerForm.loyaltyBarcode} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyBarcode: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Tegoed tag:</label>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <input name="loyaltyTag" value={newCustomerForm.loyaltyTag} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyTag: e.target.value }))} className={INPUT_STYLE} />
+                      <button type="button" className="h-11 px-6 bg-pos-surface rounded-md text-2xl hover:bg-pos-surface-hover">
+                        Extra tags
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="flex-1 min-h-0 flex flex-col bg-pos-panel rounded-lg overflow-hidden">
-            <table className="w-full border-collapse text-base flex-1">
-              <thead>
-                <tr>
-                  <th className="text-left py-3 px-3 bg-pos-bg text-pos-muted font-medium text-base">Company Name</th>
-                  <th className="text-left py-3 px-3 bg-pos-bg text-pos-muted font-medium text-base">Name</th>
-                  <th className="text-left py-3 px-3 bg-pos-bg text-pos-muted font-medium text-base">Street + House Number</th>
-                  <th className="text-left py-3 px-3 bg-pos-bg text-pos-muted font-medium text-base">Phone</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customers.map((c) => (
-                  <tr
-                    key={c.id}
-                    className={`py-3 px-3 border-b border-pos-rowHover hover:bg-pos-rowHover cursor-pointer text-base ${
-                      selectedCustomer?.id === c.id ? 'bg-pos-surface text-white' : ''
-                    }`}
-                    onClick={() => setSelectedCustomer(c)}
-                  >
-                    <td className="py-3 px-3">{c.companyName || ''}</td>
-                    <td className="py-3 px-3">{c.name}</td>
-                    <td className="py-3 px-3">{c.street || ''}</td>
-                    <td className="py-3 px-3">{c.phone || ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="flex gap-2 py-2 px-2 border-t border-pos-rowHover bg-pos-bg">
-              <button type="button" className="py-2 px-3 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => setListScroll((s) => Math.max(0, s - 1))}>
-                ↑
-              </button>
-              <button type="button" className="py-2 px-3 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => setListScroll((s) => s + 1)}>
-                ↓
-              </button>
+                <div className="flex flex-col gap-6 pt-10">
+                  <button type="button" onClick={saveNewCustomer} disabled={isSavingCustomer} className="h-20 px-5 bg-pos-surface rounded-md text-3xl hover:bg-pos-surface-hover disabled:opacity-60">
+                    Opslaan
+                  </button>
+                  <button type="button" onClick={cancelNewCustomerMode} className="h-20 px-5 bg-pos-surface rounded-md text-3xl hover:bg-pos-surface-hover">
+                    Annuleren
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-3 px-3 pb-2 pt-5 text-2xl font-semibold text-pos-text">
+                <div>{t('customersCompanyName')}:</div>
+                <div>{t('name')}:</div>
+                <div>{t('customersStreetHouseNumber')}:</div>
+                <div>{t('customersPhone')}:</div>
+              </div>
+
+              <div className="flex-1 min-h-0 bg-pos-bg border border-pos-panel rounded-md overflow-hidden">
+                <table className="w-full border-collapse text-xl">
+                  <tbody ref={listRef} className="block max-h-full overflow-auto">
+                    {visibleCustomers.map((c) => (
+                      <tr
+                        key={c.id}
+                        className={`grid grid-cols-[1fr_1fr_1fr_1fr] px-3 py-3 border-b border-pos-border cursor-pointer ${
+                          selectedCustomer?.id === c.id ? 'bg-pos-panel text-white' : ''
+                        }`}
+                        onClick={() => setSelectedCustomer(c)}
+                      >
+                        <td>{c.companyName || ''}</td>
+                        <td>{c.name || ''}</td>
+                        <td>{c.street || ''}</td>
+                        <td>{c.phone || ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-center gap-40 py-2 text-5xl">
+                <button type="button" className="text-pos-text hover:text-white" onClick={() => scrollList(-1)}>↑</button>
+                <button type="button" className="text-pos-text hover:text-white" onClick={() => scrollList(1)}>↓</button>
+              </div>
+            </>
+          )}
         </main>
 
-        <aside className="w-[180px] shrink-0 flex flex-col gap-2 p-4 bg-pos-bg border-l border-pos-border">
-          <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-base text-left hover:bg-pos-surface-hover">
-            New Customer
-          </button>
-          <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-base text-left hover:bg-pos-surface-hover">
-            Edit Customer
-          </button>
-          <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-base text-left hover:bg-pos-surface-hover">
-            History
-          </button>
-          <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-base text-left hover:bg-pos-surface-hover">
-            Pick-up
-          </button>
-          <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-base text-left hover:bg-pos-surface-hover">
-            Deliver
-          </button>
-          <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-base text-left hover:bg-pos-surface-hover mt-auto">
-            None
-          </button>
-        </aside>
+        {!isNewCustomerMode && (
+          <aside className="w-[170px] shrink-0 flex flex-col gap-4 text-xl h-full justify-around py-8">
+            <input
+              name="quickSearch"
+              value={quickSearch}
+              onFocus={setActiveInput}
+              onChange={(e) => setQuickSearch(e.target.value)}
+              className="py-3 px-3 bg-pos-surface border border-pos-border rounded-md text-pos-text outline-none"
+            />
+            <button type="button" onClick={openNewCustomerMode} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+              {t('customersNewCustomer')}
+            </button>
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+              {t('customersEditCustomer')}
+            </button>
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+              {t('history')}
+            </button>
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+              {t('customersPickup')}
+            </button>
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+              {t('customersDeliver')}
+            </button>
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+              {t('customersNone')}
+            </button>
+          </aside>
+        )}
       </div>
 
-      <div className="flex gap-2 py-3 px-4 bg-pos-bg border-t border-pos-border shrink-0">
-        <button type="button" className="py-2 px-4 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={onBack}>
-          Back
-        </button>
-        <button type="button" className="py-2 px-4 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface">
-          New Reservation
-        </button>
-        <button type="button" className="py-2 px-4 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface">
-          No Customer
-        </button>
-        <button type="button" className="py-2 px-4 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface">
-          Select Customer
-        </button>
-      </div>
-
-      <footer className="flex items-center gap-6 py-3 px-4 bg-pos-bg border-t border-pos-border shrink-0">
-        <div className="flex items-center gap-2 text-base font-medium">
-          <span className="text-lg">☁</span>
-          CloudPOS
+      {!isNewCustomerMode && (
+        <div className="grid grid-cols-4 gap-3 text-2xl shrink-0">
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface" onClick={onBack}>
+            {t('backName')}
+          </button>
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface">
+            {t('customersNewReservation')}
+          </button>
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface">
+            {t('customersNoCustomer')}
+          </button>
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface">
+            {t('customersSelectCustomer')}
+          </button>
         </div>
-      </footer>
+      )}
 
-      <div className="flex gap-4 py-3 px-4 bg-pos-dark border-t border-pos-border shrink-0">
-        <div className="flex-1 flex flex-col gap-2">
-          <div className="flex gap-1.5 justify-start">
-            {ROW1.split(' ').map((k) => (
-              <button key={k} type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey(k)}>
-                {k}
+      <div className="shrink-0 p-0 flex gap-4 w-full justify-center">
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-1">
+            {ROW1_KEYS.map((key) => (
+              <button key={key} type="button" className={KEY_STYLE} onClick={() => pressLetterOrSymbol(key)}>
+                {displayKey(key)}
               </button>
             ))}
-            <button type="button" className="min-w-12 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey('←')}>
+          </div>
+          <div className="flex gap-1">
+            {ROW2_KEYS.map((key) => (
+              <button key={key} type="button" className={KEY_STYLE} onClick={() => pressLetterOrSymbol(key)}>
+                {displayKey(key)}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1">
+            {ROW3_KEYS.map((key) => (
+              <button key={key} type="button" className={KEY_STYLE} onClick={() => pressLetterOrSymbol(key)}>
+                {displayKey(key)}
+              </button>
+            ))}
+            <button type="button" className={`${KEY_STYLE} w-[204px]`} onClick={() => pressKey('Backspace')} aria-label="Backspace">
               ←
             </button>
           </div>
-          <div className="flex gap-1.5 justify-start">
-            <span className="min-w-9 py-2 px-2.5 bg-pos-panel rounded text-pos-text text-base opacity-80 cursor-default">↑</span>
-            {ROW2.split(' ').map((k) => (
-              <button key={k} type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey(k)}>
-                {k}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1.5 justify-start">
-            {ROW3.split(' ').map((k) => (
-              <button key={k} type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey(k)}>
-                {k}
-              </button>
-            ))}
-            <button type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey('@')}>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className={`${KEY_STYLE} ${uppercase ? 'bg-blue-600 ring-2 ring-blue-400' : ''}`}
+              onClick={() => setUppercase((prev) => !prev)}
+              title="Shift"
+            >
+              ↑
+            </button>
+            <button type="button" className={KEY_STYLE} onClick={() => pressKey('@')}>
               @
             </button>
-            <button type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey('/')}>
+            <button type="button" className={KEY_STYLE} onClick={() => pressKey('/')}>
               /
             </button>
-          </div>
-          <div className="flex gap-1.5 justify-start">
-            <button type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface">
+            <button type="button" className="bg-pos-panel rounded hover:bg-pos-panel/80 w-[412px] h-[60px] border border-transparent transition-colors" onClick={() => pressKey(' ')} aria-label="Space" />
+            <button type="button" className={KEY_STYLE} onClick={() => pressKey('-')} aria-label="Minus">
+              -
+            </button>
+            <button type="button" className={KEY_STYLE} aria-label="Left">
               ←
             </button>
-            <button type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface">
+            <button type="button" className={KEY_STYLE} aria-label="Right">
               →
             </button>
           </div>
         </div>
-        <div className="flex flex-col gap-2 justify-end">
-          {NUMPAD.map((row, i) => (
-            <div key={i} className="flex gap-1.5 justify-end">
-              {row.map((k) => (
-                <button key={k} type="button" className="min-w-9 py-2 px-2.5 bg-pos-panel border-none rounded text-pos-text text-base hover:bg-pos-surface" onClick={() => handleKey(k)}>
-                  {k}
+        <div className="flex flex-col gap-1">
+          {NUMPAD_KEYS.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex gap-1">
+              {row.map((key) => (
+                <button key={key} type="button" className={KEY_STYLE} onClick={() => pressKey(key)}>
+                  {key}
                 </button>
               ))}
             </div>

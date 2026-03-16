@@ -1,12 +1,19 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
-export function Header({ time, webordersCount, inPlanningCount, onOpenWeborders, onOpenInPlanning }) {
+export function Header({ time, webordersCount, inPlanningCount, onOpenTables, onOpenWeborders, onOpenInPlanning, selectedTable }) {
+  const { t } = useLanguage();
+  const selectedTableLabel =
+    selectedTable != null
+      ? (selectedTable.name || `Table${selectedTable.id}`)
+      : t('noTable');
   return (
     <header className="flex items-center w-full bg-pos-bg py-2 px-2 shrink-0">
       <nav className="flex-1 flex items-center justify-start gap-3 min-w-0">
         <button
           type="button"
           className="flex items-center gap-2 px-16 h-[100px] rounded-md text-pos-text text-3xl bg-pos-panel hover:bg-pos-rowHover"
+          onClick={onOpenTables}
         >
           <span className="opacity-90" aria-hidden="true">
             <svg
@@ -35,7 +42,7 @@ export function Header({ time, webordersCount, inPlanningCount, onOpenWeborders,
               </g>
             </svg>
           </span>
-          Tables
+          {selectedTableLabel}
         </button>
         <button
           type="button"
@@ -69,7 +76,7 @@ export function Header({ time, webordersCount, inPlanningCount, onOpenWeborders,
 
             
           </span>
-          {webordersCount} Weborders
+          {webordersCount} {t('weborders')}
         </button>
         <button
           type="button"
@@ -96,7 +103,7 @@ export function Header({ time, webordersCount, inPlanningCount, onOpenWeborders,
 
             
           </span>
-          {inPlanningCount} In planning
+          {inPlanningCount} {t('inPlanning')}
         </button>
       </nav>
     </header>

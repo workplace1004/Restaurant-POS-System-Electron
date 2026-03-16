@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dropdown } from './Dropdown';
 import { KeyboardWithNumpad } from './KeyboardWithNumpad';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const PRINTER_FORM_TYPE_OPTIONS = [
   { value: 'COM', label: 'COM' },
@@ -24,6 +25,14 @@ const PRINTER_FORM_CHARACTERS_OPTIONS = [
   { value: '48', label: '48' },
   { value: '80', label: '80' },
   { value: '96', label: '96' }
+];
+
+const PRINTER_FORM_BAUDRATE_OPTIONS = [
+  { value: '9600', label: '9600' },
+  { value: '19200', label: '19200' },
+  { value: '38400', label: '38400' },
+  { value: '57600', label: '57600' },
+  { value: '115200', label: '115200' }
 ];
 
 const PRINTER_FORM_TICKET_SIZE_OPTIONS = [
@@ -51,7 +60,10 @@ const PRINTER_FORM_PRINTER_TYPE_OPTIONS = [
 
 const defaultForm = () => ({
   name: '',
-  tab: 'General',
+  printerName: '',
+  ipAddress: '',
+  port: '',
+  tab: 'general',
   type: 'COM',
   comPort: '',
   baudrate: '9600',
@@ -65,9 +77,18 @@ const defaultForm = () => ({
   printerType: 'Esc'
 });
 
-export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
+export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }) {
+  const { t } = useLanguage();
+  const tr = (key, fallback) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  };
   const [name, setName] = useState('');
-  const [tab, setTab] = useState('General');
+  const [printerName, setPrinterName] = useState('');
+  const [activeField, setActiveField] = useState('name');
+  const [ipAddress, setIpAddress] = useState('');
+  const [port, setPort] = useState('');
+  const [tab, setTab] = useState('general');
   const [type, setType] = useState('COM');
   const [comPort, setComPort] = useState('');
   const [baudrate, setBaudrate] = useState('9600');
@@ -79,13 +100,17 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
   const [spaceBetweenProducts, setSpaceBetweenProducts] = useState('none');
   const [logo, setLogo] = useState('disable');
   const [printerType, setPrinterType] = useState('Esc');
+  const [testLoading, setTestLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     const d = defaultForm();
     if (initialPrinter) {
       setName(initialPrinter.name || '');
-      setTab('General');
+      setPrinterName(initialPrinter.printerName || initialPrinter.name || '');
+      setIpAddress(initialPrinter.ipAddress || '');
+      setPort(initialPrinter.port || '');
+      setTab('general');
       setType(initialPrinter.type || 'COM');
       setComPort(initialPrinter.comPort || '');
       setBaudrate(initialPrinter.baudrate || '9600');
@@ -97,8 +122,18 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
       setSpaceBetweenProducts(initialPrinter.spaceBetweenProducts || 'none');
       setLogo(initialPrinter.logo || 'disable');
       setPrinterType(initialPrinter.printerType || 'Esc');
+      setActiveField(
+        (initialPrinter.type || 'COM') === 'USB'
+          ? 'printerName'
+          : (initialPrinter.type || 'COM') === 'Network'
+            ? 'ipAddress'
+            : 'name'
+      );
     } else {
       setName(d.name);
+      setPrinterName(d.printerName);
+      setIpAddress(d.ipAddress);
+      setPort(d.port);
       setTab(d.tab);
       setType(d.type);
       setComPort(d.comPort);
@@ -111,14 +146,23 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
       setSpaceBetweenProducts(d.spaceBetweenProducts);
       setLogo(d.logo);
       setPrinterType(d.printerType);
+      setActiveField('name');
     }
   }, [open, initialPrinter]);
 
   const handleSave = () => {
     const trimmedName = (name || '').trim();
-    if (!trimmedName) return;
+    const trimmedPrinterName = (printerName || '').trim();
+    const trimmedIpAddress = (ipAddress || '').trim();
+    const trimmedPort = (port || '').trim();
+    const finalName = type === 'USB' ? (trimmedPrinterName || trimmedName) : trimmedName;
+    if (!finalName) return;
+    if (type === 'Network' && (!trimmedIpAddress || !trimmedPort)) return;
     onSave({
-      name: trimmedName,
+      name: finalName,
+      printerName: trimmedPrinterName,
+      ipAddress: trimmedIpAddress,
+      port: trimmedPort,
       type,
       comPort,
       baudrate,
@@ -133,6 +177,82 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
     });
   };
 
+  const buildApiPrinterPayload = () => {
+    const trimmedName = (name || '').trim();
+    const trimmedPrinterName = (printerName || '').trim();
+    const trimmedIpAddress = (ipAddress || '').trim();
+    const trimmedPort = (port || '').trim();
+    const safePort = trimmedPort || '9100';
+    const apiType = type === 'COM' ? 'serial' : 'windows';
+    const connectionString =
+      type === 'COM'
+        ? `serial://${(comPort || '').trim().toUpperCase()}`
+        : type === 'USB'
+          ? trimmedPrinterName
+          : `tcp://${trimmedIpAddress}:${safePort}`;
+    return {
+      name: type === 'USB' ? (trimmedPrinterName || trimmedName) : trimmedName,
+      type: apiType,
+      connection_string: connectionString,
+      baud_rate: type === 'COM' ? baudrate : null,
+      data_bits: null,
+      parity: null,
+      stop_bits: null,
+      is_main: standard ? 1 : 0,
+      enabled: 1,
+    };
+  };
+
+  const handleTestPrint = async () => {
+    setTestLoading(true);
+    try {
+      const payload = buildApiPrinterPayload();
+      const res = await fetch('/api/printers/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      onNotify?.('success', data?.message || tr('printerModal.testSuccess', 'Test print succeeded.'));
+    } catch (err) {
+      onNotify?.('error', err?.message || tr('printerModal.testFailed', 'Test print failed.'));
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const keyboardValue =
+    activeField === 'printerName'
+      ? printerName
+      : activeField === 'ipAddress'
+        ? ipAddress
+        : activeField === 'port'
+          ? port
+      : activeField === 'baudrate'
+        ? baudrate
+        : name;
+
+  const handleKeyboardChange = (nextValue) => {
+    if (activeField === 'printerName') {
+      setPrinterName(nextValue);
+      return;
+    }
+    if (activeField === 'baudrate') {
+      setBaudrate(nextValue);
+      return;
+    }
+    if (activeField === 'ipAddress') {
+      setIpAddress(nextValue);
+      return;
+    }
+    if (activeField === 'port') {
+      setPort(nextValue);
+      return;
+    }
+    setName(nextValue);
+  };
+
   if (!open) return null;
 
   return (
@@ -142,49 +262,106 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
           <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
         <div className="flex mt-10 mb-4 px-6 w-full justify-center shrink-0 gap-20">
-          {['General', 'Production sorting'].map((t) => (
+          {[
+            { id: 'general', label: tr('printerModal.tabGeneral', 'General') },
+            { id: 'production', label: tr('printerModal.tabProductionSorting', 'Production sorting') }
+          ].map((tabItem) => (
             <button
-              key={t}
+              key={tabItem.id}
               type="button"
-              className={`px-4 py-3 text-xl font-medium border-b-2 transition-colors ${tab === t ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
-              onClick={() => setTab(t)}
+              className={`px-4 py-3 text-xl font-medium border-b-2 transition-colors ${tab === tabItem.id ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+              onClick={() => setTab(tabItem.id)}
             >
-              {t}
+              {tabItem.label}
             </button>
           ))}
         </div>
         <div className="p-6 overflow-hidden flex-1">
-          {tab === 'General' && (
+          {tab === 'general' && (
             <div className="grid grid-cols-3 w-full gap-6">
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 w-[140px]">Name:</span>
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="flex-1 min-w-0 max-w-[260px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                  <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('name', 'Name')}:</span>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onFocus={() => setActiveField('name')}
+                    onClick={() => setActiveField('name')}
+                    className="flex-1 min-w-0 max-w-[260px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                  />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 w-[140px]">Type:</span>
+                  <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.type', 'Type')}:</span>
                   <Dropdown options={PRINTER_FORM_TYPE_OPTIONS} value={type} onChange={setType} placeholder="COM" className="text-xl min-w-[140px] max-w-[200px]" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 w-[140px]">Com port:</span>
-                  <Dropdown options={PRINTER_FORM_COM_PORT_OPTIONS} value={comPort} onChange={setComPort} placeholder="Select" className="text-xl min-w-[140px] max-w-[200px]" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 w-[140px]">Baudrate:</span>
-                  <input type="text" value={baudrate} onChange={(e) => setBaudrate(e.target.value)} className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 w-[140px]">Characters:</span>
-                  <Dropdown options={PRINTER_FORM_CHARACTERS_OPTIONS} value={characters} onChange={setCharacters} placeholder="48" className="text-xl min-w-[140px] max-w-[140px]" />
-                </div>
+                {type === 'USB' ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.printerName', 'Printer Name')} *</span>
+                    <input
+                      type="text"
+                      value={printerName}
+                      onChange={(e) => setPrinterName(e.target.value)}
+                      onFocus={() => setActiveField('printerName')}
+                      onClick={() => setActiveField('printerName')}
+                      className="flex-1 min-w-0 max-w-[260px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                    />
+                  </div>
+                ) : type === 'Network' ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.ipAddress', 'IP address')}:</span>
+                      <input
+                        type="text"
+                        value={ipAddress}
+                        onChange={(e) => setIpAddress(e.target.value)}
+                        onFocus={() => setActiveField('ipAddress')}
+                        onClick={() => setActiveField('ipAddress')}
+                        className="flex-1 min-w-0 max-w-[260px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.port', 'Port')}:</span>
+                      <input
+                        type="text"
+                        value={port}
+                        onChange={(e) => setPort(e.target.value)}
+                        onFocus={() => setActiveField('port')}
+                        onClick={() => setActiveField('port')}
+                        className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.comPort', 'Com port')}:</span>
+                      <Dropdown options={PRINTER_FORM_COM_PORT_OPTIONS} value={comPort} onChange={setComPort} placeholder="Select" className="text-xl min-w-[140px] max-w-[200px]" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.baudrate', 'Baudrate')}:</span>
+                      <Dropdown
+                        options={PRINTER_FORM_BAUDRATE_OPTIONS}
+                        value={baudrate}
+                        onChange={setBaudrate}
+                        placeholder="9600"
+                        className="text-xl min-w-[140px] max-w-[140px]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-pos-text text-xl shrink-0 w-[140px]">{tr('printerModal.characters', 'Characters')}:</span>
+                      <Dropdown options={PRINTER_FORM_CHARACTERS_OPTIONS} value={characters} onChange={setCharacters} placeholder="48" className="text-xl min-w-[140px] max-w-[140px]" />
+                    </div>
+                  </>
+                )}
               </div>
               <div className="flex flex-col gap-6">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <span className="text-pos-text text-xl min-w-[200px] max-w-[200px] shrink-0">Standard:</span>
+                  <span className="text-pos-text text-xl min-w-[200px] max-w-[200px] shrink-0">{tr('printerModal.standard', 'Standard')}:</span>
                   <input type="checkbox" checked={standard} onChange={(e) => setStandard(e.target.checked)} className="w-8 h-8 rounded border-gray-400" />
                 </label>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[200px] max-w-[200px]">Number of prints:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[200px] max-w-[200px]">{tr('printerModal.numberOfPrints', 'Number of prints')}:</span>
                   <div className="flex items-center gap-2">
                     <button type="button" className="p-1 px-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setNumberOfPrints((n) => Math.max(1, n - 1))}>−</button>
                     <input type="number" min={1} value={numberOfPrints} onChange={(e) => setNumberOfPrints(Math.max(1, Number(e.target.value) || 1))} className="w-16 px-2 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
@@ -194,37 +371,37 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
               </div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Text size Production ticket:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.textSizeProduction', 'Text size Production ticket')}:</span>
                   <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={productionTicketSize} onChange={setProductionTicketSize} placeholder="Normal" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Total amount of VAT ticket size:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.vatTicketSize', 'Total amount of VAT ticket size')}:</span>
                   <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={vatTicketSize} onChange={setVatTicketSize} placeholder="Normal" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Space between products:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.spaceBetweenProducts', 'Space between products')}:</span>
                   <Dropdown options={PRINTER_FORM_SPACE_OPTIONS} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder="None" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Logo:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.logo', 'Logo')}:</span>
                   <Dropdown options={PRINTER_FORM_LOGO_OPTIONS} value={logo} onChange={setLogo} placeholder="Disable" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Printer type:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.printerType', 'Printer type')}:</span>
                   <Dropdown options={PRINTER_FORM_PRINTER_TYPE_OPTIONS} value={printerType} onChange={setPrinterType} placeholder="Esc" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
               </div>
             </div>
           )}
-          {tab === 'Production sorting' && (
+          {tab === 'production' && (
             <div className="grid grid-cols-3 w-full gap-6">
               <div className="flex flex-col gap-6">
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <span className="text-pos-text text-xl min-w-[200px] max-w-[200px] shrink-0">Standard:</span>
+                  <span className="text-pos-text text-xl min-w-[200px] max-w-[200px] shrink-0">{tr('printerModal.standard', 'Standard')}:</span>
                   <input type="checkbox" checked={standard} onChange={(e) => setStandard(e.target.checked)} className="w-8 h-8 rounded border-gray-400" />
                 </label>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[200px] max-w-[200px]">Number of prints:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[200px] max-w-[200px]">{tr('printerModal.numberOfPrints', 'Number of prints')}:</span>
                   <div className="flex items-center gap-2">
                     <button type="button" className="p-1 px-2 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setNumberOfPrints((n) => Math.max(1, n - 1))}>−</button>
                     <input type="number" min={1} value={numberOfPrints} onChange={(e) => setNumberOfPrints(Math.max(1, Number(e.target.value) || 1))} className="w-16 px-2 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
@@ -234,43 +411,43 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave }) {
               </div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Text size Production ticket:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.textSizeProduction', 'Text size Production ticket')}:</span>
                   <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={productionTicketSize} onChange={setProductionTicketSize} placeholder="Normal" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Total amount of VAT ticket size:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.vatTicketSize', 'Total amount of VAT ticket size')}:</span>
                   <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={vatTicketSize} onChange={setVatTicketSize} placeholder="Normal" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Space between products:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.spaceBetweenProducts', 'Space between products')}:</span>
                   <Dropdown options={PRINTER_FORM_SPACE_OPTIONS} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder="None" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
               </div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Logo:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.logo', 'Logo')}:</span>
                   <Dropdown options={PRINTER_FORM_LOGO_OPTIONS} value={logo} onChange={setLogo} placeholder="Disable" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">Printer type:</span>
+                  <span className="text-pos-text text-xl shrink-0 min-w-[250px] max-w-[250px]">{tr('printerModal.printerType', 'Printer type')}:</span>
                   <Dropdown options={PRINTER_FORM_PRINTER_TYPE_OPTIONS} value={printerType} onChange={setPrinterType} placeholder="Esc" className="text-xl min-w-[120px] max-w-[120px]" />
                 </div>
               </div>
             </div>
           )}
           <div className="flex items-center justify-center gap-20 mt-12">
-            <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg text-xl" onClick={() => { /* Test print */ }}>
+            <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg text-xl disabled:opacity-60" onClick={handleTestPrint} disabled={testLoading}>
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-              Test print
+              {testLoading ? tr('printerModal.testing', 'Testing...') : tr('printerModal.testPrint', 'Test print')}
             </button>
             <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={!(name || '').trim()} onClick={handleSave}>
               <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-              Save
+              {tr('control.save', 'Save')}
             </button>
           </div>
         </div>
         <div className="shrink-0">
-          <KeyboardWithNumpad value={name} onChange={setName} />
+          <KeyboardWithNumpad value={keyboardValue} onChange={handleKeyboardChange} />
         </div>
       </div>
     </div>

@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+const LANG_OPTIONS = [
+  { value: 'en', label: 'EN' },
+  { value: 'nl', label: 'NL' },
+  { value: 'fr', label: 'FR' },
+  { value: 'tr', label: 'TR' },
+];
 
 export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, currentUser, onLogout, onControlClick }) {
+  const { t, lang, setLang } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogoutConfirm = () => {
@@ -12,7 +20,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
     <aside className="w-[300px] shrink-0 flex flex-col bg-pos-bg p-4 px-2">
 
       <div className="flex items-center justify-center h-[80px] mb-4">
-        <div className="text-5xl font-semibold text-pos-text">CloudPOS</div>
+        <div className="text-5xl font-semibold text-pos-text">{t('appName')}</div>
       </div>
       <div className="flex flex-col gap-1 flex-1 overflow-auto">
         {categories.map((cat) => (
@@ -43,7 +51,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
             className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text"
             onClick={() => setShowLogoutModal(true)}
           >
-            Log out
+            {t('logOut')}
           </button>
         </div>
         <div className="px-10 py-6 border-t border-pos-border border-gray-500">
@@ -52,33 +60,33 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
             className="bg-transparent border-none text-pos-muted text-3xl p-0 hover:text-pos-text"
             onClick={() => onControlClick?.()}
           >
-            Control
+            {t('control')}
           </button>
         </div>
       </div>
       <div className="text-center text-3xl text-pos-muted">
         <span className="text-4xl pr-1">☁</span>
-        RestaurantPOS
+        {t('tagline')}
       </div>
 
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowLogoutModal(false)}>
           <div className="bg-pos-panel border border-pos-border rounded-xl shadow-xl p-8 py-14 max-w-4xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <p className="text-pos-text text-5xl mb-8 text-center">Are you sure you want to log out?</p>
+            <p className="text-pos-text text-5xl mb-8 text-center">{t('logoutConfirm')}</p>
             <div className="flex gap-4 justify-around mt-20 items-center">
               <button
                 type="button"
                 className="px-8 py-4 rounded-lg text-4xl font-medium bg-pos-bg text-pos-text hover:bg-gray-700 border border-pos-border"
                 onClick={() => setShowLogoutModal(false)}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
                 className="px-8 py-4 rounded-lg text-4xl font-medium bg-red-600 text-white hover:bg-red-700"
                 onClick={handleLogoutConfirm}
               >
-                Log out
+                {t('logOut')}
               </button>
             </div>
           </div>

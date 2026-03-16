@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 /**
  * Reusable delete confirmation modal.
@@ -8,6 +9,7 @@ import React from 'react';
  * @param {string} [message] - Confirmation question (default: delete price group)
  */
 export function DeleteConfirmModal({ open, onClose, onConfirm, message = 'Are you sure you want to delete this price group?' }) {
+  const { t } = useLanguage();
   if (!open) return null;
 
   return (
@@ -31,14 +33,14 @@ export function DeleteConfirmModal({ open, onClose, onConfirm, message = 'Are yo
             className="px-8 py-4 rounded-lg text-xl font-semibold bg-rose-500 text-white hover:bg-rose-600 focus:outline-none transition-colors"
             onClick={() => onConfirm?.()}
           >
-            Yes
+            {t('yes')}
           </button>
           <button
             type="button"
             className="px-8 py-4 rounded-lg text-xl font-semibold text-white hover:text-gray-400 focus:outline-none"
             onClick={onClose}
           >
-            No
+            {t('no')}
           </button>
         </div>
       </div>

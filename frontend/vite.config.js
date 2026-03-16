@@ -7,9 +7,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:3001',
+      '/api': 'http://localhost:5000',
       '/socket.io': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:5000',
         ws: true
       }
     }

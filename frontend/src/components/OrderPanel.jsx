@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const KEYPAD = [
   ['C', '7', '8', '9'],
@@ -6,15 +7,10 @@ const KEYPAD = [
   ['0', '1', '2', '3']
 ];
 
-const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', icon: '€' },
-  { id: 'bancontact', label: 'Bancontact', icon: 'card' },
-  { id: 'visa', label: 'Visa', icon: 'visa' }
-];
-
 const formatSubtotalPrice = (n) => `€ ${Number(n).toFixed(2).replace('.', ',')}`;
 
-export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [] }) {
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted }) {
+  const { t } = useLanguage();
   const [customAmount, setCustomAmount] = useState('');
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
@@ -23,12 +19,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [payModalKeypadInput, setPayModalKeypadInput] = useState('');
   const [payModalKeypadLocked, setPayModalKeypadLocked] = useState(false);
+  const [payConfirmLoading, setPayConfirmLoading] = useState(false);
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState('');
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
   const selectedItems = items.filter((i) => selectedItemIds.includes(i.id));
   const hasSelection = selectedItemIds.length > 0;
   const canDecreaseAll = selectedItems.length > 0 && selectedItems.every((i) => (i.quantity ?? 0) > 1);
+  const getItemLabel = (item) => {
+    const base = item?.product?.name ?? '—';
+    const note = (item?.notes || '').trim();
+    return note ? `${base} (${note})` : base;
+  };
 
   const toggleItemSelection = (id) => {
     setSelectedItemIds((prev) =>
@@ -78,11 +81,15 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setPayModalKeypadLocked(true);
   };
 
-  const handlePaymentCardClick = (methodId) => {
+  const handleCashImageClick = () => {
+    if (payModalKeypadLocked) {
+      setSelectedPayment('cash');
+      return;
+    }
     const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
-    setPaymentAmounts((prev) => ({ ...prev, [methodId]: prev[methodId] + value }));
+    setPaymentAmounts((prev) => ({ ...prev, cash: prev.cash + value }));
     setPayModalKeypadInput('');
-    setSelectedPayment(methodId);
+    setSelectedPayment('cash');
     setPayModalKeypadLocked(true);
   };
 
@@ -102,6 +109,129 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setPayModalKeypadLocked(false);
   };
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const runCashmaticPayment = async (amountEuro) => {
+    const cents = Math.round((Number(amountEuro) || 0) * 100);
+    if (cents <= 0) return;
+
+    const startRes = await fetch('/api/cashmatic/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: cents })
+    });
+    const startData = await startRes.json().catch(() => ({}));
+    if (!startRes.ok) {
+      throw new Error(startData?.error || 'Unable to start Cashmatic payment.');
+    }
+
+    const sessionId = startData?.data?.sessionId;
+    if (!sessionId) throw new Error('Cashmatic session did not start.');
+
+    for (let i = 0; i < 90; i += 1) {
+      await sleep(1000);
+      const statusRes = await fetch(`/api/cashmatic/status/${encodeURIComponent(sessionId)}`);
+      const statusData = await statusRes.json().catch(() => ({}));
+      if (!statusRes.ok) {
+        throw new Error(statusData?.error || 'Unable to read Cashmatic payment status.');
+      }
+
+      const state = String(statusData?.data?.state || '').toUpperCase();
+      if (state === 'PAID' || state === 'FINISHED' || state === 'FINISHED_MANUAL') {
+        await fetch(`/api/cashmatic/finish/${encodeURIComponent(sessionId)}`, { method: 'POST' });
+        return;
+      }
+      if (state === 'CANCELLED' || state === 'ERROR') {
+        throw new Error(statusData?.error || `Cashmatic payment ${state.toLowerCase()}.`);
+      }
+    }
+
+    await fetch(`/api/cashmatic/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+    throw new Error('Cashmatic payment timeout. Please try again.');
+  };
+
+  const printTicketAutomatically = async () => {
+    const listRes = await fetch('/api/printers');
+    const listData = await listRes.json().catch(() => ({}));
+    if (!listRes.ok) {
+      throw new Error(listData?.error || 'Unable to load printers for auto print.');
+    }
+
+    const printers = Array.isArray(listData?.data) ? listData.data : [];
+    const enabledPrinters = printers.filter((p) => p && (p.enabled === 1 || p.enabled === true));
+    const printer =
+      enabledPrinters.find((p) => p.is_main === 1 || p.is_main === true) ||
+      enabledPrinters[0];
+
+    if (!printer) {
+      throw new Error('No enabled printer configured for automatic ticket printing.');
+    }
+
+    const printRes = await fetch('/api/printers/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: printer.name,
+        type: printer.type,
+        connection_string: printer.connection_string
+      })
+    });
+    const printData = await printRes.json().catch(() => ({}));
+    if (!printRes.ok) {
+      throw new Error(printData?.error || 'Automatic ticket print failed.');
+    }
+  };
+
+  const resetAfterSuccessfulPayment = () => {
+    setShowPayDifferentlyModal(false);
+    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+    setSelectedPayment(null);
+    setPayModalKeypadInput('');
+    setPayModalKeypadLocked(false);
+    setSelectedItemIds([]);
+    setCustomAmount('');
+    setShowDeleteAllModal(false);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (selectedPayment == null || payConfirmLoading) return;
+
+    const pendingInput = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
+    const shouldAssignInput = !payModalKeypadLocked && pendingInput > 0;
+    const nextAmounts = {
+      ...paymentAmounts,
+      ...(shouldAssignInput ? { [selectedPayment]: paymentAmounts[selectedPayment] + pendingInput } : {})
+    };
+
+    setPaymentAmounts(nextAmounts);
+    if (shouldAssignInput) {
+      setPayModalKeypadInput('');
+      setPayModalKeypadLocked(true);
+    }
+
+    try {
+      setPayConfirmLoading(true);
+      if (nextAmounts.cash > 0) {
+        await runCashmaticPayment(nextAmounts.cash);
+      }
+      if (order?.id) {
+        await onStatusChange?.(order.id, 'paid');
+        await onPaymentCompleted?.(order.id);
+      }
+      try {
+        await printTicketAutomatically();
+      } catch (printErr) {
+        setPaymentErrorMessage(printErr?.message || 'Automatic ticket print failed.');
+      }
+      await onCreateOrder?.();
+      resetAfterSuccessfulPayment();
+    } catch (err) {
+      setPaymentErrorMessage(err?.message || 'Payment failed.');
+    } finally {
+      setPayConfirmLoading(false);
+    }
+  };
+
   return (
     <aside className="w-[500px] shrink-0 flex flex-col gap-3 p-4 bg-pos-bg border-l border-pos-border">
       <div className="min-h-[600px] flex flex-col bg-pos-surface rounded-lg overflow-hidden">
@@ -117,7 +247,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 group.forEach((item) => (
                   result.push(
                     <div key={item.id} className="flex justify-between items-baseline py-1.5 text-2xl">
-                      <span className="font-medium">{item.quantity}x {item.product?.name ?? '—'}</span>
+                      <span className="font-medium">{item.quantity}x {getItemLabel(item)}</span>
                       <span className="font-medium">{formatSubtotalPrice(item.price * item.quantity)}</span>
                     </div>
                   )
@@ -136,7 +266,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               remaining.forEach((item) =>
                 result.push(
                   <div key={item.id} className="flex justify-between items-baseline py-1.5 text-2xl">
-                    <span className="font-medium">{item.quantity}x {item.product?.name ?? '—'}</span>
+                    <span className="font-medium">{item.quantity}x {getItemLabel(item)}</span>
                     <span className="font-medium">{formatSubtotalPrice(item.price * item.quantity)}</span>
                   </div>
                 )
@@ -154,7 +284,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 onClick={() => toggleItemSelection(item.id)}
               >
                 <span className="flex-1 font-semibold">
-                  {item.product?.name} × {item.quantity}
+                  {getItemLabel(item)} × {item.quantity}
                 </span>
                 <span className="font-semibold">€{(item.price * item.quantity).toFixed(2)}</span>
               </div>
@@ -195,14 +325,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             }}
             disabled={!hasSelection}
           >
-            Delete
+            {t('remove')}
           </button>
           <button
             type="button"
             className="flex-1 py-2 text-pos-text border-none rounded text-2xl hover:bg-gray-600"
             onClick={() => setShowDeleteAllModal(true)}
           >
-            Again
+            {t('clear')}
           </button>
           <button
             type="button"
@@ -228,7 +358,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       </div>
 
       <div className="flex items-center w-full px-5 justify-between text-xl font-semibold py-2">
-        <span className='text-4xl'>Total:&nbsp;€{total.toFixed(2)}</span>
+        <span className='text-4xl'>{t('total')}:&nbsp;€{total.toFixed(2)}</span>
         <div>
           <input
             readOnly
@@ -247,14 +377,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
           onClick={() => order && onStatusChange(order.id, 'in_planning')}
         >
-          In planning
+          {t('inPlanning')}
         </button>
         <button
           type="button"
           className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
           onClick={openPayDifferentlyModal}
         >
-          Pay differently
+          {t('payDifferently')}
         </button>
         <button
           type="button"
@@ -279,50 +409,23 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             {/* Left: Total + payment methods + Cancel */}
             <div className="flex items-center justify-center">
               <div className="p-10 min-w-[46%] w-full h-full flex flex-col">
-                <div className="text-3xl font-semibold mb-4 flex w-full justify-center items-center">Total: €{total.toFixed(2)}</div>
+                <div className="text-3xl font-semibold mb-4 flex w-full justify-center items-center">{t('total')}: €{total.toFixed(2)}</div>
                 <div className="flex gap-3 w-full mb-6 h-full items-center justify-center">
-                  {PAYMENT_METHODS.map((method) => {
-                    const amount = paymentAmounts[method.id];
-                    const isSelected = selectedPayment === method.id;
-                    return (
-                      <button
-                        type="button"
-                        key={method.id}
-                        onClick={() => (payModalKeypadLocked ? setSelectedPayment(method.id) : handlePaymentCardClick(method.id))}
-                        className={`flex flex-col h-[200px] items-center justify-center p-4 rounded-lg border-2 min-w-[220px] transition-colors ${isSelected ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 hover:border-gray-400'
-                          }`}
-                      >
-                        {method.icon === '€' && <span className="text-6xl mb-1">
-                          <svg width="60" height="60" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
-                            <path fill="#444" d="M10.89 3c1.166 0.009 2.244 0.383 3.127 1.011l-0.017-2.321c-0.918-0.433-1.994-0.686-3.129-0.686-3.606 0-6.616 2.551-7.323 5.947l-1.548 0.049v1h1.41c0 0.17 0 0.33 0 0.5-0.005 0.075-0.008 0.162-0.008 0.25s0.003 0.175 0.008 0.262l-1.411-0.012v1h1.54c0.882 3.353 3.805 5.818 7.331 5.999 1.149-0.002 2.218-0.256 3.175-0.708l-0.045-2.291c-0.866 0.617-1.944 0.991-3.108 1-2.461-0.128-4.512-1.744-5.28-3.959l6.388-0.041v-1h-6.59c-0.006-0.075-0.009-0.162-0.009-0.25s0.003-0.175 0.010-0.261c-0.001-0.159-0.001-0.319-0.001-0.489h6.59v-1h-6.4c0.678-2.325 2.788-3.996 5.29-4z"></path>
-                          </svg>
-                        </span>}
-                        {method.icon === 'card' && (
-                          <span className="mb-1 flex items-center justify-center text-xs">
-                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M22 7.54844C22 8.20844 21.46 8.74844 20.8 8.74844H3.2C2.54 8.74844 2 8.20844 2 7.54844V7.53844C2 5.24844 3.85 3.39844 6.14 3.39844H17.85C20.14 3.39844 22 5.25844 22 7.54844Z" fill="#292D32" />
-                              <path d="M2 11.45V16.46C2 18.75 3.85 20.6 6.14 20.6H17.85C20.14 20.6 22 18.74 22 16.45V11.45C22 10.79 21.46 10.25 20.8 10.25H3.2C2.54 10.25 2 10.79 2 11.45ZM8 17.25H6C5.59 17.25 5.25 16.91 5.25 16.5C5.25 16.09 5.59 15.75 6 15.75H8C8.41 15.75 8.75 16.09 8.75 16.5C8.75 16.91 8.41 17.25 8 17.25ZM14.5 17.25H10.5C10.09 17.25 9.75 16.91 9.75 16.5C9.75 16.09 10.09 15.75 10.5 15.75H14.5C14.91 15.75 15.25 16.09 15.25 16.5C15.25 16.91 14.91 17.25 14.5 17.25Z" fill="#292D32" />
-                            </svg>
-
-                          </span>
-                        )}
-                        {method.icon === 'visa' && <span className="text-xs font-bold mb-1">
-                          <svg fill="#000000" width="60" height="60" viewBox="0 -6 36 36" xmlns="http://www.w3.org/2000/svg">
-                            <path d="m33.6 24h-31.2c-1.325 0-2.4-1.075-2.4-2.4v-19.2c0-1.325 1.075-2.4 2.4-2.4h31.2c1.325 0 2.4 1.075 2.4 2.4v19.2c0 1.325-1.075 2.4-2.4 2.4zm-15.76-9.238-.359 2.25c.79.338 1.709.535 2.674.535.077 0 .153-.001.229-.004h-.011c.088.005.19.008.294.008 1.109 0 2.137-.348 2.981-.941l-.017.011c.766-.568 1.258-1.469 1.258-2.485 0-.005 0-.01 0-.015v.001c0-1.1-.736-2.014-2.187-2.72-.426-.208-.79-.426-1.132-.672l.023.016c-.198-.13-.33-.345-.343-.592v-.002c.016-.26.165-.482.379-.6l.004-.002c.282-.164.62-.261.982-.261.042 0 .084.001.126.004h-.006.08c.023 0 .05-.001.077-.001.644 0 1.255.139 1.806.388l-.028-.011.234.125.359-2.171c-.675-.267-1.458-.422-2.277-.422-.016 0-.033 0-.049 0h.003c-.064-.003-.139-.005-.214-.005-1.096 0-2.112.347-2.943.937l.016-.011c-.752.536-1.237 1.404-1.237 2.386v.005c-.01 1.058.752 1.972 2.266 2.72.4.175.745.389 1.054.646l-.007-.006c.175.148.288.365.297.608v.002.002c0 .319-.19.593-.464.716l-.005.002c-.3.158-.656.25-1.034.25-.015 0-.031 0-.046 0h.002c-.022 0-.049 0-.075 0-.857 0-1.669-.19-2.397-.53l.035.015-.343-.172zm10.125 1.141h3.315q.08.343.313 1.5h2.407l-2.094-10.031h-2c-.035-.003-.076-.005-.118-.005-.562 0-1.043.348-1.239.84l-.003.009-3.84 9.187h2.72l.546-1.499zm-13.074-8.531-1.626 10.031h2.594l1.625-10.031zm-9.969 2.047 2.11 7.968h2.734l4.075-10.015h-2.746l-2.534 6.844-.266-1.391-.904-4.609c-.091-.489-.514-.855-1.023-.855-.052 0-.104.004-.154.011l.006-.001h-4.187l-.031.203c3.224.819 5.342 2.586 6.296 5.25-.309-.792-.76-1.467-1.326-2.024l-.001-.001c-.567-.582-1.248-1.049-2.007-1.368l-.04-.015zm25.937 4.421h-2.16q.219-.578 1.032-2.8l.046-.141c.042-.104.094-.24.16-.406s.11-.302.14-.406l.188.859.593 2.89z" />
-                          </svg>
-                        </span>}
-                        <span className="text-3xl font-medium">{method.label}</span>
-                        <span className={`text-4xl font-semibold mt-1 ${isSelected ? 'text-white' : 'text-gray-700'}`}>
-                          €{amount.toFixed(2).replace('.', ',')}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  <button
+                    type="button"
+                    onClick={handleCashImageClick}
+                    className={`rounded-lg border-2 p-2 transition-colors ${
+                      selectedPayment === 'cash' ? 'bg-gray-300 border-gray-400' : 'bg-white'
+                    }`}
+                    aria-label={t('cash')}
+                  >
+                    <img src="/cash.png" alt={t('cash')} className="max-h-[280px] w-auto object-contain" />
+                  </button>
                 </div>
               </div>
               {/* Right: Assigned + input + keypad + actions + To confirm */}
               <div className="min-w-[30%] p-6">
-                <div className="text-3xl font-semibold mb-2 flex justify-center">Assigned: €{payModalTotalAssigned.toFixed(2)}</div>
+                <div className="text-3xl font-semibold mb-2 flex justify-center">{t('assigned')}: €{payModalTotalAssigned.toFixed(2)}</div>
                 <div className="flex justify-center mt-3">
                   <input
                     readOnly
@@ -363,7 +466,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   }`}
                   onClick={handlePayHalfAmount}
                 >
-                  Half amount
+                  {t('halfAmount')}
                 </button>
                 <button
                   type="button"
@@ -373,39 +476,37 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   }`}
                   onClick={handlePayRemaining}
                 >
-                  Remaining amount
+                  {t('remainingAmount')}
                 </button>
                 <button
                   type="button"
                   className="py-3 px-3 bg-gray-300 w-[300px] rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
                   onClick={handlePayReset}
                 >
-                  Reset
+                  {t('reset')}
                 </button>
               </div>
             </div>
             <div className="flex justify-between px-[250px] text-3xl gap-10 w-full pt-10">
               <button
                 type="button"
+                disabled={payConfirmLoading}
                 className="mt-auto w-[230px] py-3 px-6 bg-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-400"
                 onClick={() => setShowPayDifferentlyModal(false)}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
-                disabled={selectedPayment == null}
+                disabled={selectedPayment == null || payConfirmLoading}
                 className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${
-                  selectedPayment == null
+                  selectedPayment == null || payConfirmLoading
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
                 }`}
-                onClick={() => {
-                  if (selectedPayment != null && payModalKeypadInput && !payModalKeypadLocked) assignPayModalInput();
-                  setShowPayDifferentlyModal(false);
-                }}
+                onClick={handleConfirmPayment}
               >
-                To confirm
+                {payConfirmLoading ? 'Processing...' : t('toConfirm')}
               </button>
             </div>
           </div>
@@ -426,7 +527,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           >
             <h2 id="delete-all-title" className="text-3xl mb-10 font-semibold flex justify-center w-full text-pos-text">
               <div className='flex'>
-                Are you sure you want to clear the list?
+                {t('clearListConfirm')}
               </div>
             </h2>
             <div className="flex gap-3 justify-between">
@@ -435,7 +536,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 className="w-[200px] py-5 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
                 onClick={() => setShowDeleteAllModal(false)}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
@@ -445,6 +546,35 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   setShowDeleteAllModal(false);
                   setSelectedItemIds([]);
                 }}
+              >
+                {t('ok')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paymentErrorMessage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payment-error-title"
+          onClick={() => setPaymentErrorMessage('')}
+        >
+          <div
+            className="bg-pos-panel rounded-lg shadow-xl px-10 py-8 max-w-3xl w-full mx-4 border border-pos-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="payment-error-title" className="text-3xl mb-6 font-semibold text-pos-text text-center">
+              Payment error
+            </h2>
+            <p className="text-2xl text-pos-text text-center mb-8">{paymentErrorMessage}</p>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="w-[200px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                onClick={() => setPaymentErrorMessage('')}
               >
                 OK
               </button>
