@@ -8,6 +8,7 @@ const ROW3_KEYS = 'w x c v b n , €'.split(' ');
 const NUMPAD_KEYS = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
 const KEY_STYLE = 'w-[100px] h-[60px] bg-pos-panel rounded text-white text-4xl hover:bg-pos-panel/80 border border-transparent transition-colors';
 const INPUT_STYLE = 'w-full py-3 px-3 bg-pos-bg border border-pos-panel text-pos-text outline-none';
+const DISABLED_PRICE_GROUP = { value: 'disabled', labelKey: 'control.productModal.disabled' };
 const EMPTY_NEW_CUSTOMER = {
   companyName: '',
   firstName: '',
@@ -15,7 +16,7 @@ const EMPTY_NEW_CUSTOMER = {
   phone: '',
   email: '',
   discount: '',
-  priceGroup: 'Uitgeschakeld',
+  priceGroup: 'disabled',
   streetHouseNumber: '',
   postalCode: '',
   city: '',
@@ -33,30 +34,54 @@ export function CustomersView({
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [search, setSearch] = useState({ companyName: '', name: '', street: '', phone: '' });
   const [quickSearch, setQuickSearch] = useState('');
-  const [isNewCustomerMode, setIsNewCustomerMode] = useState(false);
+  const [priceGroups, setPriceGroups] = useState([]);
+  const [customerFormMode, setCustomerFormMode] = useState(null);
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  const [isPriceGroupOpen, setIsPriceGroupOpen] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(EMPTY_NEW_CUSTOMER);
   const activeInputRef = useRef(null);
   const listRef = useRef(null);
+  const priceGroupDropdownRef = useRef(null);
+  const isCustomerFormOpen = customerFormMode !== null;
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (search.companyName) params.set('companyName', search.companyName);
-      if (search.name) params.set('name', search.name);
-      if (search.street) params.set('street', search.street);
-      if (search.phone) params.set('phone', search.phone);
-      const res = await fetch(`${API}/customers?${params}`);
+      // Always load full list; sidebar search filters locally in UI.
+      const res = await fetch(`${API}/customers`);
       const data = res.ok ? await res.json() : [];
       setCustomers(Array.isArray(data) ? data : []);
     } catch {
       setCustomers([]);
     }
-  }, [search.companyName, search.name, search.street, search.phone]);
+  }, []);
 
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
+
+  useEffect(() => {
+    const fetchPriceGroups = async () => {
+      try {
+        const res = await fetch(`${API}/price-groups`);
+        const data = res.ok ? await res.json() : [];
+        setPriceGroups(Array.isArray(data) ? data : []);
+      } catch {
+        setPriceGroups([]);
+      }
+    };
+    fetchPriceGroups();
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!isPriceGroupOpen) return;
+      if (priceGroupDropdownRef.current && !priceGroupDropdownRef.current.contains(event.target)) {
+        setIsPriceGroupOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isPriceGroupOpen]);
 
   const setActiveInput = (e) => {
     activeInputRef.current = e.target;
@@ -71,7 +96,7 @@ export function CustomersView({
       setQuickSearch(nextValue);
       return;
     }
-    if (isNewCustomerMode) {
+    if (isCustomerFormOpen) {
       setNewCustomerForm((s) => ({ ...s, [name]: nextValue }));
       return;
     }
@@ -81,7 +106,7 @@ export function CustomersView({
   const activeValue = activeInputRef.current?.name
     ? (activeInputRef.current.name === 'quickSearch'
       ? quickSearch
-      : isNewCustomerMode
+      : isCustomerFormOpen
       ? (newCustomerForm[activeInputRef.current.name] || '')
       : (search[activeInputRef.current.name] || ''))
     : '';
@@ -109,41 +134,88 @@ export function CustomersView({
     listRef.current.scrollBy({ top: direction * 120, behavior: 'smooth' });
   };
 
+  const mapCustomerToForm = (customer) => {
+    const nameParts = String(customer?.name || '').trim().split(/\s+/).filter(Boolean);
+    const selectedPriceGroup = customer?.priceGroup || 'disabled';
+    return {
+      ...EMPTY_NEW_CUSTOMER,
+      companyName: customer?.companyName || '',
+      firstName: customer?.firstName || nameParts[0] || '',
+      lastName: customer?.lastName || nameParts.slice(1).join(' '),
+      phone: customer?.phone || '',
+      email: customer?.email || '',
+      discount: customer?.discount || '',
+      priceGroup: selectedPriceGroup,
+      streetHouseNumber: customer?.street || '',
+      postalCode: customer?.postalCode || '',
+      city: customer?.city || '',
+      vatNumber: customer?.vatNumber || '',
+      loyaltyBarcode: customer?.loyaltyCardBarcode || '',
+      loyaltyTag: customer?.creditTag || ''
+    };
+  };
+
   const openNewCustomerMode = () => {
     activeInputRef.current = null;
+    setIsPriceGroupOpen(false);
     setNewCustomerForm(EMPTY_NEW_CUSTOMER);
-    setIsNewCustomerMode(true);
+    setCustomerFormMode('create');
   };
 
-  const cancelNewCustomerMode = () => {
+  const openEditCustomerMode = () => {
+    if (!selectedCustomer) return;
     activeInputRef.current = null;
-    setIsNewCustomerMode(false);
+    setIsPriceGroupOpen(false);
+    setNewCustomerForm(mapCustomerToForm(selectedCustomer));
+    setCustomerFormMode('edit');
+  };
+
+  const closeCustomerForm = () => {
+    activeInputRef.current = null;
+    setCustomerFormMode(null);
     setIsSavingCustomer(false);
+    setIsPriceGroupOpen(false);
     setNewCustomerForm(EMPTY_NEW_CUSTOMER);
   };
 
-  const saveNewCustomer = async () => {
+  const saveCustomer = async () => {
     if (isSavingCustomer) return;
     setIsSavingCustomer(true);
     try {
       const fullName = `${newCustomerForm.firstName} ${newCustomerForm.lastName}`.trim();
+      const companyName = newCustomerForm.companyName.trim();
+      const resolvedName = fullName || companyName;
+      if (!resolvedName) return;
       const payload = {
-        companyName: newCustomerForm.companyName.trim(),
-        name: fullName || 'New customer',
+        companyName,
+        firstName: newCustomerForm.firstName.trim(),
+        lastName: newCustomerForm.lastName.trim(),
+        name: resolvedName,
         street: [newCustomerForm.streetHouseNumber, newCustomerForm.postalCode, newCustomerForm.city]
           .map((v) => v.trim())
           .filter(Boolean)
           .join(' '),
-        phone: newCustomerForm.phone.trim()
+        postalCode: newCustomerForm.postalCode.trim(),
+        city: newCustomerForm.city.trim(),
+        phone: newCustomerForm.phone.trim(),
+        email: newCustomerForm.email.trim(),
+        discount: newCustomerForm.discount.trim(),
+        priceGroup: newCustomerForm.priceGroup === 'disabled' ? '' : newCustomerForm.priceGroup,
+        vatNumber: newCustomerForm.vatNumber.trim(),
+        loyaltyCardBarcode: newCustomerForm.loyaltyBarcode.trim(),
+        creditTag: newCustomerForm.loyaltyTag.trim()
       };
-      const response = await fetch(`${API}/customers`, {
-        method: 'POST',
+      const isEdit = customerFormMode === 'edit' && selectedCustomer?.id;
+      const response = await fetch(isEdit ? `${API}/customers/${selectedCustomer.id}` : `${API}/customers`, {
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (!response.ok) throw new Error('Failed to save customer');
+      const saved = await response.json();
       await fetchCustomers();
-      cancelNewCustomerMode();
+      if (saved?.id) setSelectedCustomer(saved);
+      closeCustomerForm();
     } catch (error) {
       console.error(error);
     } finally {
@@ -152,6 +224,11 @@ export function CustomersView({
   };
 
   const normalizedQuickSearch = quickSearch.trim().toLowerCase();
+  const priceGroupOptions = [
+    { value: DISABLED_PRICE_GROUP.value, label: t(DISABLED_PRICE_GROUP.labelKey) },
+    ...priceGroups.map((group) => ({ value: group.id, label: group.name || '-' }))
+  ];
+  const selectedPriceGroupOption = priceGroupOptions.find((option) => option.value === newCustomerForm.priceGroup) || priceGroupOptions[0];
   const visibleCustomers = normalizedQuickSearch
     ? customers.filter((customer) => [customer.companyName, customer.name, customer.street, customer.phone]
       .filter(Boolean)
@@ -162,80 +239,109 @@ export function CustomersView({
     <div className="flex flex-col h-full bg-pos-bg text-pos-text p-3 gap-3">
       <div className="flex flex-1 min-h-0 gap-3">
         <main className="flex-1 min-w-0 flex flex-col">
-          {isNewCustomerMode ? (
+          {isCustomerFormOpen ? (
             <div className="flex-1 min-h-0 border border-pos-panel rounded-md p-6">
-              <div className="grid grid-cols-3 gap-8 h-full">
-                <div>
-                  <div>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1 pb-1">Firmanaam:</label>
+              <div className="flex justify-around h-full">
+                <div className='flex flex-col'>
+                  <div className='text-2xl'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersCompanyName')}:</label>
                     <input name="companyName" value={newCustomerForm.companyName} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, companyName: e.target.value }))} className={INPUT_STYLE} />
                   </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Voornaam:</label>
+                  <div className='pt-4 text-2xl'>
+                    <label className="block font-semibold w-full flex justify-center mb-1">{t('customersFirstName')}:</label>
                     <input name="firstName" value={newCustomerForm.firstName} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, firstName: e.target.value }))} className={INPUT_STYLE} />
                   </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Naam:</label>
+                  <div className='pt-4 text-2xl'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('name')}:</label>
                     <input name="lastName" value={newCustomerForm.lastName} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, lastName: e.target.value }))} className={INPUT_STYLE} />
                   </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Telefoon:</label>
+                  <div className='pt-4 text-2xl'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersPhone')}:</label>
                     <input name="phone" value={newCustomerForm.phone} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, phone: e.target.value }))} className={INPUT_STYLE} />
                   </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">E-mail:</label>
+                  <div className='pt-4 text-2xl'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersEmail')}:</label>
                     <input name="email" value={newCustomerForm.email} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, email: e.target.value }))} className={INPUT_STYLE} />
                   </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Korting:</label>
+                  <div className='pt-4 text-2xl'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersDiscount')}:</label>
                     <input name="discount" value={newCustomerForm.discount} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, discount: e.target.value }))} className={INPUT_STYLE} />
                   </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Prijsgroep:</label>
-                    <select name="priceGroup" value={newCustomerForm.priceGroup} onChange={(e) => setNewCustomerForm((s) => ({ ...s, priceGroup: e.target.value }))} className={INPUT_STYLE}>
-                      <option value="Uitgeschakeld">Uitgeschakeld</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Straat + Huisnummer:</label>
-                    <input name="streetHouseNumber" value={newCustomerForm.streetHouseNumber} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, streetHouseNumber: e.target.value }))} className={INPUT_STYLE} />
-                  </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Postcode:</label>
-                    <input name="postalCode" value={newCustomerForm.postalCode} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, postalCode: e.target.value }))} className={INPUT_STYLE} />
-                  </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Gemeente:</label>
-                    <input name="city" value={newCustomerForm.city} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, city: e.target.value }))} className={INPUT_STYLE} />
-                  </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">BTW nummer:</label>
-                    <input name="vatNumber" value={newCustomerForm.vatNumber} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, vatNumber: e.target.value }))} className={INPUT_STYLE} />
-                  </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Spaarkaart barcode:</label>
-                    <input name="loyaltyBarcode" value={newCustomerForm.loyaltyBarcode} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyBarcode: e.target.value }))} className={INPUT_STYLE} />
-                  </div>
-                  <div className='pt-4'>
-                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">Tegoed tag:</label>
-                    <div className="grid grid-cols-[1fr_auto] gap-2">
-                      <input name="loyaltyTag" value={newCustomerForm.loyaltyTag} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyTag: e.target.value }))} className={INPUT_STYLE} />
-                      <button type="button" className="h-11 px-6 bg-pos-surface rounded-md text-2xl hover:bg-pos-surface-hover">
-                        Extra tags
+                  <div className='pt-4 text-2xl'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersPriceGroup')}:</label>
+                    <div ref={priceGroupDropdownRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsPriceGroupOpen((prev) => !prev)}
+                        className={`${INPUT_STYLE} flex items-center justify-between`}
+                      >
+                        <span>{selectedPriceGroupOption.label}</span>
+                        <span className="text-sm">▼</span>
                       </button>
+                      {isPriceGroupOpen && (
+                        <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-pos-panel border border-pos-border rounded-md overflow-hidden shadow-lg">
+                          {priceGroupOptions.map((option) => {
+                            const isSelected = newCustomerForm.priceGroup === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  setNewCustomerForm((prev) => ({ ...prev, priceGroup: option.value }));
+                                  setIsPriceGroupOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 transition-colors ${
+                                  isSelected ? 'bg-pos-surface text-white' : 'bg-pos-panel text-pos-text hover:bg-pos-surface'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-6 pt-10">
-                  <button type="button" onClick={saveNewCustomer} disabled={isSavingCustomer} className="h-20 px-5 bg-pos-surface rounded-md text-3xl hover:bg-pos-surface-hover disabled:opacity-60">
-                    Opslaan
+                <div className='text-2xl'>
+                  <div>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersStreetHouseNumber')}:</label>
+                    <input name="streetHouseNumber" value={newCustomerForm.streetHouseNumber} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, streetHouseNumber: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersPostcode')}:</label>
+                    <input name="postalCode" value={newCustomerForm.postalCode} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, postalCode: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersCity')}:</label>
+                    <input name="city" value={newCustomerForm.city} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, city: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersVatNumber')}:</label>
+                    <input name="vatNumber" value={newCustomerForm.vatNumber} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, vatNumber: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersLoyaltyCardBarcode')}:</label>
+                    <input name="loyaltyBarcode" value={newCustomerForm.loyaltyBarcode} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyBarcode: e.target.value }))} className={INPUT_STYLE} />
+                  </div>
+                  <div className='pt-4'>
+                    <label className="block text-2xl font-semibold w-full flex justify-center mb-1">{t('customersCreditTag')}:</label>
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <input name="loyaltyTag" value={newCustomerForm.loyaltyTag} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyTag: e.target.value }))} className={INPUT_STYLE} />
+                      {/* <button type="button" className="py-3 px-6 bg-pos-surface rounded-md text-2xl hover:bg-pos-surface-hover">
+                        {t('customersExtraTags')}
+                      </button> */}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-6 min-w-[200px] h-full justify-around py-20">
+                  <button type="button" onClick={saveCustomer} disabled={isSavingCustomer} className="py-3 px-5 bg-pos-surface rounded-md text-2xl hover:bg-pos-surface-hover disabled:opacity-60">
+                    {t('control.save')}
                   </button>
-                  <button type="button" onClick={cancelNewCustomerMode} className="h-20 px-5 bg-pos-surface rounded-md text-3xl hover:bg-pos-surface-hover">
-                    Annuleren
+                  <button type="button" onClick={closeCustomerForm} className="py-3 px-5 bg-pos-surface rounded-md text-2xl hover:bg-pos-surface-hover">
+                    {t('cancel')}
                   </button>
                 </div>
               </div>
@@ -277,19 +383,20 @@ export function CustomersView({
           )}
         </main>
 
-        {!isNewCustomerMode && (
+        {!isCustomerFormOpen && (
           <aside className="w-[170px] shrink-0 flex flex-col gap-4 text-xl h-full justify-around py-8">
             <input
               name="quickSearch"
               value={quickSearch}
               onFocus={setActiveInput}
               onChange={(e) => setQuickSearch(e.target.value)}
+              placeholder={t('customersSearchPlaceholder')}
               className="py-3 px-3 bg-pos-surface border border-pos-border rounded-md text-pos-text outline-none"
             />
             <button type="button" onClick={openNewCustomerMode} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
               {t('customersNewCustomer')}
             </button>
-            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+            <button type="button" onClick={openEditCustomerMode} disabled={!selectedCustomer} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover disabled:opacity-50 disabled:cursor-not-allowed">
               {t('customersEditCustomer')}
             </button>
             <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
@@ -308,7 +415,7 @@ export function CustomersView({
         )}
       </div>
 
-      {!isNewCustomerMode && (
+      {!isCustomerFormOpen && (
         <div className="grid grid-cols-4 gap-3 text-2xl shrink-0">
           <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface" onClick={onBack}>
             {t('backName')}

@@ -74,7 +74,13 @@ export function KeyboardWithNumpad({ value = '', onChange, className = '' }) {
             </button>
             <button type="button" className="bg-pos-panel rounded hover:bg-pos-panel/80 w-[412px] h-[100px] border border-transparent transition-colors" onClick={() => sendKey(' ')} aria-label="Space" />
             <button type="button" className={KEY_STYLE} onClick={() => sendKey('Backspace')} aria-label="Backspace">
+              _
+            </button>
+            <button type="button" className={KEY_STYLE} onClick={() => sendKey('Backspace')} aria-label="Backspace">
               ←
+            </button>
+            <button type="button" className={KEY_STYLE} onClick={() => sendKey('Backspace')} aria-label="Backspace">
+              →
             </button>
           </div>
         </div>

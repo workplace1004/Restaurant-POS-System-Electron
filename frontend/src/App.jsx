@@ -269,7 +269,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           onClick={() => setShowCustomersModal(false)}
         >
           <div
-            className="h-[92vh] w-[96vw] max-w-[1410px] rounded-xl overflow-hidden border border-pos-border shadow-2xl"
+            className="h-[96vh] w-[96vw] max-w-[1410px] rounded-xl overflow-hidden border border-pos-border shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <CustomersView onBack={() => setShowCustomersModal(false)} />
