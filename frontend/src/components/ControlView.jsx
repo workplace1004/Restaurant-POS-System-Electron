@@ -865,6 +865,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [cashmaticUrl, setCashmaticUrl] = useState('');
   const [cashmaticActiveField, setCashmaticActiveField] = useState('name');
   const [savingCashmatic, setSavingCashmatic] = useState(false);
+  const [cashmaticTerminalId, setCashmaticTerminalId] = useState(null);
 
   const [subproductGroups, setSubproductGroups] = useState([]);
   const [subproductGroupsLoading, setSubproductGroupsLoading] = useState(false);
@@ -2292,6 +2293,74 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     return { ipAddress: ipAddress.trim(), port: String(port || '9100').trim() };
   };
 
+  const parseCashmaticConnectionString = (connectionString = '') => {
+    const pickFromConfig = (config, keys) => {
+      for (const key of keys) {
+        if (config[key] != null && String(config[key]).trim() !== '') return String(config[key]).trim();
+        const lower = key.toLowerCase();
+        const match = Object.keys(config).find((k) => k.toLowerCase() === lower && config[k] != null && String(config[k]).trim() !== '');
+        if (match) return String(config[match]).trim();
+      }
+      return '';
+    };
+
+    const raw = String(connectionString || '').trim();
+    if (!raw) {
+      return { ip: '', port: '', username: '', password: '', url: '' };
+    }
+
+    let config = {};
+    try {
+      config = JSON.parse(raw);
+    } catch {
+      if (raw.startsWith('tcp://')) {
+        const [ip = '', port = '50301'] = raw.substring(6).split(':');
+        return { ip: ip.trim(), port: String(port || '50301').trim(), username: '', password: '', url: '' };
+      }
+      return { ip: raw, port: '', username: '', password: '', url: '' };
+    }
+
+    const url = pickFromConfig(config, ['url', 'apiUrl', 'api_url', 'endpoint']);
+    const ip = pickFromConfig(config, ['ip', 'ipAddress', 'ip_address']) || (() => {
+      if (!url) return '';
+      try {
+        return new URL(url).hostname || '';
+      } catch {
+        return '';
+      }
+    })();
+    const port = pickFromConfig(config, ['port']) || (() => {
+      if (!url) return '';
+      try {
+        return String(new URL(url).port || '');
+      } catch {
+        return '';
+      }
+    })();
+    const username =
+      pickFromConfig(config, ['username', 'userName', 'user_name', 'user', 'login']) ||
+      (() => {
+        if (!url) return '';
+        try {
+          return new URL(url).username || '';
+        } catch {
+          return '';
+        }
+      })();
+    const password =
+      pickFromConfig(config, ['password', 'pass', 'pwd']) ||
+      (() => {
+        if (!url) return '';
+        try {
+          return new URL(url).password || '';
+        } catch {
+          return '';
+        }
+      })();
+
+    return { ip, port, username, password, url };
+  };
+
   const mapApiPrinterToUi = (p, index) => {
     const apiType = String(p?.type || '').toLowerCase();
     const connection = String(p?.connection_string || '');
@@ -2806,6 +2875,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   useEffect(() => {
     if (topNavId !== 'external-devices' || subNavId !== 'Cashmatic') return;
+    let cancelled = false;
     try {
       const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_cashmatic');
       if (raw) {
@@ -2825,6 +2895,33 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         }
       }
     } catch (_) { }
+    const loadCashmaticFromDb = async () => {
+      try {
+        const res = await fetch(`${API}/payment-terminals`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok) return;
+        const terminals = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+        const cashmatic = terminals.find((t) => String(t?.type || '').toLowerCase() === 'cashmatic');
+        if (!cashmatic || cancelled) return;
+        const parsed = parseCashmaticConnectionString(cashmatic.connection_string);
+        setCashmaticTerminalId(cashmatic.id || null);
+        if (cashmatic.name != null) setCashmaticName(String(cashmatic.name));
+        if (cashmatic.connection_type != null) {
+          setCashmaticConnectionType(String(cashmatic.connection_type).toLowerCase() === 'api' ? 'api' : 'tcp');
+        }
+        if (parsed.ip) setCashmaticIpAddress(parsed.ip);
+        if (parsed.port) setCashmaticPort(parsed.port);
+        if (parsed.username) setCashmaticUsername(parsed.username);
+        if (parsed.password) setCashmaticPassword(parsed.password);
+        if (parsed.url) setCashmaticUrl(parsed.url);
+      } catch {
+        // Keep local values if backend is unavailable.
+      }
+    };
+    loadCashmaticFromDb();
+    return () => {
+      cancelled = true;
+    };
   }, [topNavId, subNavId]);
 
   useEffect(() => {
@@ -2883,22 +2980,93 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     }
   };
 
-  const handleSaveCashmatic = () => {
+  const handleSaveCashmatic = async () => {
     setSavingCashmatic(true);
     try {
+      const trimmedUsername = String(cashmaticUsername || '').trim();
+      const trimmedPassword = String(cashmaticPassword || '').trim();
+      const trimmedIp = String(cashmaticIpAddress || '').trim();
+      const trimmedUrl = String(cashmaticUrl || '').trim();
+      const trimmedPort = String(cashmaticPort || '').trim();
+      const resolvedPort = trimmedPort || '50301';
+      const validPort = Number.parseInt(resolvedPort, 10);
+      if (!trimmedUsername || !trimmedPassword) {
+        throw new Error('Cashmatic username and password are required.');
+      }
+      if (cashmaticConnectionType === 'tcp' && !trimmedIp) {
+        throw new Error('Cashmatic IP address is required for TCP/IP.');
+      }
+      if (cashmaticConnectionType === 'tcp' && /^[0-9]+$/.test(trimmedIp)) {
+        throw new Error('Cashmatic IP address is invalid. Please enter a full IP like 192.168.1.60.');
+      }
+      if (cashmaticConnectionType === 'api' && !trimmedUrl && !trimmedIp) {
+        throw new Error('Cashmatic URL or IP address is required for API mode.');
+      }
+      if (!Number.isInteger(validPort) || validPort < 1 || validPort > 65535) {
+        throw new Error('Cashmatic port must be a number between 1 and 65535.');
+      }
+
+      const connectionConfig = cashmaticConnectionType === 'api'
+        ? {
+            url: trimmedUrl,
+            ip: trimmedIp,
+            port: resolvedPort,
+            username: trimmedUsername,
+            password: trimmedPassword,
+          }
+        : {
+            ip: trimmedIp,
+            port: resolvedPort,
+            username: trimmedUsername,
+            password: trimmedPassword,
+          };
+
+      const terminalPayload = {
+        name: String(cashmaticName || '').trim() || 'Cashmatic Terminal',
+        type: 'cashmatic',
+        connection_type: cashmaticConnectionType === 'api' ? 'api' : 'tcp',
+        connection_string: JSON.stringify(connectionConfig),
+        enabled: 1,
+        is_main: 1,
+      };
+
+      let terminalId = cashmaticTerminalId;
+      if (!terminalId) {
+        const listRes = await fetch(`${API}/payment-terminals`);
+        const listData = await listRes.json().catch(() => null);
+        const list = Array.isArray(listData?.data) ? listData.data : (Array.isArray(listData) ? listData : []);
+        const existing = list.find((t) => String(t?.type || '').toLowerCase() === 'cashmatic');
+        if (existing?.id) terminalId = existing.id;
+      }
+
+      const endpoint = terminalId ? `${API}/payment-terminals/${terminalId}` : `${API}/payment-terminals`;
+      const method = terminalId ? 'PUT' : 'POST';
+      const saveRes = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(terminalPayload),
+      });
+      const saved = await saveRes.json().catch(() => ({}));
+      if (!saveRes.ok) {
+        throw new Error(saved?.error || `Failed to save Cashmatic terminal (HTTP ${saveRes.status})`);
+      }
+      if (saved?.id) setCashmaticTerminalId(saved.id);
+
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('pos_cashmatic', JSON.stringify({
-          name: cashmaticName,
+          name: terminalPayload.name,
           connectionType: cashmaticConnectionType,
-          ip: cashmaticIpAddress,
-          port: cashmaticPort,
-          username: cashmaticUsername,
-          password: cashmaticPassword,
-          url: cashmaticUrl,
-          ipPort: `${cashmaticIpAddress}${cashmaticPort ? `:${cashmaticPort}` : ''}`,
+          ip: connectionConfig.ip,
+          port: connectionConfig.port,
+          username: connectionConfig.username,
+          password: connectionConfig.password,
+          url: connectionConfig.url || '',
+          ipPort: `${connectionConfig.ip}${connectionConfig.port ? `:${connectionConfig.port}` : ''}`,
         }));
       }
       showToast('success', 'Cashmatic settings saved.');
+    } catch (err) {
+      showToast('error', err?.message || 'Failed to save Cashmatic settings.');
     } finally {
       setSavingCashmatic(false);
     }

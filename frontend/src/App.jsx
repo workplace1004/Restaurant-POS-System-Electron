@@ -78,6 +78,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     removeOrderItem,
     updateOrderItemQuantity,
     setOrderStatus,
+    setOrderTable,
     createOrder,
     removeOrder,
     removeAllOrders,
@@ -141,11 +142,19 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   };
 
   const handleSelectTable = useCallback(
-    (table) => {
+    async (table) => {
       setSelectedTable(table);
+      if (currentOrder?.id) {
+        await setOrderTable(currentOrder.id, table?.id || null);
+      }
       setViewAndPersist('pos');
     },
-    [setViewAndPersist]
+    [currentOrder?.id, setOrderTable, setViewAndPersist]
+  );
+
+  const handleAddProductWithSelectedTable = useCallback(
+    (product) => addItemToOrder(product, 1, selectedTable?.id || null),
+    [addItemToOrder, selectedTable?.id]
   );
 
   if (!user) {
@@ -211,7 +220,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           selectedCategoryId={selectedCategoryId}
           categories={categories}
           onSelectCategory={setSelectedCategoryId}
-          onAddProduct={addItemToOrder}
+          onAddProduct={handleAddProductWithSelectedTable}
           currentOrderId={currentOrder?.id}
           fetchSubproductsForProduct={fetchSubproductsForProduct}
         />

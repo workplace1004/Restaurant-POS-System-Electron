@@ -8,6 +8,8 @@ const KEYPAD = [
 ];
 
 const formatSubtotalPrice = (n) => `€ ${Number(n).toFixed(2).replace('.', ',')}`;
+const roundCurrency = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const formatPaymentAmount = (n) => `€${roundCurrency(n).toFixed(2)}`;
 
 export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted }) {
   const { t } = useLanguage();
@@ -21,6 +23,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [payModalKeypadLocked, setPayModalKeypadLocked] = useState(false);
   const [payConfirmLoading, setPayConfirmLoading] = useState(false);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState('');
+  const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
@@ -150,36 +153,23 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     throw new Error('Cashmatic payment timeout. Please try again.');
   };
 
-  const printTicketAutomatically = async () => {
-    const listRes = await fetch('/api/printers');
-    const listData = await listRes.json().catch(() => ({}));
-    if (!listRes.ok) {
-      throw new Error(listData?.error || 'Unable to load printers for auto print.');
-    }
-
-    const printers = Array.isArray(listData?.data) ? listData.data : [];
-    const enabledPrinters = printers.filter((p) => p && (p.enabled === 1 || p.enabled === true));
-    const printer =
-      enabledPrinters.find((p) => p.is_main === 1 || p.is_main === true) ||
-      enabledPrinters[0];
-
-    if (!printer) {
-      throw new Error('No enabled printer configured for automatic ticket printing.');
-    }
-
-    const printRes = await fetch('/api/printers/test', {
+  const printTicketAutomatically = async (paymentBreakdown) => {
+    const printRes = await fetch('/api/printers/receipt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: printer.name,
-        type: printer.type,
-        connection_string: printer.connection_string
+        orderId: order?.id,
+        paymentBreakdown
       })
     });
     const printData = await printRes.json().catch(() => ({}));
     if (!printRes.ok) {
       throw new Error(printData?.error || 'Automatic ticket print failed.');
     }
+    if (printData?.success !== true || printData?.data?.printed !== true) {
+      throw new Error(printData?.error || 'Printer did not confirm successful print.');
+    }
+    return printData?.data || {};
   };
 
   const resetAfterSuccessfulPayment = () => {
@@ -202,6 +192,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       ...paymentAmounts,
       ...(shouldAssignInput ? { [selectedPayment]: paymentAmounts[selectedPayment] + pendingInput } : {})
     };
+    const assignedTotal = roundCurrency(nextAmounts.cash + nextAmounts.bancontact + nextAmounts.visa);
+    const orderTotal = roundCurrency(total);
+
+    if (assignedTotal <= 0) {
+      setPaymentErrorMessage('Assigned amount must be greater than 0.');
+      return;
+    }
+    if (Math.abs(assignedTotal - orderTotal) > 0.009) {
+      setPaymentErrorMessage(`Assigned amount (€${assignedTotal.toFixed(2)}) must match total (€${orderTotal.toFixed(2)}).`);
+      return;
+    }
 
     setPaymentAmounts(nextAmounts);
     if (shouldAssignInput) {
@@ -218,10 +219,25 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         await onStatusChange?.(order.id, 'paid');
         await onPaymentCompleted?.(order.id);
       }
+      let printedSuccessfully = true;
+      let printResult = null;
       try {
-        await printTicketAutomatically();
+        printResult = await printTicketAutomatically(nextAmounts);
       } catch (printErr) {
+        printedSuccessfully = false;
         setPaymentErrorMessage(printErr?.message || 'Automatic ticket print failed.');
+      }
+      if (printedSuccessfully) {
+        const methodLines = [
+          nextAmounts.cash > 0 ? `Cashmatic: ${formatPaymentAmount(nextAmounts.cash)}` : null,
+          nextAmounts.bancontact > 0 ? `Bancontact: ${formatPaymentAmount(nextAmounts.bancontact)}` : null,
+          nextAmounts.visa > 0 ? `Visa: ${formatPaymentAmount(nextAmounts.visa)}` : null,
+        ].filter(Boolean);
+        setPaymentSuccessMessage([
+          `Payment successful (${formatPaymentAmount(orderTotal)}).`,
+          methodLines.length ? methodLines.join(' | ') : '',
+          `Receipt printed successfully${printResult?.printerName ? ` on ${printResult.printerName}` : ''}.`,
+        ].filter(Boolean).join(' '));
       }
       await onCreateOrder?.();
       resetAfterSuccessfulPayment();
@@ -507,6 +523,35 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 onClick={handleConfirmPayment}
               >
                 {payConfirmLoading ? 'Processing...' : t('toConfirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paymentSuccessMessage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payment-success-title"
+          onClick={() => setPaymentSuccessMessage('')}
+        >
+          <div
+            className="bg-pos-panel rounded-lg shadow-xl px-10 py-8 max-w-3xl w-full mx-4 border border-pos-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="payment-success-title" className="text-3xl mb-6 font-semibold text-pos-text text-center">
+              Payment successful
+            </h2>
+            <p className="text-2xl text-pos-text text-center mb-8">{paymentSuccessMessage}</p>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="w-[200px] py-4 bg-green-600 text-white rounded text-2xl hover:bg-green-700"
+                onClick={() => setPaymentSuccessMessage('')}
+              >
+                OK
               </button>
             </div>
           </div>
