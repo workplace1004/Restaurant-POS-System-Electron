@@ -89,7 +89,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchTables,
     historyOrders,
     fetchOrderHistory,
-    fetchSubproductsForProduct
+    fetchSubproductsForProduct,
+    savedPositioningLayoutByCategory,
+    fetchSavedPositioningLayout
   } = usePos(API, socket, selectedTable?.id ?? null);
 
   useEffect(() => {
@@ -103,11 +105,18 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchWebordersCount();
     fetchInPlanningCount();
     fetchTables();
-  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables]);
+    fetchSavedPositioningLayout();
+  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout]);
 
   useEffect(() => {
     if (selectedCategoryId) fetchProducts(selectedCategoryId);
   }, [selectedCategoryId, fetchProducts]);
+
+  useEffect(() => {
+    if (view === 'pos') {
+      fetchSavedPositioningLayout();
+    }
+  }, [view, fetchSavedPositioningLayout]);
 
   useEffect(() => {
     setSubtotalBreaks([]);
@@ -219,6 +228,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           onAddProduct={handleAddProductWithSelectedTable}
           currentOrderId={currentOrder?.id}
           fetchSubproductsForProduct={fetchSubproductsForProduct}
+          positioningLayoutByCategory={savedPositioningLayoutByCategory}
         />
         <Footer
           customersActive={showCustomersModal}

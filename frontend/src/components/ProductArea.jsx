@@ -8,7 +8,8 @@ export function ProductArea({
   onSelectCategory,
   onAddProduct,
   currentOrderId,
-  fetchSubproductsForProduct
+  fetchSubproductsForProduct,
+  positioningLayoutByCategory
 }) {
   const { t } = useLanguage();
   const [page, setPage] = useState(0);
@@ -25,9 +26,14 @@ export function ProductArea({
       return {};
     }
   }, []);
-  const perPage = 8;
-  const totalPages = Math.max(1, Math.ceil(products.length / perPage));
-  const paginated = products.slice(page * perPage, page * perPage + perPage);
+  const productById = new Map(products.map((p) => [p.id, p]));
+  const layoutForCategory = Array.isArray(positioningLayoutByCategory?.[selectedCategoryId])
+    ? positioningLayoutByCategory[selectedCategoryId]
+    : null;
+  const PAGE_SIZE = 30; // 5 x 6, same as positioning modal
+  const totalPages = Math.max(1, Math.ceil((layoutForCategory?.length || PAGE_SIZE) / PAGE_SIZE));
+  const pageStart = page * PAGE_SIZE;
+  const pageCells = Array.from({ length: PAGE_SIZE }, (_, i) => layoutForCategory?.[pageStart + i] || null);
 
   const goPrev = () => setPage((p) => Math.max(0, p - 1));
   const goNext = () => setPage((p) => Math.min(totalPages - 1, p + 1));
@@ -40,6 +46,10 @@ export function ProductArea({
     setLoadingSubproducts(false);
     setPage(0);
   }, [selectedCategoryId]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [selectedCategoryId, layoutForCategory?.length]);
 
   const handleProductPress = useCallback(
     async (product) => {
@@ -127,63 +137,49 @@ export function ProductArea({
           ›
         </button>
       </div>
-      <div className="max-h-[300px] min-h-[160px] p-1 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 content-start overflow-auto">
-        {paginated.length === 0 ? (
-          <div className="col-span-full flex items-center justify-center text-pos-surface text-lg min-h-[120px]">
+      <div className="max-h-[820px] min-h-[240px] p-1 overflow-auto">
+        {!layoutForCategory ? (
+          <div className="col-span-full flex items-center justify-center text-pos-surface text-lg min-h-[100px] max-h-[100px]">
             {t('selectCategoryToSeeProducts')}
           </div>
         ) : (
-          paginated.map((product) => (
-            <button
-              type="button"
-              key={product.id}
-              className={`flex flex-col items-center justify-center p-4 bg-pos-panel border-none rounded-lg text-pos-text text-2xl min-h-[88px] hover:bg-pos-rowHover ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
-                }`}
-              onClick={() => handleProductPress(product)}
-            >
-              {product.kassaPhotoPath ? (
-                <img
-                  src={product.kassaPhotoPath}
-                  alt={product.name}
-                  className="w-full h-[88px] object-cover rounded mb-2"
-                />
-              ) : null}
-              <span className="mb-1">{product.name}</span>
-              <span className="font-semibold text-pos-text-dim text-xl">€{Number(product.price).toFixed(2)}</span>
-            </button>
-          ))
-        )}
-      </div>
-      <div className="flex-1 min-h-[120px] mt-3 overflow-auto">
-        {selectedProduct && loadingSubproducts ? (
-          <div className="h-full flex items-center justify-center text-pos-surface text-lg">
-            Loading subproducts...
-          </div>
-        ) : null}
-        {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 content-start">
-            {subproducts.map((subproduct) => (
-              <button
-                type="button"
-                key={subproduct.id}
-                className="flex flex-col items-center justify-center p-4 bg-pos-surface border-none rounded-lg text-pos-text text-xl min-h-[82px] hover:bg-pos-rowHover"
-                onClick={() => handleSubproductPress(subproduct)}
-              >
-                {subproduct?.kioskPicture ? (
-                  <img
-                    src={subproduct.kioskPicture}
-                    alt={subproduct.name}
-                    className="w-full h-[64px] object-cover rounded mb-2"
+          <div className="grid grid-cols-5 gap-3 content-start">
+            {pageCells.map((entry, idx) => {
+              const product = typeof entry === 'string' && entry.startsWith('p:')
+                ? productById.get(entry.slice(2))
+                : null;
+              if (!product) {
+                return (
+                  <div
+                    key={`empty-${idx}`}
+                    className="min-h-[120px] rounded-lg bg-transparent"
                   />
-                ) : null}
-                <span className="mb-1">{subproduct.name}</span>
-                <span className="font-semibold text-pos-text-dim text-lg">
-                  €{Number(subproduct?.price != null ? subproduct.price : selectedProduct?.price ?? 0).toFixed(2)}
-                </span>
-              </button>
-            ))}
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  key={`${product.id}-${idx}`}
+                  className={`flex flex-row items-center gap-5 justify-center px-3 bg-pos-panel border-none rounded-lg text-pos-text text-xl min-h-[120px] max-h-[120px] hover:bg-pos-rowHover ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                    }`}
+                  onClick={() => handleProductPress(product)}
+                >
+                  {product.kassaPhotoPath ? (
+                    <img
+                      src={product.kassaPhotoPath}
+                      alt={product.name}
+                      className="max-w-[100px] min-w-[100px] max-h-[80px] min-h-[80px] object-cover rounded"
+                    />
+                  ) : null}
+                  <div className="flex flex-col items-start justify-center">
+                    <span>{product.name}</span>
+                    <span className="font-semibold text-pos-text-dim text-xl">€{Number(product.price).toFixed(2)}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        ) : null}
+        )}
       </div>
     </main>
   );

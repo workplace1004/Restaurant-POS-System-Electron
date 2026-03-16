@@ -569,6 +569,12 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const [showProductSubproductsModal, setShowProductSubproductsModal] = useState(false);
+  const [productSubproductsProduct, setProductSubproductsProduct] = useState(null);
+  const [productSubproductsGroupId, setProductSubproductsGroupId] = useState('');
+  const [productSubproductsOptions, setProductSubproductsOptions] = useState([]);
+  const [productSubproductsSelectedId, setProductSubproductsSelectedId] = useState('');
+  const [savingProductSubproducts, setSavingProductSubproducts] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showProductPositioningModal, setShowProductPositioningModal] = useState(false);
   const [positioningCategoryId, setPositioningCategoryId] = useState(null);
@@ -577,6 +583,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [positioningSubproducts, setPositioningSubproducts] = useState([]);
   const [positioningLayoutByCategory, setPositioningLayoutByCategory] = useState({});
   const [positioningColorByCategory, setPositioningColorByCategory] = useState({});
+  const [savingPositioningLayout, setSavingPositioningLayout] = useState(false);
+  const [positioningLayoutSaveMessage, setPositioningLayoutSaveMessage] = useState('');
   const [editingProductId, setEditingProductId] = useState(null);
   const [productTab, setProductTab] = useState('general');
   const [productTabsUnlocked, setProductTabsUnlocked] = useState(false);
@@ -1038,15 +1046,33 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   }, [showProductPositioningModal, positioningCategoryId, categories, selectedCategoryId]);
 
   useEffect(() => {
-    try {
-      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_product_positioning_layout') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') setPositioningLayoutByCategory(parsed);
+    let alive = true;
+    const loadSavedPositioningLayout = async () => {
+      try {
+        const res = await fetch(`${API}/settings/product-positioning-layout`);
+        const data = await res.json().catch(() => null);
+        const value = data?.value;
+        if (alive && value && typeof value === 'object') {
+          setPositioningLayoutByCategory(value);
+          return;
+        }
+      } catch {
+        // fallback to local draft when api is unavailable
       }
-    } catch {
-      // ignore broken local positioning data
-    }
+      try {
+        const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_product_positioning_layout') : null;
+        if (alive && raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') setPositioningLayoutByCategory(parsed);
+        }
+      } catch {
+        // ignore broken local positioning data
+      }
+    };
+    loadSavedPositioningLayout();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1133,6 +1159,17 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     fetchPositioningSubproducts(categoryId);
   }, [showProductPositioningModal, positioningCategoryId, selectedCategoryId, categories, fetchProducts, fetchPositioningSubproducts]);
 
+  useEffect(() => {
+    if (!showProductPositioningModal) return;
+    const categoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
+    if (!categoryId) return;
+    setPositioningLayoutByCategory((prev) => {
+      if (Array.isArray(prev?.[categoryId])) return prev;
+      // Persist explicit empty layout so POS does not auto-fallback to full product list.
+      return { ...prev, [categoryId]: Array.from({ length: 30 }, () => null) };
+    });
+  }, [showProductPositioningModal, positioningCategoryId, selectedCategoryId, categories]);
+
   const openProductPositioningModal = () => {
     setPositioningCategoryId(selectedCategoryId || categories[0]?.id || null);
     setPositioningSelectedProductId(null);
@@ -1144,7 +1181,29 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setShowProductPositioningModal(false);
     setPositioningSelectedProductId(null);
     setPositioningSelectedCellIndex(null);
+    setPositioningLayoutSaveMessage('');
   };
+
+  const saveProductPositioningLayout = useCallback(async () => {
+    setSavingPositioningLayout(true);
+    setPositioningLayoutSaveMessage('');
+    try {
+      const res = await fetch(`${API}/settings/product-positioning-layout`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: positioningLayoutByCategory || {} })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to save positioning layout');
+      }
+      setPositioningLayoutSaveMessage('Layout saved');
+    } catch (err) {
+      setPositioningLayoutSaveMessage(err?.message || 'Failed to save layout');
+    } finally {
+      setSavingPositioningLayout(false);
+    }
+  }, [positioningLayoutByCategory]);
 
   const fetchSubproductGroups = useCallback(async () => {
     setSubproductGroupsLoading(true);
@@ -1231,6 +1290,96 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       setSelectedSubproductGroupId(subproductGroups[0].id);
     }
   }, [subNavId, subproductGroups, selectedSubproductGroupId]);
+
+  const openProductSubproductsModal = useCallback(async (product) => {
+    setProductSubproductsProduct(product);
+    let groups = subproductGroups;
+    if (!groups.length) {
+      try {
+        const res = await fetch(`${API}/subproduct-groups`);
+        const data = await res.json().catch(() => []);
+        groups = Array.isArray(data) ? data : [];
+        setSubproductGroups(groups);
+      } catch {
+        groups = [];
+      }
+    }
+    let initialGroupId = '';
+    if (product?.addition) {
+      const byId = groups.find((g) => g.id === product.addition);
+      const byName = groups.find((g) => g.name === product.addition);
+      initialGroupId = (byId || byName)?.id || '';
+    }
+    if (!initialGroupId && groups[0]?.id) initialGroupId = groups[0].id;
+    setProductSubproductsGroupId(initialGroupId);
+    setProductSubproductsSelectedId('');
+    setProductSubproductsOptions([]);
+    setShowProductSubproductsModal(true);
+  }, [subproductGroups]);
+
+  const closeProductSubproductsModal = useCallback(() => {
+    setShowProductSubproductsModal(false);
+    setProductSubproductsProduct(null);
+    setProductSubproductsGroupId('');
+    setProductSubproductsSelectedId('');
+    setProductSubproductsOptions([]);
+    setSavingProductSubproducts(false);
+  }, []);
+
+  useEffect(() => {
+    if (!showProductSubproductsModal || !productSubproductsGroupId) {
+      setProductSubproductsOptions([]);
+      setProductSubproductsSelectedId('');
+      return;
+    }
+    let alive = true;
+    const loadGroupSubproducts = async () => {
+      try {
+        const res = await fetch(`${API}/subproduct-groups/${productSubproductsGroupId}/subproducts`);
+        const data = await res.json().catch(() => []);
+        if (!alive) return;
+        const list = Array.isArray(data) ? data : [];
+        setProductSubproductsOptions(list);
+        setProductSubproductsSelectedId(list[0]?.id || '');
+      } catch {
+        if (!alive) return;
+        setProductSubproductsOptions([]);
+        setProductSubproductsSelectedId('');
+      }
+    };
+    loadGroupSubproducts();
+    return () => {
+      alive = false;
+    };
+  }, [showProductSubproductsModal, productSubproductsGroupId]);
+
+  const handleSaveProductSubproducts = useCallback(async () => {
+    if (!productSubproductsProduct?.id) return;
+    setSavingProductSubproducts(true);
+    try {
+      const body = { addition: productSubproductsGroupId || null };
+      const res = await fetch(`${API}/products/${productSubproductsProduct.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to save subproducts setting');
+      }
+      showToast('success', 'Subproducts setting saved.');
+      setProducts((prev) => prev.map((p) => (
+        p.id === productSubproductsProduct.id
+          ? { ...p, addition: productSubproductsGroupId || null }
+          : p
+      )));
+      closeProductSubproductsModal();
+    } catch (err) {
+      showToast('error', err?.message || 'Failed to save subproducts setting.');
+    } finally {
+      setSavingProductSubproducts(false);
+    }
+  }, [closeProductSubproductsModal, productSubproductsGroupId, productSubproductsProduct, showToast]);
 
   const handleLogoutConfirm = () => {
     setShowLogoutModal(false);
@@ -3135,18 +3284,18 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       const connectionConfig = cashmaticConnectionType === 'api'
         ? {
-            url: trimmedUrl,
-            ip: trimmedIp,
-            port: resolvedPort,
-            username: trimmedUsername,
-            password: trimmedPassword,
-          }
+          url: trimmedUrl,
+          ip: trimmedIp,
+          port: resolvedPort,
+          username: trimmedUsername,
+          password: trimmedPassword,
+        }
         : {
-            ip: trimmedIp,
-            port: resolvedPort,
-            username: trimmedUsername,
-            password: trimmedPassword,
-          };
+          ip: trimmedIp,
+          port: resolvedPort,
+          username: trimmedUsername,
+          password: trimmedPassword,
+        };
 
       const terminalPayload = {
         name: String(cashmaticName || '').trim() || 'Cashmatic Terminal',
@@ -4339,7 +4488,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             {product.name}
                           </span>
                           <span className="flex-shrink-0 min-w-[30%] text-center text-pos-muted text-xl">
-                            {tr('control.products.subproductsColumn', 'Subproducts')}
+                            <button
+                              type="button"
+                              className="px-3 py-1 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openProductSubproductsModal(product);
+                              }}
+                            >
+                              {tr('control.products.subproductsColumn', 'Subproducts')}
+                            </button>
                           </span>
                           <div className="flex items-center justify-end min-w-[40%] gap-10 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
@@ -6866,20 +7024,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
           .map((p) => ({ ...p, type: 'product', _positioningId: `p:${p.id}` }));
         const allItems = [...positioningProducts, ...positioningSubproducts];
         const itemMap = new Map(allItems.map((it) => [it._positioningId, it]));
-        const existingLayout = Array.isArray(positioningLayoutByCategory[positionCategoryId])
-          ? positioningLayoutByCategory[positionCategoryId].slice(0, PAGE_SIZE)
-          : [];
-        while (existingLayout.length < PAGE_SIZE) existingLayout.push(null);
-        const validLayout = existingLayout.map((id) => (id && itemMap.has(id) ? id : null));
-        const placed = new Set(validLayout.filter(Boolean));
-        const unplaced = allItems.filter((it) => !placed.has(it._positioningId));
-        const firstEmpty = validLayout.findIndex((cell) => !cell);
-        if (firstEmpty >= 0) {
-          for (let i = firstEmpty; i < PAGE_SIZE && unplaced.length > 0; i += 1) {
-            if (!validLayout[i]) validLayout[i] = unplaced.shift()._positioningId;
-          }
+        const hasStoredLayout = Array.isArray(positioningLayoutByCategory[positionCategoryId]);
+        let cells = [];
+        if (hasStoredLayout) {
+          const existingLayout = positioningLayoutByCategory[positionCategoryId].slice(0, PAGE_SIZE);
+          while (existingLayout.length < PAGE_SIZE) existingLayout.push(null);
+          cells = existingLayout.map((id) => (id && itemMap.has(id) ? id : null));
+        } else {
+          // No auto-placement: keep grid empty until user drags items from sidebar.
+          cells = Array.from({ length: PAGE_SIZE }, () => null);
         }
-        const cells = validLayout;
         const pages = 1;
         const categoryColors = positioningColorByCategory[positionCategoryId] || {};
         const categoryIndex = categories.findIndex((c) => c.id === positionCategoryId);
@@ -6904,10 +7058,26 @@ export function ControlView({ currentUser, onLogout, onBack }) {
           setPositioningLayoutByCategory((prev) => ({ ...prev, [positionCategoryId]: normalized }));
         };
         const removeFromPlace = () => {
-          if (!Number.isInteger(positioningSelectedCellIndex) || positioningSelectedCellIndex < 0 || positioningSelectedCellIndex >= PAGE_SIZE) return;
+          let idx = Number.isInteger(positioningSelectedCellIndex) ? positioningSelectedCellIndex : -1;
+          if (idx < 0 || idx >= PAGE_SIZE) {
+            if (positioningSelectedProductId) {
+              idx = cells.findIndex((id) => {
+                const item = id ? itemMap.get(id) : null;
+                return item?.id === positioningSelectedProductId;
+              });
+            }
+          }
+          if (idx < 0 || idx >= PAGE_SIZE) return;
           const next = [...cells];
-          next[positioningSelectedCellIndex] = null;
+          next[idx] = null;
           updateLayout(next);
+          if (positionCategoryId) {
+            setPositioningColorByCategory((prev) => {
+              const byCategory = { ...(prev[positionCategoryId] || {}) };
+              delete byCategory[String(idx)];
+              return { ...prev, [positionCategoryId]: byCategory };
+            });
+          }
           setPositioningSelectedProductId(null);
           setPositioningSelectedCellIndex(null);
         };
@@ -6997,9 +7167,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           key={c.id}
                           type="button"
                           onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); }}
-                          className={`px-10 py-4 text-3xl border-r border-gray-300 ${
-                            c.id === positionCategoryId ? 'bg-blue-400 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className={`px-10 py-4 text-3xl border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-blue-400 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                            }`}
                         >
                           {(c.name || '').toUpperCase()}
                         </button>
@@ -7034,7 +7203,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDropOnPool}
                   >
-                    <div className="text-gray-500 text-sm mb-2">Products + Subproducts</div>
                     <div className="grid grid-cols-1 gap-2">
                       {allItems
                         .filter((it) => !cells.includes(it._positioningId))
@@ -7044,9 +7212,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             type="button"
                             draggable
                             onDragStart={(e) => handleDragStartFromPool(e, item._positioningId)}
-                            className={`text-left px-3 py-2 rounded border text-sm ${
-                              item.type === 'product' ? 'bg-green-500/90 text-white border-green-600' : 'bg-amber-500/90 text-white border-amber-600'
-                            }`}
+                            className={`text-left px-3 py-2 rounded border text-sm ${item.type === 'product' ? 'bg-green-500/90 text-white border-green-600' : 'bg-amber-500/90 text-white border-amber-600'
+                              }`}
                           >
                             <div className="truncate">{item.name}</div>
                             <div className="text-xs opacity-90">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)} · {item.type}</div>
@@ -7066,6 +7233,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         <div
                           key={item?.id || `empty-${idx}`}
                           className={`h-[82px] border border-gray-300 px-2 text-center text-xl ${tileClass} ${selected ? 'ring-2 ring-black' : ''}`}
+                          style={selected ? { boxShadow: 'inset 0 0 0 2px #111827' } : undefined}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDropOnCell(e, idx)}
                         >
@@ -7090,14 +7258,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-center gap-8">
-                  <button
-                    type="button"
-                    className="px-8 py-3 rounded border border-gray-300 text-2xl text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-                    disabled={!Number.isInteger(positioningSelectedCellIndex)}
-                    onClick={removeFromPlace}
-                  >
-                    Remove from place
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      className="px-8 py-3 rounded border border-gray-300 text-2xl text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                      disabled={!Number.isInteger(positioningSelectedCellIndex)}
+                      onClick={removeFromPlace}
+                    >
+                      Remove from place
+                    </button>
+                  </div>
                   <div className="flex gap-3">
                     {COLOR_OPTIONS.map((option) => (
                       <button
@@ -7105,17 +7275,27 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         type="button"
                         disabled={!Number.isInteger(positioningSelectedCellIndex)}
                         onClick={() => applyColorToSelectedCell(option.id)}
-                        className={`w-12 h-12 rounded border border-gray-300 ${option.className} ${
-                          Number.isInteger(positioningSelectedCellIndex) &&
+                        className={`w-24 h-12 rounded border border-gray-300 ${option.className} ${Number.isInteger(positioningSelectedCellIndex) &&
                           categoryColors[String(positioningSelectedCellIndex)] === option.id
-                            ? 'ring-2 ring-black'
-                            : ''
-                        }`}
+                          ? 'ring-2 ring-black'
+                          : ''
+                          }`}
                         aria-label={`Set tile color ${option.id}`}
                       />
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    className="px-8 py-3 rounded border border-emerald-700 text-2xl text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+                    disabled={savingPositioningLayout}
+                    onClick={saveProductPositioningLayout}
+                  >
+                    {savingPositioningLayout ? 'Saving...' : 'Save'}
+                  </button>
                 </div>
+                {positioningLayoutSaveMessage ? (
+                  <div className="mt-2 text-center text-xl text-gray-700">{positioningLayoutSaveMessage}</div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -7131,6 +7311,47 @@ export function ControlView({ currentUser, onLogout, onBack }) {
             </button>
             <div className="p-4 shrink-0 pt-14">
               <KeyboardWithNumpad value={productSearch} onChange={setProductSearch} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product row -> Subproducts modal */}
+      {showProductSubproductsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeProductSubproductsModal}>
+          <div className="relative bg-gray-100 rounded-xl shadow-2xl w-full max-w-[860px] min-h-[560px] p-10" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-4 right-4 p-2 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900" onClick={closeProductSubproductsModal} aria-label="Close">
+              <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            <div className="max-w-[360px] space-y-5">
+              <Dropdown
+                options={[
+                  { value: '', label: 'Zonder groep' },
+                  ...subproductGroups.map((g) => ({ value: g.id, label: g.name }))
+                ]}
+                value={productSubproductsGroupId}
+                onChange={setProductSubproductsGroupId}
+                className="w-full text-xl"
+              />
+              <Dropdown
+                options={[
+                  { value: '', label: '---' },
+                  ...productSubproductsOptions.map((sp) => ({ value: sp.id, label: sp.name }))
+                ]}
+                value={productSubproductsSelectedId}
+                onChange={setProductSubproductsSelectedId}
+                className="w-full text-xl"
+              />
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                onClick={handleSaveProductSubproducts}
+                disabled={savingProductSubproducts || !productSubproductsProduct}
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span className="text-2xl">{savingProductSubproducts ? 'Saving...' : 'Add'}</span>
+              </button>
             </div>
           </div>
         </div>

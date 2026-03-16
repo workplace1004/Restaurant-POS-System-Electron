@@ -9,6 +9,7 @@ export function usePos(API, socket, selectedTableId = null) {
   const [weborders, setWeborders] = useState([]);
   const [inPlanningCount, setInPlanningCount] = useState(0);
   const [historyOrders, setHistoryOrders] = useState([]);
+  const [savedPositioningLayoutByCategory, setSavedPositioningLayoutByCategory] = useState({});
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -75,6 +76,17 @@ export function usePos(API, socket, selectedTableId = null) {
     },
     [API]
   );
+
+  const fetchSavedPositioningLayout = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/settings/product-positioning-layout`);
+      const data = await safeJson(res);
+      const value = data?.value;
+      setSavedPositioningLayoutByCategory(value && typeof value === 'object' ? value : {});
+    } catch {
+      setSavedPositioningLayoutByCategory({});
+    }
+  }, [API]);
 
   useEffect(() => {
     if (!socket?.on) return;
@@ -264,6 +276,8 @@ export function usePos(API, socket, selectedTableId = null) {
     fetchTables,
     historyOrders,
     fetchOrderHistory,
-    fetchSubproductsForProduct
+    fetchSubproductsForProduct,
+    savedPositioningLayoutByCategory,
+    fetchSavedPositioningLayout
   };
 }
