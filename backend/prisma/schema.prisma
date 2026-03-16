@@ -10,7 +10,7 @@ datasource db {
 model User {
   id   String @id @default(cuid())
   name String
-  role String // admin, kitchen, waiter
+  role String // legacy field, currently stored as waiter
   pin  String
 }
 
@@ -110,12 +110,22 @@ model Table {
 }
 
 model Customer {
-  id           String   @id @default(cuid())
-  companyName  String?
-  name         String
-  street       String?
-  phone        String?
-  orders       Order[]
+  id                 String   @id @default(cuid())
+  companyName        String?
+  firstName          String?
+  lastName           String?
+  name               String
+  street             String?
+  postalCode         String?
+  city               String?
+  phone              String?
+  email              String?
+  discount           String?
+  priceGroup         String?
+  vatNumber          String?
+  loyaltyCardBarcode String?
+  creditTag          String?
+  orders             Order[]
 }
 
 model Order {
@@ -155,5 +165,60 @@ model Subproduct {
   name      String
   groupId   String
   sortOrder Int              @default(0)
+  price     Float?           // optional: override price for this subproduct (e.g. Small/Medium/Large)
   group     SubproductGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+// Payment terminals (Cashmatic, Bancontact, etc.) – same as 123
+model PaymentTerminal {
+  id               String   @id @default(cuid())
+  name             String
+  type             String   // cashmatic, bancontact, etc.
+  connectionType   String   // tcp, serial, api
+  connectionString String
+  enabled          Int      @default(1) // 1 = enabled, 0 = disabled
+  isMain           Int      @default(0) // 1 = main terminal
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model KitchenMessage {
+  id   String @id @default(cuid())
+  name String
+}
+
+model Discount {
+  id         String   @id @default(cuid())
+  name       String
+  trigger    String?  @default("number")
+  type       String?  @default("amount")
+  value      String?
+  startDate  String?
+  endDate    String?
+  discountOn String?  @default("products")
+  pieces     String?
+  combinable  Boolean? @default(false)
+}
+
+// App settings (e.g. language)
+model AppSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+// Receipt/kitchen printers – same as 123
+model Printer {
+  id               String   @id @default(cuid())
+  name             String
+  type             String   // serial, windows
+  connectionString String?
+  baudRate         Int?
+  dataBits         Int?
+  parity           String?
+  stopBits         Int?
+  isMain           Int      @default(0) // 1 = main printer
+  enabled          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

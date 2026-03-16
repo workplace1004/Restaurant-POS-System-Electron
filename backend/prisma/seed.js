@@ -3,11 +3,11 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Users for POS login
+  // ─── USERS (POS login) ─────────────────────────────────────────────────
   const userData = [
-    { id: 'user-admin', name: 'Admin', role: 'admin', pin: '1234' },
-    { id: 'user-kitchen', name: 'Kitchen Staff', role: 'kitchen', pin: '1234' },
-    { id: 'user-waiter', name: 'Waiter', role: 'waiter', pin: '1234' }
+    { id: 'user-1', name: 'User 1', role: 'waiter', pin: '1234' },
+    { id: 'user-2', name: 'User 2', role: 'waiter', pin: '1234' },
+    { id: 'user-3', name: 'User 3', role: 'waiter', pin: '1234' }
   ];
   for (const u of userData) {
     await prisma.user.upsert({
@@ -17,17 +17,7 @@ async function main() {
     });
   }
 
-  // Price groups (optional starter data)
-  const priceGroupData = [
-  ];
-  for (const pg of priceGroupData) {
-    await prisma.priceGroup.upsert({
-      where: { id: pg.id },
-      update: {},
-      create: pg
-    });
-  }
-
+  // ─── CATEGORIES ─────────────────────────────────────────────────────────
   const catDrinks = await prisma.category.upsert({
     where: { id: 'cat-drinks' },
     update: {},
@@ -59,39 +49,87 @@ async function main() {
     create: { id: 'cat-kids', name: 'KIDS', sortOrder: 6 }
   });
 
-  const categories = [catDrinks, catAppetizer, catTapas, catMain, catDesserts, catKids];
-  const productData = [
-    { categoryId: catDrinks.id, name: 'Cola', price: 2.5 },
-    { categoryId: catDrinks.id, name: 'Water', price: 1.5 },
-    { categoryId: catDrinks.id, name: 'Coffee', price: 2.8 },
-    { categoryId: catAppetizer.id, name: 'Soup', price: 4.5 },
-    { categoryId: catAppetizer.id, name: 'Salad', price: 5.0 },
-    { categoryId: catTapas.id, name: 'Olives', price: 3.5 },
-    { categoryId: catTapas.id, name: 'Bread', price: 2.0 },
-    { categoryId: catMain.id, name: 'Steak', price: 18.0 },
-    { categoryId: catMain.id, name: 'Pasta', price: 12.0 },
-    { categoryId: catDesserts.id, name: 'Ice Cream', price: 5.0 },
-    { categoryId: catKids.id, name: 'Kids Menu', price: 8.0 }
+  // ─── TABLES ────────────────────────────────────────────────────────────
+  const tableData = [
+    { id: 'table-1', name: 'Table 1', status: 'available' },
+    { id: 'table-2', name: 'Table 2', status: 'available' },
+    { id: 'table-3', name: 'Table 3', status: 'available' },
+    { id: 'table-4', name: 'Table 4', status: 'available' },
+    { id: 'table-5', name: 'Table 5', status: 'available' },
+    { id: 'table-6', name: 'Table 6', status: 'available' },
+    { id: 'table-7', name: 'Table 7', status: 'available' },
+    { id: 'table-8', name: 'Table 8', status: 'available' }
   ];
-
-  for (const p of productData) {
-    await prisma.product.upsert({
-      where: { id: `prod-${p.name.toLowerCase().replace(/\s/g, '-')}` },
-      update: {},
-      create: { id: `prod-${p.name.toLowerCase().replace(/\s/g, '-')}`, ...p }
-    });
-  }
-
-  for (let i = 1; i <= 8; i++) {
+  for (const t of tableData) {
     await prisma.table.upsert({
-      where: { id: `table-${i}` },
+      where: { id: t.id },
       update: {},
-      create: { id: `table-${i}`, name: `Table ${i}`, status: 'available' }
+      create: t
     });
   }
 
-  const existing = await prisma.customer.count();
-  if (existing === 0) {
+  // ─── SUBPRODUCT GROUPS ──────────────────────────────────────────────────
+  const groupToppings = await prisma.subproductGroup.upsert({
+    where: { id: 'spg-toppings' },
+    update: {},
+    create: { id: 'spg-toppings', name: 'Toppings', sortOrder: 0 }
+  });
+  const groupOptions = await prisma.subproductGroup.upsert({
+    where: { id: 'spg-options' },
+    update: {},
+    create: { id: 'spg-options', name: 'Options', sortOrder: 1 }
+  });
+
+  // ─── SUBPRODUCTS (per group, each with its own price) ─────────────────────
+  const subproductData = [
+    { id: 'sp-toppings-extra-cheese', name: 'Extra cheese', groupId: groupToppings.id, sortOrder: 0, price: 0.5 },
+    { id: 'sp-toppings-no-onion', name: 'No onion', groupId: groupToppings.id, sortOrder: 1, price: 0 },
+    { id: 'sp-toppings-gluten-free', name: 'Gluten-free', groupId: groupToppings.id, sortOrder: 2, price: 0.3 },
+    { id: 'sp-options-small', name: 'Small', groupId: groupOptions.id, sortOrder: 0, price: 1.5 },
+    { id: 'sp-options-medium', name: 'Medium', groupId: groupOptions.id, sortOrder: 1, price: 2.0 },
+    { id: 'sp-options-large', name: 'Large', groupId: groupOptions.id, sortOrder: 2, price: 2.5 }
+  ];
+  for (const sp of subproductData) {
+    const { price, ...rest } = sp;
+    await prisma.subproduct.upsert({
+      where: { id: sp.id },
+      update: { price: price ?? undefined },
+      create: { ...rest, price: price ?? undefined }
+    });
+  }
+
+  // ─── PRODUCTS (every product has addition = SubproductGroup name → subproducts when clicked) ───
+  const productData = [
+    { id: 'prod-cola', categoryId: catDrinks.id, name: 'Cola', price: 2.5, number: 1, sortOrder: 0, addition: groupOptions.name, subproductRequires: false },
+    { id: 'prod-water', categoryId: catDrinks.id, name: 'Water', price: 1.5, number: 2, sortOrder: 1, addition: groupOptions.name, subproductRequires: false },
+    { id: 'prod-coffee', categoryId: catDrinks.id, name: 'Coffee', price: 2.8, number: 3, sortOrder: 2, addition: groupOptions.name, subproductRequires: false },
+    { id: 'prod-soup', categoryId: catAppetizer.id, name: 'Soup', price: 4.5, number: 4, sortOrder: 3, addition: groupToppings.name, subproductRequires: false },
+    { id: 'prod-salad', categoryId: catAppetizer.id, name: 'Salad', price: 5.0, number: 5, sortOrder: 4, addition: groupToppings.name, subproductRequires: false },
+    { id: 'prod-olives', categoryId: catTapas.id, name: 'Olives', price: 3.5, number: 6, sortOrder: 5, addition: groupToppings.name, subproductRequires: false },
+    { id: 'prod-bread', categoryId: catTapas.id, name: 'Bread', price: 2.0, number: 7, sortOrder: 6, addition: groupToppings.name, subproductRequires: false },
+    { id: 'prod-steak', categoryId: catMain.id, name: 'Steak', price: 18.0, number: 8, sortOrder: 7, addition: groupToppings.name, subproductRequires: false },
+    { id: 'prod-pasta', categoryId: catMain.id, name: 'Pasta', price: 12.0, number: 9, sortOrder: 8, addition: groupToppings.name, subproductRequires: true },
+    { id: 'prod-ice-cream', categoryId: catDesserts.id, name: 'Ice Cream', price: 5.0, number: 10, sortOrder: 9, addition: groupOptions.name, subproductRequires: false },
+    { id: 'prod-kids-menu', categoryId: catKids.id, name: 'Kids Menu', price: 8.0, number: 11, sortOrder: 10, addition: groupOptions.name, subproductRequires: false }
+  ];
+  for (const p of productData) {
+    const { addition, subproductRequires, ...rest } = p;
+    const additionValue = addition ?? null;
+    const subproductRequiresValue = subproductRequires ?? false;
+    await prisma.product.upsert({
+      where: { id: p.id },
+      update: { addition: additionValue, subproductRequires: subproductRequiresValue },
+      create: {
+        ...rest,
+        addition: additionValue,
+        subproductRequires: subproductRequiresValue
+      }
+    });
+  }
+
+  // ─── CUSTOMERS (only if empty) ──────────────────────────────────────────
+  const existingCustomers = await prisma.customer.count();
+  if (existingCustomers === 0) {
     await prisma.customer.createMany({
       data: [
         { companyName: 'pospoint', name: 'pospoint', street: 'Mezenstraat', phone: null },
@@ -100,7 +138,116 @@ async function main() {
     });
   }
 
-  console.log('Seed done.');
+  // ─── KITCHEN MESSAGES ────────────────────────────────────────────────────
+  const kitchenMessageData = [
+    { id: 'km-no-onions', name: 'No onions' },
+    { id: 'km-extra-sauce', name: 'Extra sauce' },
+    { id: 'km-allergy-nuts', name: 'Allergy: nuts' },
+    { id: 'km-well-done', name: 'Well done' }
+  ];
+  for (const km of kitchenMessageData) {
+    await prisma.kitchenMessage.upsert({
+      where: { id: km.id },
+      update: { name: km.name },
+      create: km
+    });
+  }
+
+  // ─── DISCOUNTS ───────────────────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0, 10);
+  const discountData = [
+    { id: 'disc-10pct', name: '10% off', trigger: 'number', type: 'percent', value: '10', startDate: today, endDate: today, discountOn: 'products', pieces: '', combinable: false },
+    { id: 'disc-happy-hour', name: 'Happy hour', trigger: 'number', type: 'amount', value: '2', startDate: today, endDate: today, discountOn: 'products', pieces: '', combinable: false },
+    { id: 'disc-student', name: 'Student discount', trigger: 'number', type: 'percent', value: '15', startDate: today, endDate: today, discountOn: 'products', pieces: '', combinable: false }
+  ];
+  for (const d of discountData) {
+    await prisma.discount.upsert({
+      where: { id: d.id },
+      update: { name: d.name, value: d.value, type: d.type },
+      create: d
+    });
+  }
+
+  // ─── ORDERS (sample orders with items) ───────────────────────────────────
+  const order1 = await prisma.order.upsert({
+    where: { id: 'order-1' },
+    update: {},
+    create: {
+      id: 'order-1',
+      tableId: 'table-1',
+      status: 'open',
+      total: 9.5,
+      source: 'pos'
+    }
+  });
+  const order1Items = [
+    { id: 'oi-1-1', orderId: order1.id, productId: 'prod-cola', quantity: 2, price: 2.5, notes: null },
+    { id: 'oi-1-2', orderId: order1.id, productId: 'prod-water', quantity: 1, price: 1.5, notes: null }
+  ];
+  for (const oi of order1Items) {
+    await prisma.orderItem.upsert({
+      where: { id: oi.id },
+      update: { quantity: oi.quantity, price: oi.price },
+      create: oi
+    });
+  }
+
+  const order2 = await prisma.order.upsert({
+    where: { id: 'order-2' },
+    update: {},
+    create: {
+      id: 'order-2',
+      tableId: 'table-2',
+      status: 'open',
+      total: 35.0,
+      source: 'pos'
+    }
+  });
+  const order2Items = [
+    { id: 'oi-2-1', orderId: order2.id, productId: 'prod-steak', quantity: 1, price: 18.0, notes: 'Well done' },
+    { id: 'oi-2-2', orderId: order2.id, productId: 'prod-pasta', quantity: 1, price: 12.0, notes: null },
+    { id: 'oi-2-3', orderId: order2.id, productId: 'prod-coffee', quantity: 1, price: 2.8, notes: null },
+    { id: 'oi-2-4', orderId: order2.id, productId: 'prod-ice-cream', quantity: 1, price: 5.0, notes: null }
+  ];
+  for (const oi of order2Items) {
+    await prisma.orderItem.upsert({
+      where: { id: oi.id },
+      update: { quantity: oi.quantity, price: oi.price, notes: oi.notes },
+      create: oi
+    });
+  }
+
+  const order3 = await prisma.order.upsert({
+    where: { id: 'order-3' },
+    update: {},
+    create: {
+      id: 'order-3',
+      tableId: 'table-3',
+      status: 'paid',
+      total: 14.0,
+      source: 'pos'
+    }
+  });
+  const order3Items = [
+    { id: 'oi-3-1', orderId: order3.id, productId: 'prod-soup', quantity: 1, price: 4.5, notes: null },
+    { id: 'oi-3-2', orderId: order3.id, productId: 'prod-salad', quantity: 1, price: 5.0, notes: 'No onions' },
+    { id: 'oi-3-3', orderId: order3.id, productId: 'prod-bread', quantity: 2, price: 2.0, notes: null }
+  ];
+  for (const oi of order3Items) {
+    await prisma.orderItem.upsert({
+      where: { id: oi.id },
+      update: { quantity: oi.quantity, price: oi.price, notes: oi.notes },
+      create: oi
+    });
+  }
+
+  // Mark tables with open orders as occupied
+  await prisma.table.updateMany({
+    where: { id: { in: ['table-1', 'table-2'] } },
+    data: { status: 'occupied' }
+  });
+
+  console.log('Seed done: users, categories, tables, subproduct groups, subproducts, products, customers, kitchen messages, discounts, orders.');
 }
 
 main()
