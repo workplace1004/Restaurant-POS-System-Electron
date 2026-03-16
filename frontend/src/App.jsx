@@ -78,7 +78,6 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     removeOrderItem,
     updateOrderItemQuantity,
     setOrderStatus,
-    setOrderTable,
     createOrder,
     removeOrder,
     removeAllOrders,
@@ -91,7 +90,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     historyOrders,
     fetchOrderHistory,
     fetchSubproductsForProduct
-  } = usePos(API, socket);
+  } = usePos(API, socket, selectedTable?.id ?? null);
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date().toLocaleTimeString('en-GB', { timeZone: UA_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false })), 1000);
@@ -142,14 +141,11 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   };
 
   const handleSelectTable = useCallback(
-    async (table) => {
+    (table) => {
       setSelectedTable(table);
-      if (currentOrder?.id) {
-        await setOrderTable(currentOrder.id, table?.id || null);
-      }
       setViewAndPersist('pos');
     },
-    [currentOrder?.id, setOrderTable, setViewAndPersist]
+    [setViewAndPersist]
   );
 
   const handleAddProductWithSelectedTable = useCallback(

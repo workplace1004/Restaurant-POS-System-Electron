@@ -570,6 +570,13 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showProductPositioningModal, setShowProductPositioningModal] = useState(false);
+  const [positioningCategoryId, setPositioningCategoryId] = useState(null);
+  const [positioningSelectedProductId, setPositioningSelectedProductId] = useState(null);
+  const [positioningSelectedCellIndex, setPositioningSelectedCellIndex] = useState(null);
+  const [positioningSubproducts, setPositioningSubproducts] = useState([]);
+  const [positioningLayoutByCategory, setPositioningLayoutByCategory] = useState({});
+  const [positioningColorByCategory, setPositioningColorByCategory] = useState({});
   const [editingProductId, setEditingProductId] = useState(null);
   const [productTab, setProductTab] = useState('general');
   const [productTabsUnlocked, setProductTabsUnlocked] = useState(false);
@@ -1023,6 +1030,122 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     }
   }, [subNavId, categories, selectedCategoryId]);
 
+  useEffect(() => {
+    if (!showProductPositioningModal) return;
+    if (!positioningCategoryId && categories.length > 0) {
+      setPositioningCategoryId(selectedCategoryId || categories[0].id);
+    }
+  }, [showProductPositioningModal, positioningCategoryId, categories, selectedCategoryId]);
+
+  useEffect(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_product_positioning_layout') : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') setPositioningLayoutByCategory(parsed);
+      }
+    } catch {
+      // ignore broken local positioning data
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_product_positioning_colors') : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') setPositioningColorByCategory(parsed);
+      }
+    } catch {
+      // ignore broken local color data
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pos_product_positioning_layout', JSON.stringify(positioningLayoutByCategory));
+      }
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [positioningLayoutByCategory]);
+
+  useEffect(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pos_product_positioning_colors', JSON.stringify(positioningColorByCategory));
+      }
+    } catch {
+      // ignore localStorage write failures
+    }
+  }, [positioningColorByCategory]);
+
+  const fetchPositioningSubproducts = useCallback(async (categoryId) => {
+    if (!categoryId) {
+      setPositioningSubproducts([]);
+      return;
+    }
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_subproduct_extra') : null;
+      const extraMap = raw ? JSON.parse(raw) : {};
+      const attachedIds = Object.entries(extraMap || {})
+        .filter(([, value]) => Array.isArray(value?.attachToCategoryIds) && value.attachToCategoryIds.includes(categoryId))
+        .map(([id]) => id);
+      if (attachedIds.length === 0) {
+        setPositioningSubproducts([]);
+        return;
+      }
+      const groupsRes = await fetch(`${API}/subproduct-groups`);
+      const groups = await groupsRes.json().catch(() => []);
+      const safeGroups = Array.isArray(groups) ? groups : [];
+      const listNested = await Promise.all(
+        safeGroups.map(async (g) => {
+          const res = await fetch(`${API}/subproduct-groups/${g.id}/subproducts`);
+          const data = await res.json().catch(() => []);
+          return Array.isArray(data) ? data : [];
+        })
+      );
+      const allSubproducts = listNested.flat();
+      const filtered = allSubproducts
+        .filter((sp) => attachedIds.includes(sp.id))
+        .map((sp) => {
+          const ex = extraMap?.[sp.id] || {};
+          const parsedPrice = parseFloat(ex?.price);
+          return {
+            ...sp,
+            type: 'subproduct',
+            _positioningId: `s:${sp.id}`,
+            _positioningPrice: Number.isFinite(parsedPrice) ? parsedPrice : Number(sp.price ?? 0),
+          };
+        });
+      setPositioningSubproducts(filtered);
+    } catch {
+      setPositioningSubproducts([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showProductPositioningModal) return;
+    const categoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
+    if (!categoryId) return;
+    fetchProducts(categoryId);
+    fetchPositioningSubproducts(categoryId);
+  }, [showProductPositioningModal, positioningCategoryId, selectedCategoryId, categories, fetchProducts, fetchPositioningSubproducts]);
+
+  const openProductPositioningModal = () => {
+    setPositioningCategoryId(selectedCategoryId || categories[0]?.id || null);
+    setPositioningSelectedProductId(null);
+    setPositioningSelectedCellIndex(null);
+    setShowProductPositioningModal(true);
+  };
+
+  const closeProductPositioningModal = () => {
+    setShowProductPositioningModal(false);
+    setPositioningSelectedProductId(null);
+    setPositioningSelectedCellIndex(null);
+  };
+
   const fetchSubproductGroups = useCallback(async () => {
     setSubproductGroupsLoading(true);
     try {
@@ -1324,6 +1447,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setProductFieldErrors({ name: false, keyName: false, productionName: false, vatTakeOut: false, vatEatIn: false });
     setProductTabsUnlocked(false);
     setProductDisplayNumber(null);
+    setAdvancedKassaPhotoPreview(null);
     setShowProductModal(true);
   };
 
@@ -1365,7 +1489,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setAdvancedVoorverpakVervaltype(product.voorverpakVervaltype ?? 'Shelf life');
     setAdvancedHoudbareDagen(product.houdbareDagen ?? '0');
     setAdvancedBewarenGebruik(product.bewarenGebruik ?? '');
-    if (product.kassaPhotoPath) setAdvancedKassaPhotoPreview(null);
+    setAdvancedKassaPhotoPreview(product.kassaPhotoPath ?? null);
 
     let rows = [];
     if (product.extraPricesJson) {
@@ -1410,10 +1534,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   };
 
   const closeProductModal = () => {
-    if (advancedKassaPhotoPreview) {
-      URL.revokeObjectURL(advancedKassaPhotoPreview);
-      setAdvancedKassaPhotoPreview(null);
-    }
+    setAdvancedKassaPhotoPreview(null);
     setExtraPricesRows([]);
     setExtraPricesSelectedIndex(0);
     setProductCategoryIds(['']);
@@ -1455,7 +1576,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       boldPrint: advancedBoldPrint,
       groupingReceipt: advancedGroupingReceipt,
       labelExtraInfo: advancedLabelExtraInfo.trim() || null,
-      kassaPhotoPath: null,
+      kassaPhotoPath: advancedKassaPhotoPreview || null,
       voorverpakVervaltype: advancedVoorverpakVervaltype || null,
       houdbareDagen: advancedHoudbareDagen || null,
       bewarenGebruik: advancedBewarenGebruik.trim() || null,
@@ -1528,7 +1649,13 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   const productKeyboardValue = productActiveField === 'name' ? productName : productActiveField === 'keyName' ? productKeyName : productActiveField === 'productionName' ? productProductionName : productActiveField === 'price' ? productPrice : productActiveField === 'barcode' ? productBarcode : productActiveField === 'leeggoedPrijs' ? advancedLeeggoedPrijs : productActiveField === 'labelExtraInfo' ? advancedLabelExtraInfo : productActiveField === 'houdbareDagen' ? advancedHoudbareDagen : productActiveField === 'bewarenGebruik' ? advancedBewarenGebruik : productActiveField === 'extraOtherName' ? (extraPricesRows[extraPricesSelectedIndex]?.otherName ?? '') : productActiveField === 'extraOtherPrice' ? (extraPricesRows[extraPricesSelectedIndex]?.otherPrice ?? '') : productActiveField === 'purchasePriceExcl' ? purchasePriceExcl : productActiveField === 'purchasePriceIncl' ? purchasePriceIncl : productActiveField === 'profitPct' ? profitPct : productActiveField === 'unitContent' ? unitContent : productActiveField === 'stock' ? stock : productActiveField === 'supplierCode' ? supplierCode : productActiveField === 'expirationDate' ? expirationDate : productActiveField === 'declarationExpiryDays' ? declarationExpiryDays : productActiveField === 'notificationSoldOutPieces' ? notificationSoldOutPieces : productActiveField === 'websiteRemark' ? websiteRemark : productActiveField === 'websiteOrder' ? websiteOrder : productActiveField === 'shortWebText' ? shortWebText : productActiveField === 'kioskInfo' ? kioskInfo : productActiveField === 'kioskEatIn' ? kioskEatIn : productActiveField === 'kioskSubtitle' ? kioskSubtitle : '';
   const productKeyboardOnChange = productActiveField === 'name'
-    ? (v) => { setProductName(v); setProductFieldErrors((e) => ({ ...e, name: false })); }
+    ? (v) => {
+      // Typing in Name should mirror to Test name and Production name.
+      setProductName(v);
+      setProductKeyName(v);
+      setProductProductionName(v);
+      setProductFieldErrors((e) => ({ ...e, name: false, keyName: false, productionName: false }));
+    }
     : productActiveField === 'keyName'
       ? (v) => { setProductKeyName(v); setProductFieldErrors((e) => ({ ...e, keyName: false })); }
       : productActiveField === 'productionName'
@@ -4135,6 +4262,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </button>
                   <button
                     type="button"
+                    onClick={openProductPositioningModal}
                     className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                   >
                     {tr('control.products.positioning', 'Positioning')}
@@ -6431,10 +6559,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                                 type="file"
                                 className="hidden"
                                 accept="image/*"
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (file && file.type.startsWith('image/')) {
-                                    setAdvancedKassaPhotoPreview(URL.createObjectURL(file));
+                                    const dataUrl = await new Promise((resolve, reject) => {
+                                      const reader = new FileReader();
+                                      reader.onload = () => resolve(String(reader.result || ''));
+                                      reader.onerror = () => reject(reader.error);
+                                      reader.readAsDataURL(file);
+                                    }).catch(() => '');
+                                    if (dataUrl) setAdvancedKassaPhotoPreview(dataUrl);
                                   }
                                   e.target.value = '';
                                 }}
@@ -6447,7 +6581,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                                 type="button"
                                 className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 text-xl shrink-0"
                                 onClick={() => {
-                                  URL.revokeObjectURL(advancedKassaPhotoPreview);
                                   setAdvancedKassaPhotoPreview(null);
                                 }}
                               >
@@ -6721,6 +6854,272 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         </div>
       )}
 
+      {/* Product positioning modal */}
+      {showProductPositioningModal && (() => {
+        const GRID_COLUMNS = 5;
+        const GRID_ROWS = 6;
+        const PAGE_SIZE = GRID_COLUMNS * GRID_ROWS;
+        const positionCategoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
+        const positioningProducts = products
+          .filter((p) => p.categoryId === positionCategoryId)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+          .map((p) => ({ ...p, type: 'product', _positioningId: `p:${p.id}` }));
+        const allItems = [...positioningProducts, ...positioningSubproducts];
+        const itemMap = new Map(allItems.map((it) => [it._positioningId, it]));
+        const existingLayout = Array.isArray(positioningLayoutByCategory[positionCategoryId])
+          ? positioningLayoutByCategory[positionCategoryId].slice(0, PAGE_SIZE)
+          : [];
+        while (existingLayout.length < PAGE_SIZE) existingLayout.push(null);
+        const validLayout = existingLayout.map((id) => (id && itemMap.has(id) ? id : null));
+        const placed = new Set(validLayout.filter(Boolean));
+        const unplaced = allItems.filter((it) => !placed.has(it._positioningId));
+        const firstEmpty = validLayout.findIndex((cell) => !cell);
+        if (firstEmpty >= 0) {
+          for (let i = firstEmpty; i < PAGE_SIZE && unplaced.length > 0; i += 1) {
+            if (!validLayout[i]) validLayout[i] = unplaced.shift()._positioningId;
+          }
+        }
+        const cells = validLayout;
+        const pages = 1;
+        const categoryColors = positioningColorByCategory[positionCategoryId] || {};
+        const categoryIndex = categories.findIndex((c) => c.id === positionCategoryId);
+        const canPrevCategory = categoryIndex > 0;
+        const canNextCategory = categoryIndex >= 0 && categoryIndex < categories.length - 1;
+        const COLOR_OPTIONS = [
+          { id: 'green', className: 'bg-green-500 text-white' },
+          { id: 'blue', className: 'bg-blue-700 text-white' },
+          { id: 'pink', className: 'bg-pink-300 text-white' },
+          { id: 'orange', className: 'bg-orange-300 text-white' },
+          { id: 'yellow', className: 'bg-yellow-300 text-white' },
+          { id: 'gray', className: 'bg-gray-400 text-white' },
+        ];
+        const tileClassByColorId = (colorId, fallbackType) => {
+          const found = COLOR_OPTIONS.find((c) => c.id === colorId);
+          if (found) return found.className;
+          return fallbackType === 'subproduct' ? 'bg-amber-500 text-white' : 'bg-green-500 text-white';
+        };
+        const updateLayout = (nextCells) => {
+          if (!positionCategoryId) return;
+          const normalized = Array.from({ length: PAGE_SIZE }, (_, i) => nextCells[i] || null);
+          setPositioningLayoutByCategory((prev) => ({ ...prev, [positionCategoryId]: normalized }));
+        };
+        const removeFromPlace = () => {
+          if (!Number.isInteger(positioningSelectedCellIndex) || positioningSelectedCellIndex < 0 || positioningSelectedCellIndex >= PAGE_SIZE) return;
+          const next = [...cells];
+          next[positioningSelectedCellIndex] = null;
+          updateLayout(next);
+          setPositioningSelectedProductId(null);
+          setPositioningSelectedCellIndex(null);
+        };
+        const applyColorToSelectedCell = (colorId) => {
+          if (!positionCategoryId) return;
+          if (!Number.isInteger(positioningSelectedCellIndex) || positioningSelectedCellIndex < 0 || positioningSelectedCellIndex >= PAGE_SIZE) return;
+          setPositioningColorByCategory((prev) => {
+            const byCategory = { ...(prev[positionCategoryId] || {}) };
+            byCategory[String(positioningSelectedCellIndex)] = colorId;
+            return { ...prev, [positionCategoryId]: byCategory };
+          });
+        };
+        const handleDragStartFromPool = (event, itemId) => {
+          event.dataTransfer.setData('text/plain', JSON.stringify({ itemId, source: 'pool' }));
+          event.dataTransfer.effectAllowed = 'move';
+        };
+        const handleDragStartFromCell = (event, index, itemId) => {
+          event.dataTransfer.setData('text/plain', JSON.stringify({ itemId, source: 'cell', index }));
+          event.dataTransfer.effectAllowed = 'move';
+        };
+        const handleDropOnCell = (event, targetIndex) => {
+          event.preventDefault();
+          let payload = null;
+          try {
+            payload = JSON.parse(event.dataTransfer.getData('text/plain') || '{}');
+          } catch {
+            return;
+          }
+          const itemId = payload?.itemId;
+          if (!itemId || !itemMap.has(itemId)) return;
+          const next = [...cells];
+          const sourceIndex = next.findIndex((id) => id === itemId);
+          if (sourceIndex >= 0) next[sourceIndex] = null;
+          if (payload?.source === 'cell' && Number.isInteger(payload?.index) && payload.index >= 0 && payload.index < PAGE_SIZE && payload.index !== targetIndex) {
+            const targetItem = next[targetIndex];
+            if (targetItem) next[payload.index] = targetItem;
+          }
+          next[targetIndex] = itemId;
+          updateLayout(next);
+        };
+        const handleDropOnPool = (event) => {
+          event.preventDefault();
+          let payload = null;
+          try {
+            payload = JSON.parse(event.dataTransfer.getData('text/plain') || '{}');
+          } catch {
+            return;
+          }
+          const itemId = payload?.itemId;
+          if (!itemId || !itemMap.has(itemId)) return;
+          const next = cells.map((id) => (id === itemId ? null : id));
+          updateLayout(next);
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeProductPositioningModal}>
+            <div className="relative bg-gray-100 rounded-xl shadow-2xl w-full max-w-[1320px] h-[850px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="absolute top-4 right-4 z-10 p-2 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+                onClick={closeProductPositioningModal}
+                aria-label="Close positioning modal"
+              >
+                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+
+              <div className="h-full p-8 flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <button
+                    type="button"
+                    className="p-2 rounded text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+                    disabled={!canPrevCategory}
+                    onClick={() => {
+                      if (!canPrevCategory) return;
+                      setPositioningCategoryId(categories[categoryIndex - 1].id);
+                      setPositioningSelectedProductId(null);
+                    }}
+                    aria-label="Previous category"
+                  >
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="flex-1 overflow-x-auto">
+                    <div className="flex min-w-max border-b border-gray-300">
+                      {categories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); }}
+                          className={`px-10 py-4 text-3xl border-r border-gray-300 ${
+                            c.id === positionCategoryId ? 'bg-blue-400 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {(c.name || '').toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="p-2 rounded text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+                    disabled={!canNextCategory}
+                    onClick={() => {
+                      if (!canNextCategory) return;
+                      setPositioningCategoryId(categories[categoryIndex + 1].id);
+                      setPositioningSelectedProductId(null);
+                    }}
+                    aria-label="Next category"
+                  >
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+
+                <div className="flex justify-center gap-8 mb-4">
+                  {Array.from({ length: pages }, (_, i) => (
+                    <span key={i} className={`w-3 h-3 rounded-full ${i === 0 ? 'bg-gray-800' : 'bg-gray-400'}`} />
+                  ))}
+                </div>
+
+                <div className="flex-1 grid grid-cols-[280px_1fr] gap-8">
+                  <div
+                    className="border border-gray-300 bg-white p-3 overflow-y-auto"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDropOnPool}
+                  >
+                    <div className="text-gray-500 text-sm mb-2">Products + Subproducts</div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {allItems
+                        .filter((it) => !cells.includes(it._positioningId))
+                        .map((item) => (
+                          <button
+                            key={item._positioningId}
+                            type="button"
+                            draggable
+                            onDragStart={(e) => handleDragStartFromPool(e, item._positioningId)}
+                            className={`text-left px-3 py-2 rounded border text-sm ${
+                              item.type === 'product' ? 'bg-green-500/90 text-white border-green-600' : 'bg-amber-500/90 text-white border-amber-600'
+                            }`}
+                          >
+                            <div className="truncate">{item.name}</div>
+                            <div className="text-xs opacity-90">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)} · {item.type}</div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-5 gap-0 border border-gray-300 bg-white">
+                    {cells.map((itemId, idx) => {
+                      const item = itemId ? itemMap.get(itemId) : null;
+                      const selected = item && positioningSelectedProductId === item.id && positioningSelectedCellIndex === idx;
+                      const selectedColorId = categoryColors[String(idx)];
+                      const tileClass = item
+                        ? tileClassByColorId(selectedColorId, item.type)
+                        : 'bg-gray-100';
+                      return (
+                        <div
+                          key={item?.id || `empty-${idx}`}
+                          className={`h-[82px] border border-gray-300 px-2 text-center text-xl ${tileClass} ${selected ? 'ring-2 ring-black' : ''}`}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => handleDropOnCell(e, idx)}
+                        >
+                          {item ? (
+                            <button
+                              type="button"
+                              draggable
+                              onDragStart={(e) => handleDragStartFromCell(e, idx, item._positioningId)}
+                              onClick={() => {
+                                setPositioningSelectedProductId(item.id);
+                                setPositioningSelectedCellIndex(idx);
+                              }}
+                              className="w-full h-full"
+                            >
+                              <div className="truncate">{item.name}</div>
+                              <div className="text-lg">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)}</div>
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-center gap-8">
+                  <button
+                    type="button"
+                    className="px-8 py-3 rounded border border-gray-300 text-2xl text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                    disabled={!Number.isInteger(positioningSelectedCellIndex)}
+                    onClick={removeFromPlace}
+                  >
+                    Remove from place
+                  </button>
+                  <div className="flex gap-3">
+                    {COLOR_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        disabled={!Number.isInteger(positioningSelectedCellIndex)}
+                        onClick={() => applyColorToSelectedCell(option.id)}
+                        className={`w-12 h-12 rounded border border-gray-300 ${option.className} ${
+                          Number.isInteger(positioningSelectedCellIndex) &&
+                          categoryColors[String(positioningSelectedCellIndex)] === option.id
+                            ? 'ring-2 ring-black'
+                            : ''
+                        }`}
+                        aria-label={`Set tile color ${option.id}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Product search keyboard modal */}
       {showProductSearchKeyboard && subNavId === 'Products' && (
         <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowProductSearchKeyboard(false)}>
@@ -6783,12 +7182,46 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </div>
                   <div className="flex items-center w-full gap-3">
                     <label className="block text-pos-text text-xl font-medium shrink-0">Kiosk picture:</label>
+                    {!subproductKioskPicture ? (
+                      <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-xl">
+                        Select
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file && file.type.startsWith('image/')) {
+                              const dataUrl = await new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(String(reader.result || ''));
+                                reader.onerror = () => reject(reader.error);
+                                reader.readAsDataURL(file);
+                              }).catch(() => '');
+                              if (dataUrl) setSubproductKioskPicture(dataUrl);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <img src={subproductKioskPicture} alt="Kiosk" className="w-[76px] h-[76px] object-cover rounded border border-pos-border" />
+                        <button
+                          type="button"
+                          className="px-3 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 text-xl"
+                          onClick={() => setSubproductKioskPicture('')}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-4">
                   <div>
                     <label className="block text-pos-text text-xl flex w-full justify-center font-medium mb-5">Attach To</label>
-                    <div className="border border-pos-border rounded-lg bg-white/5 min-h-[350px] overflow-auto">
+                    <div className="border border-pos-border rounded-lg bg-white/5 h-[350px] overflow-y-auto">
                       <ul className="p-2">
                         {categories.length === 0 ? (
                           <li className="text-pos-muted text-lg py-2">No categories available</li>

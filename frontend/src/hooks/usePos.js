@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-export function usePos(API, socket) {
+export function usePos(API, socket, selectedTableId = null) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -94,7 +94,11 @@ export function usePos(API, socket) {
     };
   }, [socket]);
 
-  const currentOrder = orders.find((o) => o.status === 'open') || null;
+  const currentOrder = orders.find((o) => {
+    if (o?.status !== 'open') return false;
+    if (selectedTableId) return o?.tableId === selectedTableId;
+    return !o?.tableId;
+  }) || null;
 
   const addItemToOrder = useCallback(
     async (product, quantity = 1, tableId = null) => {
@@ -116,7 +120,7 @@ export function usePos(API, socket) {
         }
         return;
       }
-      if (tableId && currentOrder?.tableId !== tableId) {
+      if (tableId && !currentOrder?.tableId) {
         await fetch(`${API}/orders/${orderId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

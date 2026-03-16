@@ -16,6 +16,15 @@ export function ProductArea({
   const [subproducts, setSubproducts] = useState([]);
   const [loadingSubproducts, setLoadingSubproducts] = useState(false);
   const subproductsRequestIdRef = useRef(0);
+  const getSubproductExtra = useCallback(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_subproduct_extra') : null;
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }, []);
   const perPage = 8;
   const totalPages = Math.max(1, Math.ceil(products.length / perPage));
   const paginated = products.slice(page * perPage, page * perPage + perPage);
@@ -47,7 +56,12 @@ export function ProductArea({
         const data = await fetchSubproductsForProduct(product.id);
         if (requestId !== subproductsRequestIdRef.current) return;
         const list = Array.isArray(data) ? data : [];
-        setSubproducts(list);
+        const extraMap = getSubproductExtra();
+        const withExtras = list.map((sp) => ({
+          ...sp,
+          kioskPicture: extraMap?.[sp.id]?.kioskPicture || ''
+        }));
+        setSubproducts(withExtras);
         if (list.length === 0) {
           onAddProduct(product);
           setSelectedProduct(null);
@@ -63,7 +77,7 @@ export function ProductArea({
         }
       }
     },
-    [fetchSubproductsForProduct, onAddProduct]
+    [fetchSubproductsForProduct, getSubproductExtra, onAddProduct]
   );
 
   const handleSubproductPress = useCallback(
@@ -94,9 +108,8 @@ export function ProductArea({
           {Array.from({ length: totalPages }, (_, i) => (
             <span
               key={i}
-              className={`w-3 h-3 rounded-full cursor-pointer ${
-                i === page ? 'bg-pos-text' : 'bg-pos-surface'
-              }`}
+              className={`w-3 h-3 rounded-full cursor-pointer ${i === page ? 'bg-pos-text' : 'bg-pos-surface'
+                }`}
               onClick={() => setPage(i)}
               role="button"
               tabIndex={0}
@@ -124,11 +137,17 @@ export function ProductArea({
             <button
               type="button"
               key={product.id}
-              className={`flex flex-col items-center justify-center p-4 bg-pos-panel border-none rounded-lg text-pos-text text-2xl min-h-[88px] hover:bg-pos-rowHover ${
-                selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
-              }`}
+              className={`flex flex-col items-center justify-center p-4 bg-pos-panel border-none rounded-lg text-pos-text text-2xl min-h-[88px] hover:bg-pos-rowHover ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                }`}
               onClick={() => handleProductPress(product)}
             >
+              {product.kassaPhotoPath ? (
+                <img
+                  src={product.kassaPhotoPath}
+                  alt={product.name}
+                  className="w-full h-[88px] object-cover rounded mb-2"
+                />
+              ) : null}
               <span className="mb-1">{product.name}</span>
               <span className="font-semibold text-pos-text-dim text-xl">€{Number(product.price).toFixed(2)}</span>
             </button>
@@ -150,6 +169,13 @@ export function ProductArea({
                 className="flex flex-col items-center justify-center p-4 bg-pos-surface border-none rounded-lg text-pos-text text-xl min-h-[82px] hover:bg-pos-rowHover"
                 onClick={() => handleSubproductPress(subproduct)}
               >
+                {subproduct?.kioskPicture ? (
+                  <img
+                    src={subproduct.kioskPicture}
+                    alt={subproduct.name}
+                    className="w-full h-[64px] object-cover rounded mb-2"
+                  />
+                ) : null}
                 <span className="mb-1">{subproduct.name}</span>
                 <span className="font-semibold text-pos-text-dim text-lg">
                   €{Number(subproduct?.price != null ? subproduct.price : selectedProduct?.price ?? 0).toFixed(2)}
