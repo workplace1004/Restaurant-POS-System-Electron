@@ -6984,6 +6984,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       if (!canPrevCategory) return;
                       setPositioningCategoryId(categories[categoryIndex - 1].id);
                       setPositioningSelectedProductId(null);
+                      setPositioningSelectedCellIndex(null);
                     }}
                     aria-label="Previous category"
                   >
@@ -6995,7 +6996,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         <button
                           key={c.id}
                           type="button"
-                          onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); }}
+                          onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); }}
                           className={`px-10 py-4 text-3xl border-r border-gray-300 ${
                             c.id === positionCategoryId ? 'bg-blue-400 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
                           }`}
@@ -7013,6 +7014,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       if (!canNextCategory) return;
                       setPositioningCategoryId(categories[categoryIndex + 1].id);
                       setPositioningSelectedProductId(null);
+                      setPositioningSelectedCellIndex(null);
                     }}
                     aria-label="Next category"
                   >
