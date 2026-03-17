@@ -538,6 +538,7 @@ app.delete('/api/discounts/:id', async (req, res) => {
 // REST: app settings (e.g. language)
 const SETTING_KEY_LANGUAGE = 'language';
 const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
+const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
 
 app.get('/api/settings/language', async (req, res) => {
   try {
@@ -595,6 +596,38 @@ app.put('/api/settings/product-positioning-layout', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/product-positioning-layout', err);
     res.status(500).json({ error: err.message || 'Failed to save product positioning layout' });
+  }
+});
+
+app.get('/api/settings/product-positioning-colors', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_PRODUCT_POSITIONING_COLORS } });
+    if (!row?.value) {
+      res.json({ value: {} });
+      return;
+    }
+    const parsed = JSON.parse(row.value);
+    res.json({ value: parsed && typeof parsed === 'object' ? parsed : {} });
+  } catch (err) {
+    console.error('GET /api/settings/product-positioning-colors', err);
+    res.status(500).json({ error: err.message || 'Failed to get product positioning colors' });
+  }
+});
+
+app.put('/api/settings/product-positioning-colors', async (req, res) => {
+  try {
+    const incoming = req.body?.value;
+    const safeValue = incoming && typeof incoming === 'object' ? incoming : {};
+    const serialized = JSON.stringify(safeValue);
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_PRODUCT_POSITIONING_COLORS },
+      create: { key: SETTING_KEY_PRODUCT_POSITIONING_COLORS, value: serialized },
+      update: { value: serialized }
+    });
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('PUT /api/settings/product-positioning-colors', err);
+    res.status(500).json({ error: err.message || 'Failed to save product positioning colors' });
   }
 });
 
