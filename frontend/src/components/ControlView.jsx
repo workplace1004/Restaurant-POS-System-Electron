@@ -7220,6 +7220,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
           if (!itemId || !itemMap.has(itemId)) return;
           const next = [...cells];
           const sourceIndex = next.findIndex((id) => id === itemId);
+          const movingFromCell = sourceIndex >= 0;
+          const targetItemBeforeMove = next[targetIndex];
           if (sourceIndex >= 0) next[sourceIndex] = null;
           if (payload?.source === 'cell' && Number.isInteger(payload?.index) && payload.index >= 0 && payload.index < PAGE_SIZE && payload.index !== targetIndex) {
             const targetItem = next[targetIndex];
@@ -7227,6 +7229,24 @@ export function ControlView({ currentUser, onLogout, onBack }) {
           }
           next[targetIndex] = itemId;
           updateLayout(next);
+          if (positionCategoryId) {
+            setPositioningColorByCategory((prev) => {
+              const byCategory = { ...(prev[positionCategoryId] || {}) };
+              const sourceKey = String(sourceIndex);
+              const targetKey = String(targetIndex);
+              const sourceColor = movingFromCell ? byCategory[sourceKey] : undefined;
+              const targetColor = byCategory[targetKey];
+
+              if (movingFromCell && sourceIndex !== targetIndex) {
+                if (sourceColor) byCategory[targetKey] = sourceColor; else delete byCategory[targetKey];
+                if (targetItemBeforeMove && targetColor) byCategory[sourceKey] = targetColor; else delete byCategory[sourceKey];
+              } else if (!movingFromCell) {
+                // Item comes from pool: target cell gets item without inheriting previous tile color.
+                delete byCategory[targetKey];
+              }
+              return { ...prev, [positionCategoryId]: byCategory };
+            });
+          }
         };
         const handleDropOnPool = (event) => {
           event.preventDefault();
@@ -7419,7 +7439,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-4 shrink-0 pt-14">
+            <div className="p-4 shrink-0 pt-20">
               <KeyboardWithNumpad value={productSearch} onChange={setProductSearch} />
             </div>
           </div>
@@ -7705,7 +7725,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowManageGroupsModal(false); setSelectedManageGroupId(null); }} aria-label="Close">
                 <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-              <div className="w-full flex items-center justify-around mt-20 px-[300px] gap-3 py-4 shrink-0 pr-14">
+              <div className="w-full flex items-center justify-around mt-10 px-[300px] gap-3 py-4 shrink-0 pr-14">
                 <input
                   type="text"
                   value={newGroupName}
@@ -7715,7 +7735,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 />
                 <button type="button" className="px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl shrink-0" disabled={savingGroup} onClick={handleAddGroup}>Add</button>
               </div>
-              <div className="flex-1 overflow-auto m-10 p-5 px-20 border border-gray-300">
+              <div className="flex-1 overflow-auto m-10 p-5 py-1 px-20">
                 <table className="w-full border-collapse">
                   <tbody>
                     {sortedGroups.map((grp) => (

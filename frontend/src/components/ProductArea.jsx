@@ -189,7 +189,7 @@ export function ProductArea({
                   type="button"
                   key={`${product.id}-${idx}`}
                   style={tileStyle}
-                  className={`flex flex-row items-center gap-5 justify-center px-3 border-none rounded-lg text-rose-500 text-xl min-h-[120px] max-h-[120px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                  className={`flex flex-row items-center gap-5 justify-center px-3 border-none rounded-lg text-xl min-h-[120px] max-h-[120px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                     }`}
                   onClick={() => handleProductPress(product)}
                 >
@@ -201,8 +201,8 @@ export function ProductArea({
                     />
                   ) : null}
                   <div className="flex flex-col items-start justify-center">
-                    <span className="text-black text-2xl">{product.name}</span>
-                    <span className="font-semibold text-black text-2xl">€{Number(product.price).toFixed(2)}</span>
+                    <span className="text-2xl">{product.name}</span>
+                    <span className="font-semibold text-2xl">€{Number(product.price).toFixed(2)}</span>
                   </div>
                 </button>
               );
