@@ -91,7 +91,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchOrderHistory,
     fetchSubproductsForProduct,
     savedPositioningLayoutByCategory,
-    fetchSavedPositioningLayout
+    fetchSavedPositioningLayout,
+    savedPositioningColorByCategory,
+    fetchSavedPositioningColors
   } = usePos(API, socket, selectedTable?.id ?? null);
 
   useEffect(() => {
@@ -106,7 +108,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchInPlanningCount();
     fetchTables();
     fetchSavedPositioningLayout();
-  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout]);
+    fetchSavedPositioningColors();
+  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors]);
 
   useEffect(() => {
     if (selectedCategoryId) fetchProducts(selectedCategoryId);
@@ -115,8 +118,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   useEffect(() => {
     if (view === 'pos') {
       fetchSavedPositioningLayout();
+      fetchSavedPositioningColors();
     }
-  }, [view, fetchSavedPositioningLayout]);
+  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors]);
 
   useEffect(() => {
     setSubtotalBreaks([]);
@@ -229,6 +233,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           currentOrderId={currentOrder?.id}
           fetchSubproductsForProduct={fetchSubproductsForProduct}
           positioningLayoutByCategory={savedPositioningLayoutByCategory}
+          positioningColorByCategory={savedPositioningColorByCategory}
         />
         <Footer
           customersActive={showCustomersModal}

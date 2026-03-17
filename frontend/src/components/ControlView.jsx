@@ -1079,15 +1079,33 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   }, []);
 
   useEffect(() => {
-    try {
-      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_product_positioning_colors') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') setPositioningColorByCategory(parsed);
+    let alive = true;
+    const loadSavedPositioningColors = async () => {
+      try {
+        const res = await fetch(`${API}/settings/product-positioning-colors`);
+        const data = await res.json().catch(() => null);
+        const value = data?.value;
+        if (alive && value && typeof value === 'object') {
+          setPositioningColorByCategory(value);
+          return;
+        }
+      } catch {
+        // fallback to local draft when api is unavailable
       }
-    } catch {
-      // ignore broken local color data
-    }
+      try {
+        const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_product_positioning_colors') : null;
+        if (alive && raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') setPositioningColorByCategory(parsed);
+        }
+      } catch {
+        // ignore broken local color data
+      }
+    };
+    loadSavedPositioningColors();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1191,22 +1209,30 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setSavingPositioningLayout(true);
     setPositioningLayoutSaveMessage('');
     try {
-      const res = await fetch(`${API}/settings/product-positioning-layout`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: positioningLayoutByCategory || {} })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.error || 'Failed to save positioning layout');
+      const [layoutRes, colorRes] = await Promise.all([
+        fetch(`${API}/settings/product-positioning-layout`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: positioningLayoutByCategory || {} })
+        }),
+        fetch(`${API}/settings/product-positioning-colors`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: positioningColorByCategory || {} })
+        })
+      ]);
+      if (!layoutRes.ok || !colorRes.ok) {
+        const layoutErr = layoutRes.ok ? null : await layoutRes.json().catch(() => null);
+        const colorErr = colorRes.ok ? null : await colorRes.json().catch(() => null);
+        throw new Error(layoutErr?.error || colorErr?.error || 'Failed to save positioning layout');
       }
-      setPositioningLayoutSaveMessage('Layout saved');
+      setPositioningLayoutSaveMessage('Layout and colors saved');
     } catch (err) {
       setPositioningLayoutSaveMessage(err?.message || 'Failed to save layout');
     } finally {
       setSavingPositioningLayout(false);
     }
-  }, [positioningLayoutByCategory]);
+  }, [positioningLayoutByCategory, positioningColorByCategory]);
 
   const fetchSubproductGroups = useCallback(async () => {
     setSubproductGroupsLoading(true);

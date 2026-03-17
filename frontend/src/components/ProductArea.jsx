@@ -9,7 +9,8 @@ export function ProductArea({
   onAddProduct,
   currentOrderId,
   fetchSubproductsForProduct,
-  positioningLayoutByCategory
+  positioningLayoutByCategory,
+  positioningColorByCategory
 }) {
   const { t } = useLanguage();
   const [page, setPage] = useState(0);
@@ -31,6 +32,7 @@ export function ProductArea({
   const layoutForCategory = Array.isArray(positioningLayoutByCategory?.[selectedCategoryId])
     ? positioningLayoutByCategory[selectedCategoryId]
     : null;
+  const colorForCategory = positioningColorByCategory?.[selectedCategoryId] || {};
   const PAGE_SIZE = 25; // 5 x 5, same as positioning modal
   const totalPages = Math.max(1, Math.ceil((layoutForCategory?.length || PAGE_SIZE) / PAGE_SIZE));
   const pageStart = page * PAGE_SIZE;
@@ -117,6 +119,15 @@ export function ProductArea({
     [onAddProduct, selectedProduct]
   );
 
+  const colorStyleById = {
+    green: { backgroundColor: '#22c55e', color: '#ffffff' },
+    blue: { backgroundColor: '#1d4ed8', color: '#ffffff' },
+    pink: { backgroundColor: '#f9a8d4', color: '#ffffff' },
+    orange: { backgroundColor: '#fdba74', color: '#ffffff' },
+    yellow: { backgroundColor: '#fde047', color: '#ffffff' },
+    gray: { backgroundColor: '#9ca3af', color: '#ffffff' }
+  };
+
   return (
     <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg py-2">
       <div className="flex items-center justify-center gap-10 mb-1">
@@ -162,6 +173,9 @@ export function ProductArea({
               const product = typeof entry === 'string' && entry.startsWith('p:')
                 ? productById.get(entry.slice(2))
                 : null;
+              const absoluteIdx = pageStart + idx;
+              const colorId = colorForCategory[String(absoluteIdx)];
+              const tileStyle = colorStyleById[colorId] || undefined;
               if (!product) {
                 return (
                   <div
@@ -174,7 +188,8 @@ export function ProductArea({
                 <button
                   type="button"
                   key={`${product.id}-${idx}`}
-                  className={`flex flex-row items-center gap-5 justify-center px-3 bg-pos-panel border-none rounded-lg text-pos-text text-xl min-h-[120px] max-h-[120px] hover:bg-pos-rowHover ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                  style={tileStyle}
+                  className={`flex flex-row items-center gap-5 justify-center px-3 border-none rounded-lg text-rose-500 text-xl min-h-[120px] max-h-[120px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                     }`}
                   onClick={() => handleProductPress(product)}
                 >
@@ -186,8 +201,8 @@ export function ProductArea({
                     />
                   ) : null}
                   <div className="flex flex-col items-start justify-center">
-                    <span>{product.name}</span>
-                    <span className="font-semibold text-pos-text-dim text-xl">€{Number(product.price).toFixed(2)}</span>
+                    <span className="text-black text-2xl">{product.name}</span>
+                    <span className="font-semibold text-black text-2xl">€{Number(product.price).toFixed(2)}</span>
                   </div>
                 </button>
               );

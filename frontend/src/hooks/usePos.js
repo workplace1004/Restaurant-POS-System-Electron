@@ -10,6 +10,7 @@ export function usePos(API, socket, selectedTableId = null) {
   const [inPlanningCount, setInPlanningCount] = useState(0);
   const [historyOrders, setHistoryOrders] = useState([]);
   const [savedPositioningLayoutByCategory, setSavedPositioningLayoutByCategory] = useState({});
+  const [savedPositioningColorByCategory, setSavedPositioningColorByCategory] = useState({});
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -85,6 +86,17 @@ export function usePos(API, socket, selectedTableId = null) {
       setSavedPositioningLayoutByCategory(value && typeof value === 'object' ? value : {});
     } catch {
       setSavedPositioningLayoutByCategory({});
+    }
+  }, [API]);
+
+  const fetchSavedPositioningColors = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/settings/product-positioning-colors`);
+      const data = await safeJson(res);
+      const value = data?.value;
+      setSavedPositioningColorByCategory(value && typeof value === 'object' ? value : {});
+    } catch {
+      setSavedPositioningColorByCategory({});
     }
   }, [API]);
 
@@ -278,6 +290,8 @@ export function usePos(API, socket, selectedTableId = null) {
     fetchOrderHistory,
     fetchSubproductsForProduct,
     savedPositioningLayoutByCategory,
-    fetchSavedPositioningLayout
+    fetchSavedPositioningLayout,
+    savedPositioningColorByCategory,
+    fetchSavedPositioningColors
   };
 }
