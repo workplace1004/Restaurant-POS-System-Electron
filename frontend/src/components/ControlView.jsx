@@ -897,6 +897,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [subproductName, setSubproductName] = useState('');
   const [subproductKeyName, setSubproductKeyName] = useState('');
   const [subproductProductionName, setSubproductProductionName] = useState('');
+  const [subproductActiveField, setSubproductActiveField] = useState('name');
   const [subproductPrice, setSubproductPrice] = useState('');
   const [subproductVatTakeOut, setSubproductVatTakeOut] = useState('');
   const [subproductVatEatIn, setSubproductVatEatIn] = useState('');
@@ -1972,11 +1973,38 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     ? subproducts.filter((s) => (s.name || '').toLowerCase().includes(subproductSearch.trim().toLowerCase()))
     : subproducts;
 
+  const handleSubproductNameChange = useCallback((value) => {
+    setSubproductName(value);
+    setSubproductKeyName(value);
+    setSubproductProductionName(value);
+  }, []);
+
+  const subproductKeyboardValue = subproductActiveField === 'name'
+    ? subproductName
+    : subproductActiveField === 'keyName'
+      ? subproductKeyName
+      : subproductActiveField === 'productionName'
+        ? subproductProductionName
+        : subproductActiveField === 'price'
+          ? subproductPrice
+          : '';
+
+  const subproductKeyboardOnChange = subproductActiveField === 'name'
+    ? handleSubproductNameChange
+    : subproductActiveField === 'keyName'
+      ? setSubproductKeyName
+      : subproductActiveField === 'productionName'
+        ? setSubproductProductionName
+        : subproductActiveField === 'price'
+          ? setSubproductPrice
+          : () => { };
+
   const openSubproductModal = () => {
     setEditingSubproductId(null);
     setSubproductName('');
     setSubproductKeyName('');
     setSubproductProductionName('');
+    setSubproductActiveField('name');
     setSubproductPrice('');
     setSubproductVatTakeOut('');
     setSubproductVatEatIn('');
@@ -1990,6 +2018,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const openEditSubproductModal = (sp) => {
     setEditingSubproductId(sp.id);
     setSubproductName(sp.name || '');
+    setSubproductActiveField('name');
     setSubproductModalGroupId(selectedSubproductGroupId);
     try {
       const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_subproduct_extra');
@@ -2020,6 +2049,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setSubproductName('');
     setSubproductKeyName('');
     setSubproductProductionName('');
+    setSubproductActiveField('name');
     setSubproductPrice('');
     setSubproductAttachToCategoryIds([]);
     setSubproductAddCategoryId('');
@@ -3700,14 +3730,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
           <div className="flex flex-col gap-1">
             <button
               type="button"
-              className="text-left px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
+              className="px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
               onClick={() => onBack?.()}
             >
               {tr('backName', 'Back')}
             </button>
             <button
               type="button"
-              className="text-left px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
+              className="px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
               onClick={() => setShowLogoutModal(true)}
             >
               {tr('logOut', 'Log out')}
@@ -7480,19 +7510,47 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 <div className="md:col-span-1 flex flex-col gap-4">
                   <div className="flex items-center gap-3">
                     <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Name:</label>
-                    <input type="text" value={subproductName} onChange={(e) => setSubproductName(e.target.value)} placeholder="" className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    <input
+                      type="text"
+                      value={subproductName}
+                      onChange={(e) => handleSubproductNameChange(e.target.value)}
+                      onFocus={() => setSubproductActiveField('name')}
+                      placeholder=""
+                      className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                    />
                   </div>
                   <div className="flex items-center gap-3">
                     <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Key name:</label>
-                    <input type="text" value={subproductKeyName} onChange={(e) => setSubproductKeyName(e.target.value)} placeholder="" className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    <input
+                      type="text"
+                      value={subproductKeyName}
+                      onChange={(e) => setSubproductKeyName(e.target.value)}
+                      onFocus={() => setSubproductActiveField('keyName')}
+                      placeholder=""
+                      className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                    />
                   </div>
                   <div className="flex items-center gap-3">
                     <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Production name:</label>
-                    <input type="text" value={subproductProductionName} onChange={(e) => setSubproductProductionName(e.target.value)} placeholder="" className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    <input
+                      type="text"
+                      value={subproductProductionName}
+                      onChange={(e) => setSubproductProductionName(e.target.value)}
+                      onFocus={() => setSubproductActiveField('productionName')}
+                      placeholder=""
+                      className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                    />
                   </div>
                   <div className="flex items-center gap-3">
                     <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Price:</label>
-                    <input type="text" value={subproductPrice} onChange={(e) => setSubproductPrice(e.target.value)} placeholder="" className="w-32 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
+                    <input
+                      type="text"
+                      value={subproductPrice}
+                      onChange={(e) => setSubproductPrice(e.target.value)}
+                      onFocus={() => setSubproductActiveField('price')}
+                      placeholder=""
+                      className="w-32 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                    />
                   </div>
                   <div className="flex items-center gap-3">
                     <label className="block text-pos-text text-xl font-medium w-36 shrink-0">VAT Take out:</label>
@@ -7603,7 +7661,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               </div>
             </div>
             <div className="shrink-0 pt-4 px-4 pb-4">
-              <KeyboardWithNumpad value={subproductName} onChange={setSubproductName} />
+              <KeyboardWithNumpad value={subproductKeyboardValue} onChange={subproductKeyboardOnChange} />
             </div>
           </div>
         </div>
