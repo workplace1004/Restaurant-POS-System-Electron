@@ -61,6 +61,35 @@ function summarizeCashmaticConnection(connectionString) {
   }
 }
 
+const SETTING_KEY_PRODUCT_SUBPRODUCT_LINKS = 'product_subproduct_links';
+
+async function loadProductSubproductLinksMap() {
+  const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_PRODUCT_SUBPRODUCT_LINKS } });
+  if (!row?.value) return {};
+  try {
+    const parsed = JSON.parse(row.value);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeProductSubproductLinks(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const normalized = [];
+  for (const raw of list) {
+    const subproductId = raw?.subproductId != null ? String(raw.subproductId).trim() : '';
+    if (!subproductId || seen.has(subproductId)) continue;
+    seen.add(subproductId);
+    normalized.push({
+      subproductId,
+      groupId: raw?.groupId != null ? String(raw.groupId).trim() : ''
+    });
+  }
+  return normalized;
+}
+
 // REST: categories
 app.get('/api/categories', async (req, res) => {
   const categories = await prisma.category.findMany({ orderBy: { sortOrder: 'asc' }, include: { products: true } });
@@ -132,6 +161,20 @@ app.get('/api/categories/:id/products', async (req, res) => {
 // Subproducts for a product (by product.addition = subproduct group name or id)
 app.get('/api/products/:id/subproducts', async (req, res) => {
   try {
+    const linksMap = await loadProductSubproductLinksMap();
+    const links = normalizeProductSubproductLinks(linksMap?.[req.params.id]);
+    if (links.length > 0) {
+      const idOrder = new Map(links.map((l, idx) => [l.subproductId, idx]));
+      const ids = links.map((l) => l.subproductId);
+      const items = await prisma.subproduct.findMany({
+        where: { id: { in: ids } }
+      });
+      const sorted = items
+        .filter((sp) => idOrder.has(sp.id))
+        .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
+      return res.json(sorted);
+    }
+
     const product = await prisma.product.findUnique({ where: { id: req.params.id } });
     if (!product || !product.addition || String(product.addition).trim() === '') {
       return res.json([]);
@@ -552,6 +595,59 @@ app.put('/api/settings/product-positioning-layout', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/product-positioning-layout', err);
     res.status(500).json({ error: err.message || 'Failed to save product positioning layout' });
+  }
+});
+
+app.get('/api/products/:id/subproduct-links', async (req, res) => {
+  try {
+    const linksMap = await loadProductSubproductLinksMap();
+    const links = normalizeProductSubproductLinks(linksMap?.[req.params.id]);
+    const groupIds = [...new Set(links.map((l) => l.groupId).filter(Boolean))];
+    const subproductIds = links.map((l) => l.subproductId);
+    const [groups, subproducts] = await Promise.all([
+      groupIds.length
+        ? prisma.subproductGroup.findMany({ where: { id: { in: groupIds } } })
+        : Promise.resolve([]),
+      subproductIds.length
+        ? prisma.subproduct.findMany({ where: { id: { in: subproductIds } } })
+        : Promise.resolve([])
+    ]);
+    const groupMap = new Map(groups.map((g) => [g.id, g]));
+    const subMap = new Map(subproducts.map((s) => [s.id, s]));
+    const expanded = links
+      .map((l) => {
+        const sub = subMap.get(l.subproductId);
+        if (!sub) return null;
+        const group = groupMap.get(l.groupId);
+        return {
+          subproductId: sub.id,
+          subproductName: sub.name,
+          groupId: group?.id || sub.groupId || '',
+          groupName: group?.name || ''
+        };
+      })
+      .filter(Boolean);
+    res.json(expanded);
+  } catch (err) {
+    console.error('GET /api/products/:id/subproduct-links', err);
+    res.status(500).json({ error: err.message || 'Failed to load product subproduct links' });
+  }
+});
+
+app.put('/api/products/:id/subproduct-links', async (req, res) => {
+  try {
+    const links = normalizeProductSubproductLinks(req.body?.links);
+    const linksMap = await loadProductSubproductLinksMap();
+    linksMap[req.params.id] = links;
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_PRODUCT_SUBPRODUCT_LINKS },
+      create: { key: SETTING_KEY_PRODUCT_SUBPRODUCT_LINKS, value: JSON.stringify(linksMap) },
+      update: { value: JSON.stringify(linksMap) }
+    });
+    res.json({ links });
+  } catch (err) {
+    console.error('PUT /api/products/:id/subproduct-links', err);
+    res.status(500).json({ error: err.message || 'Failed to save product subproduct links' });
   }
 });
 
