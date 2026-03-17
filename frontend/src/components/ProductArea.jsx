@@ -13,6 +13,7 @@ export function ProductArea({
 }) {
   const { t } = useLanguage();
   const [page, setPage] = useState(0);
+  const [subPage, setSubPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [subproducts, setSubproducts] = useState([]);
   const [loadingSubproducts, setLoadingSubproducts] = useState(false);
@@ -30,13 +31,21 @@ export function ProductArea({
   const layoutForCategory = Array.isArray(positioningLayoutByCategory?.[selectedCategoryId])
     ? positioningLayoutByCategory[selectedCategoryId]
     : null;
-  const PAGE_SIZE = 30; // 5 x 6, same as positioning modal
+  const PAGE_SIZE = 25; // 5 x 5, same as positioning modal
   const totalPages = Math.max(1, Math.ceil((layoutForCategory?.length || PAGE_SIZE) / PAGE_SIZE));
   const pageStart = page * PAGE_SIZE;
   const pageCells = Array.from({ length: PAGE_SIZE }, (_, i) => layoutForCategory?.[pageStart + i] || null);
 
   const goPrev = () => setPage((p) => Math.max(0, p - 1));
   const goNext = () => setPage((p) => Math.min(totalPages - 1, p + 1));
+  const SUBPRODUCTS_PER_PAGE = 5;
+  const subTotalPages = Math.max(1, Math.ceil(subproducts.length / SUBPRODUCTS_PER_PAGE));
+  const paginatedSubproducts = subproducts.slice(
+    subPage * SUBPRODUCTS_PER_PAGE,
+    subPage * SUBPRODUCTS_PER_PAGE + SUBPRODUCTS_PER_PAGE
+  );
+  const goSubPrev = () => setSubPage((p) => Math.max(0, p - 1));
+  const goSubNext = () => setSubPage((p) => Math.min(subTotalPages - 1, p + 1));
 
   useEffect(() => {
     // Category switch should always clear selected product and subproducts panel.
@@ -45,11 +54,16 @@ export function ProductArea({
     setSubproducts([]);
     setLoadingSubproducts(false);
     setPage(0);
+    setSubPage(0);
   }, [selectedCategoryId]);
 
   useEffect(() => {
     setPage(0);
   }, [selectedCategoryId, layoutForCategory?.length]);
+
+  useEffect(() => {
+    setSubPage(0);
+  }, [selectedProduct?.id, subproducts.length]);
 
   const handleProductPress = useCallback(
     async (product) => {
@@ -104,8 +118,8 @@ export function ProductArea({
   );
 
   return (
-    <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg">
-      <div className="flex items-center justify-center gap-4 mb-4">
+    <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg py-2">
+      <div className="flex items-center justify-center gap-10 mb-1">
         <button
           type="button"
           className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
@@ -114,7 +128,7 @@ export function ProductArea({
         >
           ‹
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-10">
           {Array.from({ length: totalPages }, (_, i) => (
             <span
               key={i}
@@ -137,7 +151,7 @@ export function ProductArea({
           ›
         </button>
       </div>
-      <div className="max-h-[820px] min-h-[240px] p-1 overflow-auto">
+      <div className="max-h-[660px] min-h-[240px] p-1 overflow-auto">
         {!layoutForCategory ? (
           <div className="col-span-full flex items-center justify-center text-pos-surface text-lg min-h-[100px] max-h-[100px]">
             {t('selectCategoryToSeeProducts')}
@@ -180,6 +194,72 @@ export function ProductArea({
             })}
           </div>
         )}
+      </div>
+      <div className="mt-3 min-h-[120px] max-h-[220px] overflow-auto">
+        {selectedProduct && loadingSubproducts ? (
+          <div className="h-full flex items-center justify-center text-pos-surface text-lg">
+            Loading subproducts...
+          </div>
+        ) : null}
+        {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
+          <div className="grid grid-cols-5 gap-3 content-start max-h-[120px]">
+            {paginatedSubproducts.map((subproduct) => (
+              <button
+                type="button"
+                key={subproduct.id}
+                className="flex items-center justify-center p-4 bg-pos-surface border-none rounded-lg text-pos-text text-xl min-h-[110px] hover:bg-pos-rowHover"
+                onClick={() => handleSubproductPress(subproduct)}
+              >
+                {subproduct?.kioskPicture ? (
+                  <img
+                    src={subproduct.kioskPicture}
+                    alt={subproduct.name}
+                    className="max-w-[100px] min-w-[100px] max-h-[80px] min-h-[80px] object-cover rounded"
+                  />
+                ) : null}
+                <div className="flex flex-col w-full items-center justify-center">
+                  <span>{subproduct.name}</span>
+                  <span className="font-semibold text-pos-text text-xl">
+                    €{Number(subproduct?.price != null ? subproduct.price : selectedProduct?.price ?? 0).toFixed(2)}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
+          <div className="flex items-center justify-center gap-10 mt-2">
+            <button
+              type="button"
+              className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
+              onClick={goSubPrev}
+              aria-label="Previous subproducts"
+            >
+              ‹
+            </button>
+            <div className="flex gap-10">
+              {Array.from({ length: subTotalPages }, (_, i) => (
+                <span
+                  key={`sub-page-${i}`}
+                  className={`w-3 h-3 rounded-full cursor-pointer ${i === subPage ? 'bg-pos-text' : 'bg-pos-surface'}`}
+                  onClick={() => setSubPage(i)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && setSubPage(i)}
+                  aria-label={`Subproducts page ${i + 1}`}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
+              onClick={goSubNext}
+              aria-label="Next subproducts"
+            >
+              ›
+            </button>
+          </div>
+        ) : null}
       </div>
     </main>
   );

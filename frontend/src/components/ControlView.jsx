@@ -574,6 +574,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [productSubproductsGroupId, setProductSubproductsGroupId] = useState('');
   const [productSubproductsOptions, setProductSubproductsOptions] = useState([]);
   const [productSubproductsSelectedId, setProductSubproductsSelectedId] = useState('');
+  const [productSubproductsLinked, setProductSubproductsLinked] = useState([]);
+  const [loadingProductSubproductsLinked, setLoadingProductSubproductsLinked] = useState(false);
   const [savingProductSubproducts, setSavingProductSubproducts] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showProductPositioningModal, setShowProductPositioningModal] = useState(false);
@@ -1166,7 +1168,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setPositioningLayoutByCategory((prev) => {
       if (Array.isArray(prev?.[categoryId])) return prev;
       // Persist explicit empty layout so POS does not auto-fallback to full product list.
-      return { ...prev, [categoryId]: Array.from({ length: 30 }, () => null) };
+      return { ...prev, [categoryId]: Array.from({ length: 25 }, () => null) };
     });
   }, [showProductPositioningModal, positioningCategoryId, selectedCategoryId, categories]);
 
@@ -1314,6 +1316,23 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setProductSubproductsGroupId(initialGroupId);
     setProductSubproductsSelectedId('');
     setProductSubproductsOptions([]);
+    setProductSubproductsLinked([]);
+    setLoadingProductSubproductsLinked(true);
+    try {
+      const res = await fetch(`${API}/products/${product.id}/subproduct-links`);
+      const data = await res.json().catch(() => []);
+      const links = Array.isArray(data) ? data : [];
+      setProductSubproductsLinked(links.map((l) => ({
+        subproductId: l.subproductId,
+        subproductName: l.subproductName,
+        groupId: l.groupId || '',
+        groupName: l.groupName || ''
+      })));
+    } catch {
+      setProductSubproductsLinked([]);
+    } finally {
+      setLoadingProductSubproductsLinked(false);
+    }
     setShowProductSubproductsModal(true);
   }, [subproductGroups]);
 
@@ -1323,6 +1342,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setProductSubproductsGroupId('');
     setProductSubproductsSelectedId('');
     setProductSubproductsOptions([]);
+    setProductSubproductsLinked([]);
+    setLoadingProductSubproductsLinked(false);
     setSavingProductSubproducts(false);
   }, []);
 
@@ -1353,33 +1374,66 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     };
   }, [showProductSubproductsModal, productSubproductsGroupId]);
 
+  const handleAddProductSubproductLink = useCallback(() => {
+    if (!productSubproductsSelectedId) return;
+    const selected = productSubproductsOptions.find((sp) => sp.id === productSubproductsSelectedId);
+    if (!selected) return;
+    setProductSubproductsLinked((prev) => {
+      if (prev.some((x) => x.subproductId === selected.id)) return prev;
+      const group = subproductGroups.find((g) => g.id === productSubproductsGroupId);
+      return [
+        ...prev,
+        {
+          subproductId: selected.id,
+          subproductName: selected.name,
+          groupId: group?.id || productSubproductsGroupId || '',
+          groupName: group?.name || ''
+        }
+      ];
+    });
+  }, [productSubproductsSelectedId, productSubproductsOptions, subproductGroups, productSubproductsGroupId]);
+
+  const moveProductSubproductLink = useCallback((index, direction) => {
+    setProductSubproductsLinked((prev) => {
+      const next = [...prev];
+      const target = index + direction;
+      if (index < 0 || index >= next.length || target < 0 || target >= next.length) return prev;
+      const tmp = next[index];
+      next[index] = next[target];
+      next[target] = tmp;
+      return next;
+    });
+  }, []);
+
+  const removeProductSubproductLink = useCallback((subproductId) => {
+    setProductSubproductsLinked((prev) => prev.filter((x) => x.subproductId !== subproductId));
+  }, []);
+
   const handleSaveProductSubproducts = useCallback(async () => {
     if (!productSubproductsProduct?.id) return;
     setSavingProductSubproducts(true);
     try {
-      const body = { addition: productSubproductsGroupId || null };
-      const res = await fetch(`${API}/products/${productSubproductsProduct.id}`, {
-        method: 'PATCH',
+      const linksPayload = productSubproductsLinked.map((l) => ({
+        groupId: l.groupId || '',
+        subproductId: l.subproductId
+      }));
+      const res = await fetch(`${API}/products/${productSubproductsProduct.id}/subproduct-links`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ links: linksPayload })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.error || 'Failed to save subproducts setting');
+        throw new Error(err?.error || 'Failed to save product subproducts');
       }
-      showToast('success', 'Subproducts setting saved.');
-      setProducts((prev) => prev.map((p) => (
-        p.id === productSubproductsProduct.id
-          ? { ...p, addition: productSubproductsGroupId || null }
-          : p
-      )));
+      showToast('success', 'Product subproducts saved.');
       closeProductSubproductsModal();
     } catch (err) {
-      showToast('error', err?.message || 'Failed to save subproducts setting.');
+      showToast('error', err?.message || 'Failed to save product subproducts.');
     } finally {
       setSavingProductSubproducts(false);
     }
-  }, [closeProductSubproductsModal, productSubproductsGroupId, productSubproductsProduct, showToast]);
+  }, [closeProductSubproductsModal, productSubproductsLinked, productSubproductsProduct, showToast]);
 
   const handleLogoutConfirm = () => {
     setShowLogoutModal(false);
@@ -7015,7 +7069,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       {/* Product positioning modal */}
       {showProductPositioningModal && (() => {
         const GRID_COLUMNS = 5;
-        const GRID_ROWS = 6;
+        const GRID_ROWS = 5;
         const PAGE_SIZE = GRID_COLUMNS * GRID_ROWS;
         const positionCategoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
         const positioningProducts = products
@@ -7319,38 +7373,95 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       {/* Product row -> Subproducts modal */}
       {showProductSubproductsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeProductSubproductsModal}>
-          <div className="relative bg-gray-100 rounded-xl shadow-2xl w-full max-w-[860px] min-h-[560px] p-10" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl min-w-[1200px] max-w-[1200px] min-h-[820px] p-10" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 p-2 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900" onClick={closeProductSubproductsModal} aria-label="Close">
               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <div className="max-w-[360px] space-y-5">
-              <Dropdown
-                options={[
-                  { value: '', label: 'Zonder groep' },
-                  ...subproductGroups.map((g) => ({ value: g.id, label: g.name }))
-                ]}
-                value={productSubproductsGroupId}
-                onChange={setProductSubproductsGroupId}
-                className="w-full text-xl"
-              />
-              <Dropdown
-                options={[
-                  { value: '', label: '---' },
-                  ...productSubproductsOptions.map((sp) => ({ value: sp.id, label: sp.name }))
-                ]}
-                value={productSubproductsSelectedId}
-                onChange={setProductSubproductsSelectedId}
-                className="w-full text-xl"
-              />
+            <div className="grid grid-cols-[360px_1fr] gap-10 mt-10">
+              <div className="space-y-5">
+                <Dropdown
+                  options={[
+                    { value: '', label: 'Zonder groep' },
+                    ...subproductGroups.map((g) => ({ value: g.id, label: g.name }))
+                  ]}
+                  value={productSubproductsGroupId}
+                  onChange={setProductSubproductsGroupId}
+                  className="w-full text-xl"
+                />
+                <Dropdown
+                  options={[
+                    { value: '', label: '---' },
+                    ...productSubproductsOptions.map((sp) => ({ value: sp.id, label: sp.name }))
+                  ]}
+                  value={productSubproductsSelectedId}
+                  onChange={setProductSubproductsSelectedId}
+                  className="w-full text-xl"
+                />
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 text-gray-500 w-full justify-center hover:text-gray-700 disabled:opacity-50"
+                  onClick={handleAddProductSubproductLink}
+                  disabled={!productSubproductsSelectedId}
+                >
+                  <svg className="w-10 h-10 border border-gray-500 rounded-full p-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <span className="text-2xl">Add</span>
+                </button>
+              </div>
+
+              <div className="rounded-lg border border-pos-border bg-pos-panel/30 min-h-[560px] p-3 overflow-y-auto">
+                {loadingProductSubproductsLinked ? (
+                  <div className="text-pos-muted text-xl px-3 py-2">Loading...</div>
+                ) : productSubproductsLinked.length === 0 ? (
+                  <div className="text-pos-muted text-xl px-3 py-2">No subproducts linked yet.</div>
+                ) : (
+                  <ul className="space-y-2">
+                    {productSubproductsLinked.map((link, idx) => (
+                      <li key={link.subproductId} className="flex items-center justify-between px-4 py-2 rounded bg-pos-bg text-pos-text text-3xl">
+                        <span className="truncate pr-4">{link.subproductName}</span>
+                        <div className="flex items-center gap-4 shrink-0">
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-pos-panel disabled:opacity-40"
+                            onClick={() => moveProductSubproductLink(idx, 1)}
+                            disabled={idx >= productSubproductsLinked.length - 1}
+                            aria-label="Move down"
+                          >
+                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m0 0l-6-6m6 6l6-6" /></svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-pos-panel disabled:opacity-40"
+                            onClick={() => moveProductSubproductLink(idx, -1)}
+                            disabled={idx <= 0}
+                            aria-label="Move up"
+                          >
+                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l6 6m-6-6l-6 6" /></svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 rounded hover:bg-pos-panel"
+                            onClick={() => removeProductSubproductLink(link.subproductId)}
+                            aria-label="Delete"
+                          >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                className="px-8 py-3 rounded-lg bg-green-600 text-white text-2xl font-medium hover:bg-green-700 disabled:opacity-50"
                 onClick={handleSaveProductSubproducts}
                 disabled={savingProductSubproducts || !productSubproductsProduct}
               >
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                <span className="text-2xl">{savingProductSubproducts ? 'Saving...' : 'Add'}</span>
+                {savingProductSubproducts ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
