@@ -527,6 +527,30 @@ const SETTING_KEY_LANGUAGE = 'language';
 const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
 const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
 const SETTING_KEY_TABLE_SAVED_ORDER_IDS = 'table_saved_order_ids';
+const SETTING_KEY_FUNCTION_BUTTONS_LAYOUT = 'function_buttons_layout';
+const FUNCTION_BUTTON_LAYOUT_ALLOWED_IDS = [
+  'tables',
+  'weborders',
+  'in-wacht',
+  'geplande-orders',
+  'reservaties',
+  'verkopers'
+];
+const FUNCTION_BUTTON_LAYOUT_SLOT_COUNT = 3;
+const normalizeFunctionButtonsLayout = (value) => {
+  if (!Array.isArray(value)) return Array(FUNCTION_BUTTON_LAYOUT_SLOT_COUNT).fill('');
+  const next = Array(FUNCTION_BUTTON_LAYOUT_SLOT_COUNT).fill('');
+  const used = new Set();
+  for (let i = 0; i < FUNCTION_BUTTON_LAYOUT_SLOT_COUNT; i += 1) {
+    const candidate = String(value[i] || '').trim();
+    if (!candidate) continue;
+    if (!FUNCTION_BUTTON_LAYOUT_ALLOWED_IDS.includes(candidate)) continue;
+    if (used.has(candidate)) continue;
+    next[i] = candidate;
+    used.add(candidate);
+  }
+  return next;
+};
 const normalizeSavedTableOrderEntries = (value) => {
   if (!Array.isArray(value)) return [];
   const byOrderId = new Map();
@@ -672,6 +696,38 @@ app.put('/api/settings/table-saved-orders', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/table-saved-orders', err);
     res.status(500).json({ error: err.message || 'Failed to save table orders' });
+  }
+});
+
+app.get('/api/settings/function-buttons-layout', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_FUNCTION_BUTTONS_LAYOUT } });
+    if (!row?.value) {
+      res.json({ value: normalizeFunctionButtonsLayout([]) });
+      return;
+    }
+    const parsed = JSON.parse(row.value);
+    res.json({ value: normalizeFunctionButtonsLayout(parsed) });
+  } catch (err) {
+    console.error('GET /api/settings/function-buttons-layout', err);
+    res.status(500).json({ error: err.message || 'Failed to get function buttons layout' });
+  }
+});
+
+app.put('/api/settings/function-buttons-layout', async (req, res) => {
+  try {
+    const incoming = req.body?.value;
+    const safeValue = normalizeFunctionButtonsLayout(incoming);
+    const serialized = JSON.stringify(safeValue);
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_FUNCTION_BUTTONS_LAYOUT },
+      create: { key: SETTING_KEY_FUNCTION_BUTTONS_LAYOUT, value: serialized },
+      update: { value: serialized }
+    });
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('PUT /api/settings/function-buttons-layout', err);
+    res.status(500).json({ error: err.message || 'Failed to save function buttons layout' });
   }
 });
 
