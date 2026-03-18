@@ -137,6 +137,7 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
             const tableNumber = String(table?.name ?? id).replace(/^Table\s*/i, '') || id;
             const pos = positions[id] || { x: 0, y: 0 };
             const isDragging = draggingId === id;
+            const hasOpenOrders = Array.isArray(table?.orders) && table.orders.length > 0;
             return (
               <button
                 key={id}
@@ -147,8 +148,12 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
                 } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
               >
-                <img src="/table.png" alt={`Table ${tableNumber}`} className="w-full h-full object-contain" />
-                <span className="absolute inset-0 flex items-center justify-center text-[40px] font-bold text-[#3fa666] -mt-10 pointer-events-none">
+                <img src="/table.png" alt={`${t('table')} ${tableNumber}`} className="w-full h-full object-contain" />
+                <span
+                  className={`absolute inset-0 flex items-center justify-center text-[40px] font-bold -mt-10 pointer-events-none ${
+                    hasOpenOrders ? 'text-red-500' : 'text-[#3fa666]'
+                  }`}
+                >
                   {tableNumber}
                 </span>
               </button>

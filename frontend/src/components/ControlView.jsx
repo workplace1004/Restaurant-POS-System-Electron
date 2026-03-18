@@ -573,6 +573,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [productSubproductsProduct, setProductSubproductsProduct] = useState(null);
   const [productSubproductsGroupId, setProductSubproductsGroupId] = useState('');
   const [productSubproductsOptions, setProductSubproductsOptions] = useState([]);
+  const [productSubproductsByGroup, setProductSubproductsByGroup] = useState({});
   const [productSubproductsSelectedId, setProductSubproductsSelectedId] = useState('');
   const [productSubproductsLinked, setProductSubproductsLinked] = useState([]);
   const [loadingProductSubproductsLinked, setLoadingProductSubproductsLinked] = useState(false);
@@ -600,9 +601,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [productCategoryIds, setProductCategoryIds] = useState(['']);
   const [productAddition, setProductAddition] = useState('Subproducts');
   const [productBarcode, setProductBarcode] = useState('');
-  const [productPrinter1, setProductPrinter1] = useState('Disabled');
-  const [productPrinter2, setProductPrinter2] = useState('Disabled');
-  const [productPrinter3, setProductPrinter3] = useState('Disabled');
+  const [productPrinter1, setProductPrinter1] = useState('');
+  const [productPrinter2, setProductPrinter2] = useState('');
+  const [productPrinter3, setProductPrinter3] = useState('');
   const [productActiveField, setProductActiveField] = useState('name');
   const [savingProduct, setSavingProduct] = useState(false);
   const [deleteConfirmProductId, setDeleteConfirmProductId] = useState(null);
@@ -1333,14 +1334,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         groups = [];
       }
     }
-    let initialGroupId = '';
-    if (product?.addition) {
-      const byId = groups.find((g) => g.id === product.addition);
-      const byName = groups.find((g) => g.name === product.addition);
-      initialGroupId = (byId || byName)?.id || '';
-    }
-    if (!initialGroupId && groups[0]?.id) initialGroupId = groups[0].id;
-    setProductSubproductsGroupId(initialGroupId);
+    setProductSubproductsGroupId('');
     setProductSubproductsSelectedId('');
     setProductSubproductsOptions([]);
     setProductSubproductsLinked([]);
@@ -1355,6 +1349,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         groupId: l.groupId || '',
         groupName: l.groupName || ''
       })));
+      // Only preselect group when this product already has linked subproducts.
+      const firstLinkedGroupId = links.find((l) => l?.groupId)?.groupId || '';
+      if (firstLinkedGroupId && groups.some((g) => g.id === firstLinkedGroupId)) {
+        setProductSubproductsGroupId(firstLinkedGroupId);
+      }
     } catch {
       setProductSubproductsLinked([]);
     } finally {
@@ -1388,7 +1387,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         if (!alive) return;
         const list = Array.isArray(data) ? data : [];
         setProductSubproductsOptions(list);
-        setProductSubproductsSelectedId(list[0]?.id || '');
+        // Keep placeholder selected by default when a group is chosen.
+        setProductSubproductsSelectedId('');
       } catch {
         if (!alive) return;
         setProductSubproductsOptions([]);
@@ -1405,9 +1405,11 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     if (!productSubproductsSelectedId) return;
     const selected = productSubproductsOptions.find((sp) => sp.id === productSubproductsSelectedId);
     if (!selected) return;
+    let added = false;
     setProductSubproductsLinked((prev) => {
       if (prev.some((x) => x.subproductId === selected.id)) return prev;
       const group = subproductGroups.find((g) => g.id === productSubproductsGroupId);
+      added = true;
       return [
         ...prev,
         {
@@ -1418,6 +1420,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         }
       ];
     });
+    if (added) setProductSubproductsSelectedId('');
   }, [productSubproductsSelectedId, productSubproductsOptions, subproductGroups, productSubproductsGroupId]);
 
   const moveProductSubproductLink = useCallback((index, direction) => {
@@ -1670,9 +1673,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setProductCategoryIds([selectedCategoryId || '']);
     setProductAddition('Subproducts');
     setProductBarcode('');
-    setProductPrinter1('Disabled');
-    setProductPrinter2('Disabled');
-    setProductPrinter3('Disabled');
+    setProductPrinter1('');
+    setProductPrinter2('');
+    setProductPrinter3('');
     setProductActiveField('name');
     setProductFieldErrors({ name: false, keyName: false, productionName: false, vatTakeOut: false, vatEatIn: false });
     setProductTabsUnlocked(false);
@@ -1700,9 +1703,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setProductCategoryIds(categoryIds);
     setProductAddition(product.addition ?? 'Subproducts');
     setProductBarcode(product.barcode ?? '');
-    setProductPrinter1(product.printer1 ?? 'Disabled');
-    setProductPrinter2(product.printer2 ?? 'Disabled');
-    setProductPrinter3(product.printer3 ?? 'Disabled');
+    setProductPrinter1(product.printer1 || '');
+    setProductPrinter2(product.printer2 || '');
+    setProductPrinter3(product.printer3 || '');
     setProductActiveField('name');
     setProductFieldErrors({ name: false, keyName: false, productionName: false, vatTakeOut: false, vatEatIn: false });
     setProductTabsUnlocked(false);
@@ -3077,6 +3080,21 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     ...PRINTER_DISABLED_OPTIONS,
     ...printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }))
   ];
+
+  const sortedPrintersForProductModal = [...printers].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const getUniqueProductPrinterOptions = (currentPrinterId, otherPrinterIds = []) => {
+    const usedIds = new Set(
+      (Array.isArray(otherPrinterIds) ? otherPrinterIds : [])
+        .map((id) => String(id || '').trim())
+        .filter(Boolean)
+    );
+    return [
+      { value: '', label: tr('control.productModal.disabled', 'Disabled') },
+      ...sortedPrintersForProductModal
+        .filter((p) => p.id === currentPrinterId || !usedIds.has(p.id))
+        .map((p) => ({ value: p.id, label: p.name }))
+    ];
+  };
 
   const labelsPrinterOptions = printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }));
 
@@ -6743,15 +6761,30 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       </div>
                       <div className="flex gap-1 items-center">
                         <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer1', 'Printer 1')}:</label>
-                        <Dropdown options={[{ value: 'Disabled', label: tr('control.productModal.disabled', 'Disabled') }]} value={productPrinter1} onChange={setProductPrinter1} className="text-xl w-full min-w-[320px]" />
+                        <Dropdown
+                          options={getUniqueProductPrinterOptions(productPrinter1, [productPrinter2, productPrinter3])}
+                          value={productPrinter1}
+                          onChange={setProductPrinter1}
+                          className="text-xl w-full min-w-[320px]"
+                        />
                       </div>
                       <div className="flex gap-1 items-center">
                         <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer2', 'Printer 2')}:</label>
-                        <Dropdown options={[{ value: 'Disabled', label: tr('control.productModal.disabled', 'Disabled') }]} value={productPrinter2} onChange={setProductPrinter2} className="text-xl w-full min-w-[320px]" />
+                        <Dropdown
+                          options={getUniqueProductPrinterOptions(productPrinter2, [productPrinter1, productPrinter3])}
+                          value={productPrinter2}
+                          onChange={setProductPrinter2}
+                          className="text-xl w-full min-w-[320px]"
+                        />
                       </div>
                       <div className="flex gap-1 items-center">
                         <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer3', 'Printer 3')}:</label>
-                        <Dropdown options={[{ value: 'Disabled', label: tr('control.productModal.disabled', 'Disabled') }]} value={productPrinter3} onChange={setProductPrinter3} className="text-xl w-full min-w-[320px]" />
+                        <Dropdown
+                          options={getUniqueProductPrinterOptions(productPrinter3, [productPrinter1, productPrinter2])}
+                          value={productPrinter3}
+                          onChange={setProductPrinter3}
+                          className="text-xl w-full min-w-[320px]"
+                        />
                       </div>
                     </div>
                   </div>
@@ -7468,7 +7501,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 <Dropdown
                   options={[
                     { value: '', label: '---' },
-                    ...productSubproductsOptions.map((sp) => ({ value: sp.id, label: sp.name }))
+                    ...productSubproductsOptions
+                      .filter((sp) => !productSubproductsLinked.some((link) => link.subproductId === sp.id))
+                      .map((sp) => ({ value: sp.id, label: sp.name }))
                   ]}
                   value={productSubproductsSelectedId}
                   onChange={setProductSubproductsSelectedId}

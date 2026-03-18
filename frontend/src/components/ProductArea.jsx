@@ -10,12 +10,14 @@ export function ProductArea({
   currentOrderId,
   fetchSubproductsForProduct,
   positioningLayoutByCategory,
-  positioningColorByCategory
+  positioningColorByCategory,
+  appendSubproductNoteToItem
 }) {
   const { t } = useLanguage();
   const [page, setPage] = useState(0);
   const [subPage, setSubPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedOrderItemId, setSelectedOrderItemId] = useState(null);
   const [subproducts, setSubproducts] = useState([]);
   const [loadingSubproducts, setLoadingSubproducts] = useState(false);
   const subproductsRequestIdRef = useRef(0);
@@ -53,6 +55,7 @@ export function ProductArea({
     // Category switch should always clear selected product and subproducts panel.
     subproductsRequestIdRef.current += 1;
     setSelectedProduct(null);
+    setSelectedOrderItemId(null);
     setSubproducts([]);
     setLoadingSubproducts(false);
     setPage(0);
@@ -70,9 +73,11 @@ export function ProductArea({
   const handleProductPress = useCallback(
     async (product) => {
       if (!fetchSubproductsForProduct) {
-        onAddProduct(product);
+        await onAddProduct(product);
         return;
       }
+      const createdItemId = await onAddProduct(product);
+      setSelectedOrderItemId(createdItemId || null);
       const requestId = subproductsRequestIdRef.current + 1;
       subproductsRequestIdRef.current = requestId;
       setSelectedProduct(product);
@@ -89,13 +94,13 @@ export function ProductArea({
         }));
         setSubproducts(withExtras);
         if (list.length === 0) {
-          onAddProduct(product);
           setSelectedProduct(null);
+          setSelectedOrderItemId(null);
         }
       } catch {
         if (requestId !== subproductsRequestIdRef.current) return;
-        onAddProduct(product);
         setSelectedProduct(null);
+        setSelectedOrderItemId(null);
         setSubproducts([]);
       } finally {
         if (requestId === subproductsRequestIdRef.current) {
@@ -107,16 +112,13 @@ export function ProductArea({
   );
 
   const handleSubproductPress = useCallback(
-    (subproduct) => {
-      if (!selectedProduct) return;
-      const price = subproduct?.price != null ? Number(subproduct.price) : Number(selectedProduct.price);
-      onAddProduct({
-        ...selectedProduct,
-        price,
-        subproductName: subproduct?.name || ''
-      });
+    async (subproduct) => {
+      if (!selectedProduct || !selectedOrderItemId) return;
+      const note = subproduct?.name || '';
+      if (!note) return;
+      await appendSubproductNoteToItem?.(selectedOrderItemId, note, Number(subproduct?.price) || 0);
     },
-    [onAddProduct, selectedProduct]
+    [appendSubproductNoteToItem, selectedOrderItemId, selectedProduct]
   );
 
   const colorStyleById = {
@@ -135,7 +137,7 @@ export function ProductArea({
           type="button"
           className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
           onClick={goPrev}
-          aria-label="Previous"
+          aria-label={t('previous')}
         >
           ‹
         </button>
@@ -149,7 +151,7 @@ export function ProductArea({
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && setPage(i)}
-              aria-label={`Page ${i + 1}`}
+              aria-label={`${t('page')} ${i + 1}`}
             />
           ))}
         </div>
@@ -157,7 +159,7 @@ export function ProductArea({
           type="button"
           className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
           onClick={goNext}
-          aria-label="Next"
+          aria-label={t('next')}
         >
           ›
         </button>
@@ -213,7 +215,7 @@ export function ProductArea({
       <div className="mt-3 min-h-[120px] max-h-[220px] overflow-auto">
         {selectedProduct && loadingSubproducts ? (
           <div className="h-full flex items-center justify-center text-pos-surface text-lg">
-            Loading subproducts...
+            {t('loadingSubproducts')}
           </div>
         ) : null}
         {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
@@ -248,7 +250,7 @@ export function ProductArea({
               type="button"
               className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
               onClick={goSubPrev}
-              aria-label="Previous subproducts"
+              aria-label={t('previousSubproducts')}
             >
               ‹
             </button>
@@ -261,7 +263,7 @@ export function ProductArea({
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => e.key === 'Enter' && setSubPage(i)}
-                  aria-label={`Subproducts page ${i + 1}`}
+                  aria-label={`${t('subproductsPage')} ${i + 1}`}
                 />
               ))}
             </div>
@@ -269,7 +271,7 @@ export function ProductArea({
               type="button"
               className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
               onClick={goSubNext}
-              aria-label="Next subproducts"
+              aria-label={t('nextSubproducts')}
             >
               ›
             </button>

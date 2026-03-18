@@ -93,7 +93,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     savedPositioningLayoutByCategory,
     fetchSavedPositioningLayout,
     savedPositioningColorByCategory,
-    fetchSavedPositioningColors
+    fetchSavedPositioningColors,
+    appendSubproductNoteToItem
   } = usePos(API, socket, selectedTable?.id ?? null);
 
   useEffect(() => {
@@ -234,6 +235,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           fetchSubproductsForProduct={fetchSubproductsForProduct}
           positioningLayoutByCategory={savedPositioningLayoutByCategory}
           positioningColorByCategory={savedPositioningColorByCategory}
+          appendSubproductNoteToItem={appendSubproductNoteToItem}
         />
         <Footer
           customersActive={showCustomersModal}
@@ -256,6 +258,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         showSubtotalView={showSubtotalView}
         subtotalBreaks={subtotalBreaks}
         onPaymentCompleted={() => fetchOrderHistory()}
+        selectedTable={selectedTable}
+        currentUser={user}
+        currentTime={time}
       />
       <WebordersModal
         open={showOrdersModal}

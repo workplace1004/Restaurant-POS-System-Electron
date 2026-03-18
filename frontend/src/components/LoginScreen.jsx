@@ -93,7 +93,7 @@ export function LoginScreen({ time, onLogin }) {
             type="button"
             onClick={() => scrollRoles('left')}
             className="flex-shrink-0 w-16 h-[320px] rounded-xl bg-pos-panel border-2 border-pos-border text-white hover:border-white/50 transition-all flex items-center justify-center"
-            aria-label="Previous users"
+            aria-label={t('previousUsers')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
@@ -141,7 +141,7 @@ export function LoginScreen({ time, onLogin }) {
             type="button"
             onClick={() => scrollRoles('right')}
             className="flex-shrink-0 w-16 h-[320px] rounded-xl bg-pos-panel border-2 border-pos-border text-white hover:border-white/50 transition-all flex items-center justify-center"
-            aria-label="Next users"
+            aria-label={t('nextUsers')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 18l6-6-6-6" />
@@ -151,7 +151,7 @@ export function LoginScreen({ time, onLogin }) {
 
         <div className="bg-pos-panel rounded-xl shadow-xl p-6 w-full max-w-2xl">
           <div className="mb-4 h-16 flex items-center bg-pos-bg justify-center rounded text-2xl font-mono text-white tracking-widest">
-            {pinInput.replace(/./g, '•') || 'PIN'}
+            {pinInput.replace(/./g, '•') || t('pin')}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {PAD.map((row, ri) =>

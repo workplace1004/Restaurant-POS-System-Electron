@@ -202,7 +202,7 @@ export function WebordersModal({
             type="button"
             className="group p-2 rounded transition-colors hover:bg-white/10 rounded-full"
             onClick={() => scroll(-1)}
-            aria-label="Scroll up"
+            aria-label={t('scrollUp')}
           >
             <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" className="text-white group-hover:text-amber-300 transition-colors">
               <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="currentColor" />
@@ -212,7 +212,7 @@ export function WebordersModal({
             type="button"
             className="group p-2 rounded transition-colors hover:bg-white/10 rounded-full"
             onClick={() => scroll(1)}
-            aria-label="Scroll down"
+            aria-label={t('scrollDown')}
           >
             <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" className="text-white group-hover:text-amber-300 transition-colors">
               <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="currentColor" />

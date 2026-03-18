@@ -76,7 +76,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
                     <td className="p-2 font-medium">
                       NS {baseReceipt + total - 1 - index}
                     </td>
-                    <td className="p-2">{formatHistoryDate(order.createdAt)}</td>
+                    <td className="p-2">{formatHistoryDate(order.updatedAt || order.createdAt)}</td>
                     <td className="p-2 border-l border-dotted border-gray-500">
                       {formatHistoryAmount(order.total)}
                     </td>
@@ -95,7 +95,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
             type="button"
             className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
             onClick={() => scroll(-1)}
-            aria-label="Scroll up"
+            aria-label={t('scrollUp')}
           >
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
               <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" />
@@ -105,7 +105,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
             type="button"
             className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
             onClick={() => scroll(1)}
-            aria-label="Scroll down"
+            aria-label={t('scrollDown')}
           >
             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" />

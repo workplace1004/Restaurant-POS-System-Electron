@@ -13,7 +13,7 @@ const toDateOnly = (d) => {
 
 const MONTH_ABBREV = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function MonthPickerModal({ open, onClose, value, onChange }) {
+function MonthPickerModal({ open, onClose, value, onChange, prevYearLabel, nextYearLabel }) {
   // value: Date (first day of selected month) or null
   const initial = value ? new Date(value) : new Date();
   const [viewYear, setViewYear] = useState(initial.getFullYear());
@@ -28,11 +28,11 @@ function MonthPickerModal({ open, onClose, value, onChange }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#1e3a5f] flex items-center justify-between px-4 py-3">
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y - 1)} aria-label="Previous year">
+          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y - 1)} aria-label={prevYearLabel}>
             <svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
           </button>
           <span className="text-white py-5 text-5xl font-medium">{viewYear}</span>
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y + 1)} aria-label="Next year">
+          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y + 1)} aria-label={nextYearLabel}>
             <svg width="46" height="46" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" /></svg>
           </button>
         </div>
@@ -210,7 +210,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                       value={formatMonthYear(historyMonthDate)}
                       className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
                       onClick={() => setShowMonthPickerModal(true)}
-                      aria-label="Select month and year"
+                      aria-label={t('selectMonthYear')}
                     />
                   ) : (
                     <input
@@ -219,7 +219,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                       value={formatDate(fromDate)}
                       className="w-48 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-gray-400"
                       onClick={() => setCalendarFor('from')}
-                      aria-label="From date"
+                      aria-label={t('fromDate')}
                     />
                   )}
                 </>
@@ -232,7 +232,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                 readOnly
                 value={keyboardInputValue}
                 className="max-w-[200px] flex-1 px-3 py-2 text-3xl font-medium text-white bg-pos-panel border-2 border-gray-400 rounded placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                aria-label="Search orders"
+                aria-label={t('searchOrders')}
               />
               <button
                 type="button"
@@ -311,7 +311,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                         </td>
                         <td className="p-3 min-w-[123px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            {order.source || 'pos'}
+                            {order.source || t('originPos')}
                           </div>
                         </td>
                       </tr>
@@ -332,10 +332,10 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
               )}
             </div>
             <div className="flex justify-around w-full gap-2 py-5">
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, -1)} aria-label="Scroll up">
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, -1)} aria-label={t('scrollUp')}>
                 <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
               </button>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, 1)} aria-label="Scroll down">
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, 1)} aria-label={t('scrollDown')}>
                 <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
               </button>
             </div>
@@ -364,10 +364,10 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
             </div>
             <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white" />
             <div className="flex justify-around w-full gap-2 py-5">
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, -1)} aria-label="Scroll up">
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, -1)} aria-label={t('scrollUp')}>
                 <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
               </button>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, 1)} aria-label="Scroll down">
+              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, 1)} aria-label={t('scrollDown')}>
                 <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
               </button>
             </div>
@@ -407,7 +407,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                   </button>
                   <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('@')}>@</button>
                   <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('/')}>/</button>
-                  <button type="button" className="w-[332px] h-[80px] border rounded bg-pos-panel hover:bg-pos-rowHover" aria-label="Space" onClick={() => sendKey(' ')} />
+                  <button type="button" className="w-[332px] h-[80px] border rounded bg-pos-panel hover:bg-pos-rowHover" aria-label={t('space')} onClick={() => sendKey(' ')} />
                   <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('_')}>_</button>
                   <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('Backspace')}>←</button>
                   <button type="button" className="w-[80px] h-[80px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">→</button>
@@ -452,6 +452,8 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
         onClose={() => setShowMonthPickerModal(false)}
         value={historyMonthDate}
         onChange={(firstDayOfMonth) => setHistoryMonthDate(firstDayOfMonth)}
+        prevYearLabel={t('previousYear')}
+        nextYearLabel={t('nextYear')}
       />
 
       {/* Print options modal */}

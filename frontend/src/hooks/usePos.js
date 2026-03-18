@@ -15,6 +15,7 @@ export function usePos(API, socket, selectedTableId = null) {
   const [loading, setLoading] = useState(false);
 
   const safeJson = (res) => res.json().catch(() => null);
+  const roundCurrency = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
   const fetchCategories = useCallback(async () => {
     const res = await fetch(`${API}/categories`);
@@ -118,11 +119,17 @@ export function usePos(API, socket, selectedTableId = null) {
     };
   }, [socket]);
 
-  const currentOrder = orders.find((o) => {
+  const currentOrderCandidates = orders.filter((o) => {
     if (o?.status !== 'open') return false;
     if (selectedTableId) return o?.tableId === selectedTableId;
     return !o?.tableId;
-  }) || null;
+  });
+  const currentOrder = currentOrderCandidates.reduce((latest, candidate) => {
+    if (!latest) return candidate;
+    const latestTime = new Date(latest?.createdAt || 0).getTime();
+    const candidateTime = new Date(candidate?.createdAt || 0).getTime();
+    return candidateTime >= latestTime ? candidate : latest;
+  }, null);
 
   const addItemToOrder = useCallback(
     async (product, quantity = 1, tableId = null) => {
@@ -141,8 +148,9 @@ export function usePos(API, socket, selectedTableId = null) {
         if (created?.id) {
           orderId = created.id;
           setOrders((prev) => [created, ...prev]);
+          return created?.items?.[0]?.id || null;
         }
-        return;
+        return null;
       }
       if (tableId && !currentOrder?.tableId) {
         await fetch(`${API}/orders/${orderId}`, {
@@ -151,6 +159,7 @@ export function usePos(API, socket, selectedTableId = null) {
           body: JSON.stringify({ tableId })
         });
       }
+      const prevIds = new Set((currentOrder?.items || []).map((i) => i.id));
       await fetch(`${API}/orders/${orderId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,9 +167,49 @@ export function usePos(API, socket, selectedTableId = null) {
       });
       const res = await fetch(`${API}/orders`);
       const list = await safeJson(res);
+      if (Array.isArray(list)) {
+        setOrders(list);
+        const updatedOrder = list.find((o) => o.id === orderId);
+        if (updatedOrder?.items?.length) {
+          const createdItem = updatedOrder.items.find((i) => !prevIds.has(i.id));
+          return createdItem?.id || null;
+        }
+      }
+      return null;
+    },
+    [API, currentOrder]
+  );
+
+  const appendSubproductNoteToItem = useCallback(
+    async (orderItemId, noteText, notePrice = 0) => {
+      const orderId = currentOrder?.id;
+      const note = String(noteText || '').trim();
+      if (!orderId || !orderItemId || !note) return;
+      const target = (currentOrder?.items || []).find((it) => it.id === orderItemId);
+      if (!target) return;
+      const extraPrice = Math.max(0, roundCurrency(notePrice));
+      const noteToken = extraPrice > 0 ? `${note}::${extraPrice.toFixed(2)}` : note;
+      const existingTokens = String(target.notes || '')
+        .split(/[;,]/)
+        .map((n) => n.trim())
+        .filter(Boolean);
+      const existingLabels = existingTokens.map((token) => token.split('::')[0].trim());
+      if (existingLabels.includes(note)) return;
+      existingTokens.push(noteToken);
+      const nextPrice = extraPrice > 0 ? roundCurrency((Number(target.price) || 0) + extraPrice) : undefined;
+      await fetch(`${API}/orders/${orderId}/items/${orderItemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notes: existingTokens.join(', '),
+          ...(nextPrice !== undefined ? { price: nextPrice } : {})
+        })
+      });
+      const res = await fetch(`${API}/orders`);
+      const list = await safeJson(res);
       if (Array.isArray(list)) setOrders(list);
     },
-    [API, currentOrder?.id, currentOrder?.tableId]
+    [API, currentOrder]
   );
 
   const setOrderTable = useCallback(
@@ -228,14 +277,15 @@ export function usePos(API, socket, selectedTableId = null) {
     [API, fetchInPlanningCount, fetchWebordersCount]
   );
 
-  const createOrder = useCallback(async () => {
+  const createOrder = useCallback(async (tableId = null) => {
     const res = await fetch(`${API}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      body: JSON.stringify({ tableId: tableId || null })
     });
     const created = await safeJson(res);
     if (created?.id) setOrders((prev) => [created, ...prev]);
+    return created || null;
   }, [API]);
 
   const removeAllOrders = useCallback(async () => {
@@ -292,6 +342,7 @@ export function usePos(API, socket, selectedTableId = null) {
     savedPositioningLayoutByCategory,
     fetchSavedPositioningLayout,
     savedPositioningColorByCategory,
-    fetchSavedPositioningColors
+    fetchSavedPositioningColors,
+    appendSubproductNoteToItem
   };
 }
