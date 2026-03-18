@@ -94,6 +94,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchSavedPositioningLayout,
     savedPositioningColorByCategory,
     fetchSavedPositioningColors,
+    savedFunctionButtonsLayout,
+    fetchSavedFunctionButtonsLayout,
     appendSubproductNoteToItem
   } = usePos(API, socket, selectedTable?.id ?? null);
 
@@ -110,7 +112,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchTables();
     fetchSavedPositioningLayout();
     fetchSavedPositioningColors();
-  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors]);
+    fetchSavedFunctionButtonsLayout();
+  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout]);
 
   useEffect(() => {
     if (selectedCategoryId) fetchProducts(selectedCategoryId);
@@ -120,8 +123,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     if (view === 'pos') {
       fetchSavedPositioningLayout();
       fetchSavedPositioningColors();
+      fetchSavedFunctionButtonsLayout();
     }
-  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors]);
+  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout]);
 
   useEffect(() => {
     setSubtotalBreaks([]);
@@ -213,6 +217,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           time={time}
           webordersCount={webordersCount}
           inPlanningCount={inPlanningCount}
+          functionButtonSlots={savedFunctionButtonsLayout}
           selectedTable={selectedTable}
           onOpenTables={() => setViewAndPersist('tables')}
           onOpenWeborders={() => {

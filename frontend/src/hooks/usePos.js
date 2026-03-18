@@ -1,5 +1,29 @@
 import { useState, useCallback, useEffect } from 'react';
 
+const FUNCTION_BUTTON_SLOT_COUNT = 3;
+const FUNCTION_BUTTON_ALLOWED_IDS = [
+  'tables',
+  'weborders',
+  'in-wacht',
+  'geplande-orders',
+  'reservaties',
+  'verkopers'
+];
+const normalizeFunctionButtonsLayout = (value) => {
+  if (!Array.isArray(value)) return Array(FUNCTION_BUTTON_SLOT_COUNT).fill('');
+  const next = Array(FUNCTION_BUTTON_SLOT_COUNT).fill('');
+  const used = new Set();
+  for (let i = 0; i < FUNCTION_BUTTON_SLOT_COUNT; i += 1) {
+    const candidate = String(value[i] || '').trim();
+    if (!candidate) continue;
+    if (!FUNCTION_BUTTON_ALLOWED_IDS.includes(candidate)) continue;
+    if (used.has(candidate)) continue;
+    next[i] = candidate;
+    used.add(candidate);
+  }
+  return next;
+};
+
 export function usePos(API, socket, selectedTableId = null) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -11,6 +35,9 @@ export function usePos(API, socket, selectedTableId = null) {
   const [historyOrders, setHistoryOrders] = useState([]);
   const [savedPositioningLayoutByCategory, setSavedPositioningLayoutByCategory] = useState({});
   const [savedPositioningColorByCategory, setSavedPositioningColorByCategory] = useState({});
+  const [savedFunctionButtonsLayout, setSavedFunctionButtonsLayout] = useState(() =>
+    Array(FUNCTION_BUTTON_SLOT_COUNT).fill('')
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -98,6 +125,16 @@ export function usePos(API, socket, selectedTableId = null) {
       setSavedPositioningColorByCategory(value && typeof value === 'object' ? value : {});
     } catch {
       setSavedPositioningColorByCategory({});
+    }
+  }, [API]);
+
+  const fetchSavedFunctionButtonsLayout = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/settings/function-buttons-layout`);
+      const data = await safeJson(res);
+      setSavedFunctionButtonsLayout(normalizeFunctionButtonsLayout(data?.value));
+    } catch {
+      setSavedFunctionButtonsLayout(Array(FUNCTION_BUTTON_SLOT_COUNT).fill(''));
     }
   }, [API]);
 
@@ -343,6 +380,8 @@ export function usePos(API, socket, selectedTableId = null) {
     fetchSavedPositioningLayout,
     savedPositioningColorByCategory,
     fetchSavedPositioningColors,
+    savedFunctionButtonsLayout,
+    fetchSavedFunctionButtonsLayout,
     appendSubproductNoteToItem
   };
 }

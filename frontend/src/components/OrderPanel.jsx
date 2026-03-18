@@ -11,9 +11,14 @@ const formatSubtotalPrice = (n) => `€ ${Number(n).toFixed(2).replace('.', ',')
 const roundCurrency = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const formatPaymentAmount = (n) => `€${roundCurrency(n).toFixed(2)}`;
 const TABLE_SAVED_ORDERS_API = '/api/settings/table-saved-orders';
+const TABLE_LAST_PAID_AT_STORAGE_KEY = 'pos.tables.lastPaidAtById';
 
 export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '' }) {
   const { t } = useLanguage();
+  const tr = (key, fallback) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  };
   const [customAmount, setCustomAmount] = useState('');
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
@@ -35,6 +40,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [subtotalSelectedRightIds, setSubtotalSelectedRightIds] = useState([]);
   const [savedTableOrders, setSavedTableOrders] = useState([]);
   const splitRightPanelScrollRef = useRef(null);
+  const activeCashmaticSessionIdRef = useRef(null);
+  const cancelCashmaticRequestedRef = useRef(false);
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
@@ -89,6 +96,25 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const currentOrderTotal = hasOrderItems ? computeOrderTotal({ items }) : roundCurrency(total);
   const settlementOrdersTotal = roundCurrency(savedOrdersForSelectedTable.reduce((sum, sourceOrder) => sum + computeOrderTotal(sourceOrder), 0));
   const payableTotal = showSettlementActions ? settlementOrdersTotal : currentOrderTotal;
+  const latestOpenNoTableOrder = !hasSelectedTable
+    ? (orders || [])
+        .filter((o) => o?.status === 'open' && !o?.tableId)
+        .reduce((latest, candidate) => {
+          if (!latest) return candidate;
+          const latestTime = new Date(latest?.createdAt || 0).getTime();
+          const candidateTime = new Date(candidate?.createdAt || 0).getTime();
+          return candidateTime >= latestTime ? candidate : latest;
+        }, null)
+    : null;
+  const fallbackNoTableTotal = latestOpenNoTableOrder
+    ? (Array.isArray(latestOpenNoTableOrder.items) && latestOpenNoTableOrder.items.length > 0
+        ? computeOrderTotal(latestOpenNoTableOrder)
+        : roundCurrency(Number(latestOpenNoTableOrder?.total) || 0))
+    : 0;
+  const payableTotalForPaymentModal =
+    !hasSelectedTable && payableTotal <= 0.009 && fallbackNoTableTotal > 0.009
+      ? fallbackNoTableTotal
+      : payableTotal;
   const selectedItems = items.filter((i) => selectedItemIds.includes(i.id));
   const hasSelection = selectedItemIds.length > 0;
   const canDecreaseAll = selectedItems.length > 0 && selectedItems.every((i) => (i.quantity ?? 0) > 1);
@@ -197,7 +223,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
 
   const openPayDifferentlyModal = (overrideTotal = null) => {
-    const targetTotal = roundCurrency(overrideTotal ?? payableTotal);
+    const targetTotal = roundCurrency(overrideTotal ?? payableTotalForPaymentModal);
+    if (targetTotal <= 0) return;
     setShowPayDifferentlyModal(true);
     setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
     setSelectedPayment('cash');
@@ -284,8 +311,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
     const sessionId = startData?.data?.sessionId;
     if (!sessionId) throw new Error('Cashmatic session did not start.');
+    activeCashmaticSessionIdRef.current = sessionId;
+    cancelCashmaticRequestedRef.current = false;
 
     for (let i = 0; i < 90; i += 1) {
+      if (cancelCashmaticRequestedRef.current) {
+        await fetch(`/api/cashmatic/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+        throw new Error('Cashmatic payment cancelled.');
+      }
       await sleep(1000);
       const statusRes = await fetch(`/api/cashmatic/status/${encodeURIComponent(sessionId)}`);
       const statusData = await statusRes.json().catch(() => ({}));
@@ -296,6 +329,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       const state = String(statusData?.data?.state || '').toUpperCase();
       if (state === 'PAID' || state === 'FINISHED' || state === 'FINISHED_MANUAL') {
         await fetch(`/api/cashmatic/finish/${encodeURIComponent(sessionId)}`, { method: 'POST' });
+        activeCashmaticSessionIdRef.current = null;
         return;
       }
       if (state === 'CANCELLED' || state === 'ERROR') {
@@ -304,7 +338,21 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     }
 
     await fetch(`/api/cashmatic/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => { });
+    activeCashmaticSessionIdRef.current = null;
     throw new Error('Cashmatic payment timeout. Please try again.');
+  };
+
+  const handleCancelPayDifferentlyModal = async () => {
+    if (payConfirmLoading) {
+      cancelCashmaticRequestedRef.current = true;
+      const activeSessionId = activeCashmaticSessionIdRef.current;
+      if (activeSessionId) {
+        await fetch(`/api/cashmatic/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => {});
+      }
+      setPaymentErrorMessage(tr('orderPanel.paymentCancelled', 'Payment cancelled.'));
+    }
+    setShowPayDifferentlyModal(false);
+    setPendingSplitCheckout(null);
   };
 
   const printTicketAutomatically = async (targetOrderId, paymentBreakdown = null) => {
@@ -346,6 +394,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || 'Failed to update split order items.');
     return data;
+  };
+
+  const markSelectedTablePaid = () => {
+    if (!selectedTable?.id) return;
+    try {
+      const raw = localStorage.getItem(TABLE_LAST_PAID_AT_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      const current = parsed && typeof parsed === 'object' ? parsed : {};
+      current[String(selectedTable.id)] = Date.now();
+      localStorage.setItem(TABLE_LAST_PAID_AT_STORAGE_KEY, JSON.stringify(current));
+    } catch {
+      // Ignore storage write failures.
+    }
   };
 
   const createPaidSplitOrder = async (sourceItems) => {
@@ -437,7 +498,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     const orderTotal = roundCurrency(payModalTargetTotal);
 
     if (assignedTotal <= 0) {
-      setPaymentErrorMessage('Assigned amount must be greater than 0.');
+      setPaymentErrorMessage(tr('orderPanel.assignedAmountGreaterThanZero', 'Assigned amount must be greater than 0.'));
       return;
     }
     if (assignedTotal - orderTotal > 0.009) {
@@ -489,6 +550,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         }
 
         await onPaymentCompleted?.(paidOrderIds);
+        markSelectedTablePaid();
         if (printedSuccessfully) {
           setPaymentSuccessMessage(
             `Payment successful (${formatPaymentAmount(orderTotal)}). Receipt printed successfully${printResult?.printerName ? ` on ${printResult.printerName}` : ''}.`
@@ -518,6 +580,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         await onStatusChange?.(paidOrderId, 'paid');
       }
       await onPaymentCompleted?.(targetOrderIds);
+      markSelectedTablePaid();
       let printedSuccessfully = true;
       let printResult = null;
       try {
@@ -550,9 +613,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       }
       resetAfterSuccessfulPayment();
     } catch (err) {
-      setPaymentErrorMessage(err?.message || 'Payment failed.');
+      setPaymentErrorMessage(err?.message || tr('orderPanel.paymentFailed', 'Payment failed.'));
     } finally {
       setPayConfirmLoading(false);
+      activeCashmaticSessionIdRef.current = null;
+      cancelCashmaticRequestedRef.current = false;
     }
   };
 
@@ -798,13 +863,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     { orderId: currentOrderId, cashierName, savedAt: new Date().toISOString() }
                   ]);
                 } catch (err) {
-                  setPaymentErrorMessage(err?.message || 'Failed to save table order.');
+                  setPaymentErrorMessage(err?.message || tr('orderPanel.failedSaveTableOrder', 'Failed to save table order.'));
                   return;
                 }
                 try {
                   await onCreateOrder?.(selectedTable?.id || null);
                 } catch (err) {
-                  setPaymentErrorMessage(err?.message || 'Failed to create new table order.');
+                  setPaymentErrorMessage(err?.message || tr('orderPanel.failedCreateNewTableOrder', 'Failed to create new table order.'));
                   return;
                 }
                 setSelectedItemIds([]);
@@ -826,8 +891,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </button>
           <button
             type="button"
-            className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
-            onClick={openPayDifferentlyModal}
+            disabled={payableTotalForPaymentModal <= 0.009}
+            className={`flex-1 py-3 px-2 border-none rounded-md text-2xl ${
+              payableTotalForPaymentModal <= 0.009
+                ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
+                : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+            }`}
+            onClick={() => openPayDifferentlyModal()}
           >
             {t('payDifferently')}
           </button>
@@ -932,12 +1002,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex justify-between px-[250px] text-3xl gap-10 w-full pt-10">
               <button
                 type="button"
-                disabled={payConfirmLoading}
                 className="mt-auto w-[230px] py-3 px-6 bg-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-400"
-                onClick={() => {
-                  setShowPayDifferentlyModal(false);
-                  setPendingSplitCheckout(null);
-                }}
+                onClick={handleCancelPayDifferentlyModal}
               >
                 {t('cancel')}
               </button>
@@ -1303,7 +1369,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 className="w-[200px] py-4 bg-green-600 text-white rounded text-2xl hover:bg-green-700"
                 onClick={() => setPaymentSuccessMessage('')}
               >
-                OK
+                {t('ok')}
               </button>
             </div>
           </div>
@@ -1386,7 +1452,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 className="w-[200px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
                 onClick={() => setPaymentErrorMessage('')}
               >
-                OK
+                {t('ok')}
               </button>
             </div>
           </div>

@@ -4,6 +4,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 const TABLE_SIZE = 200;
 const TABLE_GAP = 24;
 const TABLE_POSITIONS_STORAGE_KEY = 'pos.tables.positions';
+const TABLE_LAST_PAID_AT_STORAGE_KEY = 'pos.tables.lastPaidAtById';
+const TABLE_PAID_HIGHLIGHT_WINDOW_MS = 15 * 60 * 1000;
 
 export function TablesView({ tables = [], selectedTableId = null, onSelectTable, onBack, time }) {
   const { t } = useLanguage();
@@ -12,6 +14,7 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
   const [positions, setPositions] = useState({});
   const [draggingId, setDraggingId] = useState(null);
   const [positionsReady, setPositionsReady] = useState(false);
+  const [lastPaidAtByTableId, setLastPaidAtByTableId] = useState({});
 
   const tableIds = useMemo(
     () => tables.filter((table) => table && table.id != null).map((table) => String(table.id)),
@@ -31,6 +34,16 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
       setPositionsReady(true);
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TABLE_LAST_PAID_AT_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      setLastPaidAtByTableId(parsed && typeof parsed === 'object' ? parsed : {});
+    } catch {
+      setLastPaidAtByTableId({});
+    }
+  }, [tables]);
 
   useEffect(() => {
     if (tableIds.length === 0) return;
@@ -138,6 +151,13 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
             const pos = positions[id] || { x: 0, y: 0 };
             const isDragging = draggingId === id;
             const hasOpenOrders = Array.isArray(table?.orders) && table.orders.length > 0;
+            const lastPaidAt = Number(lastPaidAtByTableId?.[id]) || 0;
+            const wasPaidRecently = !hasOpenOrders && lastPaidAt > 0 && Date.now() - lastPaidAt <= TABLE_PAID_HIGHLIGHT_WINDOW_MS;
+            const tableNumberColorClass = hasOpenOrders
+              ? 'text-red-500'
+              : wasPaidRecently
+                ? 'text-[#3fa666]'
+                : 'text-black';
             return (
               <button
                 key={id}
@@ -150,9 +170,7 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
               >
                 <img src="/table.png" alt={`${t('table')} ${tableNumber}`} className="w-full h-full object-contain" />
                 <span
-                  className={`absolute inset-0 flex items-center justify-center text-[40px] font-bold -mt-10 pointer-events-none ${
-                    hasOpenOrders ? 'text-red-500' : 'text-[#3fa666]'
-                  }`}
+                  className={`absolute inset-0 flex items-center justify-center text-[40px] font-bold -mt-10 pointer-events-none ${tableNumberColorClass}`}
                 >
                   {tableNumber}
                 </span>

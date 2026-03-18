@@ -254,8 +254,108 @@ const DEVICE_SETTINGS_TABS = [
   'Option buttons',
   'Function buttons'
 ];
+const DEVICE_SETTINGS_TAB_LABEL_KEYS = {
+  General: 'control.deviceSettingsTab.general',
+  Printer: 'control.deviceSettingsTab.printer',
+  'Category display': 'control.deviceSettingsTab.categoryDisplay',
+  'Orders in waiting': 'control.deviceSettingsTab.ordersInWaiting',
+  'Scheduled orders': 'control.deviceSettingsTab.scheduledOrders',
+  'Option buttons': 'control.deviceSettingsTab.optionButtons',
+  'Function buttons': 'control.deviceSettingsTab.functionButtons'
+};
+
+const FUNCTION_BUTTON_ITEMS = [
+  { id: 'tables', labelKey: 'control.functionButton.tables', fallbackLabel: 'Tafels' },
+  { id: 'weborders', labelKey: 'control.functionButton.weborders', fallbackLabel: 'Weborders' },
+  { id: 'in-wacht', labelKey: 'control.functionButton.inWaiting', fallbackLabel: 'In Wacht' },
+  { id: 'geplande-orders', labelKey: 'control.functionButton.scheduledOrders', fallbackLabel: 'Geplande orders' },
+  { id: 'reservaties', labelKey: 'control.functionButton.reservations', fallbackLabel: 'Reservaties' },
+  { id: 'verkopers', labelKey: 'control.functionButton.sellers', fallbackLabel: 'Verkopers' }
+];
+
+const FUNCTION_BUTTON_SLOT_COUNT = 3;
+const FUNCTION_BUTTON_ITEM_IDS = FUNCTION_BUTTON_ITEMS.map((item) => item.id);
+const FUNCTION_BUTTON_ITEM_BY_ID = Object.fromEntries(
+  FUNCTION_BUTTON_ITEMS.map((item) => [item.id, item])
+);
+
+const OPTION_BUTTON_ITEMS = [
+  { id: 'extra-bc-bedrag', labelKey: 'control.optionButton.extraBcAmount', fallbackLabel: 'Extra BC Bedrag' },
+  { id: 'bc-refund', labelKey: 'control.optionButton.bcRefund', fallbackLabel: 'BC Refund' },
+  { id: 'stock-retour', labelKey: 'control.optionButton.stockRetour', fallbackLabel: 'Stock Retour' },
+  { id: 'product-labels', labelKey: 'control.optionButton.productLabels', fallbackLabel: 'Product Labels' },
+  { id: 'ticket-afdrukken', labelKey: 'control.optionButton.printTicket', fallbackLabel: 'Ticket afdrukken' },
+  { id: 'tegoed', labelKey: 'control.optionButton.credit', fallbackLabel: 'Tegoed' },
+  { id: 'tickets-optellen', labelKey: 'control.optionButton.sumTickets', fallbackLabel: 'Tickets Optellen' },
+  { id: 'product-info', labelKey: 'control.optionButton.productInfo', fallbackLabel: 'Product Info' },
+  { id: 'personeel-ticket', labelKey: 'control.optionButton.staffTicket', fallbackLabel: 'Personeel Ticket' },
+  { id: 'productie-bericht', labelKey: 'control.optionButton.productionMessage', fallbackLabel: 'Productie Bericht' },
+  { id: 'prijs-groep', labelKey: 'control.optionButton.priceGroup', fallbackLabel: 'Prijs Groep' },
+  { id: 'discount', labelKey: 'control.optionButton.discount', fallbackLabel: 'Discount' },
+  { id: 'kadobon', labelKey: 'control.optionButton.giftVoucher', fallbackLabel: 'Kadobon' },
+  { id: 'various', labelKey: 'control.optionButton.various', fallbackLabel: 'Various' },
+  { id: 'plu', labelKey: 'control.optionButton.plu', fallbackLabel: 'PLU' },
+  { id: 'product-zoeken', labelKey: 'control.optionButton.searchProduct', fallbackLabel: 'Product Zoeken' },
+  { id: 'lade', labelKey: 'control.optionButton.drawer', fallbackLabel: 'Lade' },
+  { id: 'klanten', labelKey: 'control.optionButton.customers', fallbackLabel: 'Klanten' },
+  { id: 'historiek', labelKey: 'control.optionButton.history', fallbackLabel: 'Historiek' },
+  { id: 'subtotaal', labelKey: 'control.optionButton.subtotal', fallbackLabel: 'Subtotaal' },
+  { id: 'terugname', labelKey: 'control.optionButton.return', fallbackLabel: 'Terugname' },
+  { id: 'meer', labelKey: 'control.optionButton.more', fallbackLabel: 'Meer...' },
+  { id: 'eat-in-take-out', labelKey: 'control.optionButton.eatInTakeOut', fallbackLabel: 'Eat In Take Out' },
+  { id: 'externe-apps', labelKey: 'control.optionButton.externalApps', fallbackLabel: 'Externe Apps' },
+  { id: 'voor-verpakken', labelKey: 'control.optionButton.forPacking', fallbackLabel: 'Voor Verpakken' },
+  { id: 'leeggoed-terugnemen', labelKey: 'control.optionButton.depositReturn', fallbackLabel: 'Leeggoed Terugnemen' },
+  { id: 'webshop-tijdsloten', labelKey: 'control.optionButton.webshopTimeslots', fallbackLabel: 'Webshop tijdsloten' }
+];
+const OPTION_BUTTON_SLOT_COUNT = 28;
+const OPTION_BUTTON_ITEM_IDS = OPTION_BUTTON_ITEMS.map((item) => item.id);
+const OPTION_BUTTON_ITEM_BY_ID = Object.fromEntries(
+  OPTION_BUTTON_ITEMS.map((item) => [item.id, item])
+);
+const DEFAULT_OPTION_BUTTON_LAYOUT = [
+  'extra-bc-bedrag', '', 'bc-refund', 'stock-retour', 'product-labels', '', '',
+  'ticket-afdrukken', '', 'tegoed', 'tickets-optellen', '', 'product-info', 'personeel-ticket',
+  'productie-bericht', 'prijs-groep', 'discount', 'kadobon', 'various', 'plu', 'product-zoeken',
+  'lade', 'klanten', 'historiek', 'subtotaal', 'terugname', '', 'meer'
+];
+
+function normalizeFunctionButtonSlots(value) {
+  if (!Array.isArray(value)) return Array(FUNCTION_BUTTON_SLOT_COUNT).fill('');
+  const next = Array(FUNCTION_BUTTON_SLOT_COUNT).fill('');
+  const used = new Set();
+  for (let i = 0; i < FUNCTION_BUTTON_SLOT_COUNT; i += 1) {
+    const candidate = String(value[i] || '').trim();
+    if (!candidate) continue;
+    if (!FUNCTION_BUTTON_ITEM_IDS.includes(candidate)) continue;
+    if (used.has(candidate)) continue;
+    next[i] = candidate;
+    used.add(candidate);
+  }
+  return next;
+}
+
+function normalizeOptionButtonSlots(value) {
+  if (!Array.isArray(value)) return [...DEFAULT_OPTION_BUTTON_LAYOUT];
+  const next = Array(OPTION_BUTTON_SLOT_COUNT).fill('');
+  const used = new Set();
+  for (let i = 0; i < OPTION_BUTTON_SLOT_COUNT; i += 1) {
+    const candidate = String(value[i] || '').trim();
+    if (!candidate) continue;
+    if (!OPTION_BUTTON_ITEM_IDS.includes(candidate)) continue;
+    if (used.has(candidate)) continue;
+    next[i] = candidate;
+    used.add(candidate);
+  }
+  return next;
+}
 
 const SYSTEM_SETTINGS_TABS = ['General', 'Prices', 'Ticket'];
+const SYSTEM_SETTINGS_TAB_LABEL_KEYS = {
+  General: 'control.systemSettingsTab.general',
+  Prices: 'control.systemSettingsTab.prices',
+  Ticket: 'control.systemSettingsTab.ticket'
+};
 
 const LEEGGOED_OPTIONS = [
   { value: 'by-customers-name', label: 'By customers name' },
@@ -719,6 +819,14 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [deviceScheduledPrintProductionReceipt, setDeviceScheduledPrintProductionReceipt] = useState(true);
   const [deviceScheduledPrintCustomerProductionReceipt, setDeviceScheduledPrintCustomerProductionReceipt] = useState(true);
   const [deviceScheduledWebOrderAutoPrint, setDeviceScheduledWebOrderAutoPrint] = useState(true);
+  const [functionButtonSlots, setFunctionButtonSlots] = useState(() =>
+    Array(FUNCTION_BUTTON_SLOT_COUNT).fill('')
+  );
+  const [selectedFunctionButtonSlotIndex, setSelectedFunctionButtonSlotIndex] = useState(null);
+  const [optionButtonSlots, setOptionButtonSlots] = useState(() =>
+    normalizeOptionButtonSlots(null)
+  );
+  const [selectedOptionButtonSlotIndex, setSelectedOptionButtonSlotIndex] = useState(null);
 
   const [showSystemSettingsModal, setShowSystemSettingsModal] = useState(false);
   const [systemSettingsTab, setSystemSettingsTab] = useState('General');
@@ -1474,6 +1582,16 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     const translated = t(key);
     return translated === key ? fallback : translated;
   }, [t]);
+  const getFunctionButtonLabel = useCallback((id) => {
+    const item = FUNCTION_BUTTON_ITEM_BY_ID[id];
+    if (!item) return '';
+    return tr(item.labelKey, item.fallbackLabel);
+  }, [tr]);
+  const getOptionButtonLabel = useCallback((id) => {
+    const item = OPTION_BUTTON_ITEM_BY_ID[id];
+    if (!item) return '';
+    return tr(item.labelKey, item.fallbackLabel);
+  }, [tr]);
 
   useEffect(() => {
     if (LANGUAGE_OPTIONS.some((o) => o.value === lang)) setAppLanguage(lang);
@@ -2398,7 +2516,26 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       if (saved.scheduledPrintProductionReceipt != null) setDeviceScheduledPrintProductionReceipt(!!saved.scheduledPrintProductionReceipt);
       if (saved.scheduledPrintCustomerProductionReceipt != null) setDeviceScheduledPrintCustomerProductionReceipt(!!saved.scheduledPrintCustomerProductionReceipt);
       if (saved.scheduledWebOrderAutoPrint != null) setDeviceScheduledWebOrderAutoPrint(!!saved.scheduledWebOrderAutoPrint);
+      if (saved.optionButtonLayout != null) setOptionButtonSlots(normalizeOptionButtonSlots(saved.optionButtonLayout));
+      setSelectedFunctionButtonSlotIndex(null);
+      setSelectedOptionButtonSlotIndex(null);
     } catch (_) { }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/settings/function-buttons-layout`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        setFunctionButtonSlots(normalizeFunctionButtonSlots(data?.value));
+      } catch {
+        if (!cancelled) {
+          setFunctionButtonSlots(normalizeFunctionButtonSlots([]));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [showDeviceSettingsModal, fetchCategories]);
 
   const handleSaveDeviceSettings = async () => {
@@ -2444,14 +2581,100 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         scheduledDeliveryNoteToTurnover: deviceScheduledDeliveryNoteToTurnover,
         scheduledPrintProductionReceipt: deviceScheduledPrintProductionReceipt,
         scheduledPrintCustomerProductionReceipt: deviceScheduledPrintCustomerProductionReceipt,
-        scheduledWebOrderAutoPrint: deviceScheduledWebOrderAutoPrint
+        scheduledWebOrderAutoPrint: deviceScheduledWebOrderAutoPrint,
+        optionButtonLayout: optionButtonSlots
       };
       if (typeof localStorage !== 'undefined') localStorage.setItem('pos_device_settings', JSON.stringify(payload));
+      const layoutRes = await fetch(`${API}/settings/function-buttons-layout`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: functionButtonSlots })
+      });
+      const layoutData = await layoutRes.json().catch(() => ({}));
+      if (!layoutRes.ok) {
+        throw new Error(layoutData?.error || 'Failed to save function buttons layout');
+      }
+      setFunctionButtonSlots(normalizeFunctionButtonSlots(layoutData?.value));
+      setSelectedFunctionButtonSlotIndex(null);
       setShowDeviceSettingsModal(false);
+      showToast('success', 'Device settings saved.');
+    } catch (err) {
+      showToast('error', err?.message || 'Failed to save device settings.');
     } finally {
       setSavingDeviceSettings(false);
     }
   };
+
+  const handleFunctionButtonDragStart = (event, itemId) => {
+    if (!itemId) return;
+    event.dataTransfer.setData('text/plain', itemId);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleFunctionButtonDropOnSlot = (event, slotIndex) => {
+    event.preventDefault();
+    if (slotIndex < 0 || slotIndex >= FUNCTION_BUTTON_SLOT_COUNT) return;
+    const droppedId = String(event.dataTransfer.getData('text/plain') || '').trim();
+    if (!FUNCTION_BUTTON_ITEM_IDS.includes(droppedId)) return;
+    setFunctionButtonSlots((prev) => {
+      const next = [...prev];
+      const existingIndex = next.findIndex((id) => id === droppedId);
+      if (existingIndex >= 0) next[existingIndex] = '';
+      next[slotIndex] = droppedId;
+      return next;
+    });
+    setSelectedFunctionButtonSlotIndex(slotIndex);
+  };
+
+  const handleRemoveFunctionButtonFromSlot = () => {
+    if (!Number.isInteger(selectedFunctionButtonSlotIndex)) return;
+    setFunctionButtonSlots((prev) => {
+      const next = [...prev];
+      if (!next[selectedFunctionButtonSlotIndex]) return prev;
+      next[selectedFunctionButtonSlotIndex] = '';
+      return next;
+    });
+  };
+
+  const hasSelectedFunctionButton = Number.isInteger(selectedFunctionButtonSlotIndex)
+    && !!functionButtonSlots[selectedFunctionButtonSlotIndex];
+  const assignedFunctionButtonIds = new Set(functionButtonSlots.filter(Boolean));
+  const assignedOptionButtonIds = new Set(optionButtonSlots.filter(Boolean));
+  const unassignedOptionButtons = OPTION_BUTTON_ITEMS.filter((item) => !assignedOptionButtonIds.has(item.id));
+
+  const handleOptionButtonDragStart = (event, itemId) => {
+    if (!itemId) return;
+    event.dataTransfer.setData('text/plain', itemId);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleOptionButtonDropOnSlot = (event, slotIndex) => {
+    event.preventDefault();
+    if (slotIndex < 0 || slotIndex >= OPTION_BUTTON_SLOT_COUNT) return;
+    const droppedId = String(event.dataTransfer.getData('text/plain') || '').trim();
+    if (!OPTION_BUTTON_ITEM_IDS.includes(droppedId)) return;
+    setOptionButtonSlots((prev) => {
+      const next = [...prev];
+      const existingIndex = next.findIndex((id) => id === droppedId);
+      if (existingIndex >= 0) next[existingIndex] = '';
+      next[slotIndex] = droppedId;
+      return next;
+    });
+    setSelectedOptionButtonSlotIndex(slotIndex);
+  };
+
+  const handleRemoveOptionButtonFromSlot = () => {
+    if (!Number.isInteger(selectedOptionButtonSlotIndex)) return;
+    setOptionButtonSlots((prev) => {
+      const next = [...prev];
+      if (!next[selectedOptionButtonSlotIndex]) return prev;
+      next[selectedOptionButtonSlotIndex] = '';
+      return next;
+    });
+  };
+
+  const hasSelectedOptionButton = Number.isInteger(selectedOptionButtonSlotIndex)
+    && !!optionButtonSlots[selectedOptionButtonSlotIndex];
 
   useEffect(() => {
     if (!showSystemSettingsModal) return;
@@ -5675,7 +5898,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               <div className="absolute right-0 left-0 top-[50%] flex justify-center">
                 <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingDiscount} onClick={handleSaveDiscount}>
                   <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                  Save
+                  {tr('control.save', 'Save')}
                 </button>
               </div>
             </div>
@@ -5813,7 +6036,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   className={`px-4 py-3 font-medium whitespace-nowrap border-b-2 transition-colors ${deviceSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
                   onClick={() => setDeviceSettingsTab(tab)}
                 >
-                  {tab}
+                  {tr(DEVICE_SETTINGS_TAB_LABEL_KEYS[tab], tab)}
                 </button>
               ))}
             </div>
@@ -6054,7 +6277,137 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   </div>
                 </div>
               )}
-              {deviceSettingsTab !== 'General' && deviceSettingsTab !== 'Printer' && deviceSettingsTab !== 'Category display' && deviceSettingsTab !== 'Orders in waiting' && deviceSettingsTab !== 'Scheduled orders' && (
+              {deviceSettingsTab === 'Option buttons' && (
+                <div className="px-8 py-2">
+                  <div className="mx-auto max-w-[1320px] flex gap-8">
+                    <div className="flex-1 border border-[#aeb3bf] bg-[#d7d8de] px-6 py-5">
+                      <div className="grid grid-cols-7 gap-3">
+                        {Array.from({ length: OPTION_BUTTON_SLOT_COUNT }).map((_, slotIndex) => {
+                          const assignedId = optionButtonSlots[slotIndex];
+                          const assignedLabel = getOptionButtonLabel(assignedId);
+                          const isSelected = selectedOptionButtonSlotIndex === slotIndex;
+                          return (
+                            <button
+                              key={`option-slot-${slotIndex}`}
+                              type="button"
+                              onClick={() => setSelectedOptionButtonSlotIndex(slotIndex)}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
+                              className={`h-[74px] border px-2 text-center text-[18px] leading-[1.2] whitespace-pre-line transition-colors ${
+                                assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
+                              } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} hover:brightness-95`}
+                            >
+                              {assignedLabel || ' '}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-10 text-center">
+                        <button
+                          type="button"
+                          onClick={handleRemoveOptionButtonFromSlot}
+                          disabled={!hasSelectedOptionButton}
+                          className={`text-[20px] ${
+                            hasSelectedOptionButton
+                              ? 'text-[#858d99] hover:text-[#5c6370]'
+                              : 'text-[#9ca3af] opacity-60 cursor-not-allowed'
+                          }`}
+                        >
+                          {tr('control.optionButtons.removeFromPlace', 'Remove from place')}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="w-[380px] border border-[#aeb3bf] bg-[#d7d8de] px-6 py-5 flex flex-col">
+                      <div className="flex-1 overflow-auto space-y-4 text-center">
+                        {unassignedOptionButtons.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            draggable
+                            onDragStart={(event) => handleOptionButtonDragStart(event, item.id)}
+                            className="w-full text-[16px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] hover:text-[#2e333c] cursor-grab active:cursor-grabbing"
+                          >
+                            {tr(item.labelKey, item.fallbackLabel)}
+                          </button>
+                        ))}
+                        {unassignedOptionButtons.length === 0 ? (
+                          <div className="text-[32px] text-[#8a919e]">-</div>
+                        ) : null}
+                      </div>
+                      <div className="pt-4 flex items-center justify-around text-[24px] text-[#596170]">
+                        <span aria-hidden>↑</span>
+                        <span aria-hidden>↓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {deviceSettingsTab === 'Function buttons' && (
+                <div className="px-8 py-2">
+                  <div className="mx-auto max-w-[1300px] rounded-sm bg-[#7f7f84] p-6">
+                    <div className="grid grid-cols-4 gap-6">
+                      <button
+                        type="button"
+                        className="h-[62px] border border-[#a8a8ad] bg-transparent text-3xl text-white"
+                      >
+                        19:00
+                      </button>
+                      {Array.from({ length: FUNCTION_BUTTON_SLOT_COUNT }).map((_, slotIndex) => {
+                        const assignedId = functionButtonSlots[slotIndex];
+                        const assignedLabel = getFunctionButtonLabel(assignedId);
+                        const isSelected = selectedFunctionButtonSlotIndex === slotIndex;
+                        return (
+                          <button
+                            key={`function-slot-${slotIndex}`}
+                            type="button"
+                            onClick={() => setSelectedFunctionButtonSlotIndex(slotIndex)}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => handleFunctionButtonDropOnSlot(event, slotIndex)}
+                            className={`h-[62px] border bg-transparent text-3xl text-white transition-colors ${
+                              isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
+                            } hover:bg-white/10`}
+                          >
+                            {assignedLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="mx-auto mt-8 max-w-[1030px] border border-[#9d9da3] bg-transparent py-6">
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={handleRemoveFunctionButtonFromSlot}
+                        disabled={!hasSelectedFunctionButton}
+                        className={`text-[30px] ${
+                          hasSelectedFunctionButton
+                            ? 'text-[#8e959d] hover:text-[#b2b8be]'
+                            : 'text-[#646d76] opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
+                      </button>
+                    </div>
+                    <div className="mt-4 space-y-8 text-center flex flex-col">
+                      {FUNCTION_BUTTON_ITEMS.filter((item) => !assignedFunctionButtonIds.has(item.id)).map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          draggable
+                          onDragStart={(event) => handleFunctionButtonDragStart(event, item.id)}
+                          className="text-[30px] text-gray hover:text-[#4b5d68] cursor-grab active:cursor-grabbing"
+                        >
+                          {tr(item.labelKey, item.fallbackLabel)}
+                        </button>
+                      ))}
+                      {FUNCTION_BUTTON_ITEMS.filter((item) => !assignedFunctionButtonIds.has(item.id)).length === 0 ? (
+                        <div className="text-[28px] text-[#54616b]">-</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {deviceSettingsTab !== 'General' && deviceSettingsTab !== 'Printer' && deviceSettingsTab !== 'Category display' && deviceSettingsTab !== 'Orders in waiting' && deviceSettingsTab !== 'Scheduled orders' && deviceSettingsTab !== 'Option buttons' && deviceSettingsTab !== 'Function buttons' && (
                 <p className="text-pos-muted text-xl py-4">Settings for “{deviceSettingsTab}” will be available here.</p>
               )}
             </div>
@@ -6066,7 +6419,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 onClick={handleSaveDeviceSettings}
               >
                 <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                Save
+                {tr('control.save', 'Save')}
               </button>
             </div>
           </div>
@@ -6088,7 +6441,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   className={`px-4 py-3 font-medium whitespace-nowrap border-b-2 transition-colors ${systemSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
                   onClick={() => setSystemSettingsTab(tab)}
                 >
-                  {tab}
+                  {tr(SYSTEM_SETTINGS_TAB_LABEL_KEYS[tab], tab)}
                 </button>
               ))}
             </div>
@@ -7428,7 +7781,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       disabled={!Number.isInteger(positioningSelectedCellIndex)}
                       onClick={removeFromPlace}
                     >
-                      Remove from place
+                      {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
                     </button>
                   </div>
                   <div className="flex gap-3">
@@ -7453,7 +7806,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     disabled={savingPositioningLayout}
                     onClick={saveProductPositioningLayout}
                   >
-                    {savingPositioningLayout ? 'Saving...' : 'Save'}
+                    {savingPositioningLayout ? tr('control.saving', 'Saving...') : tr('control.save', 'Save')}
                   </button>
                 </div>
                 {positioningLayoutSaveMessage ? (
