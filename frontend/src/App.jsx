@@ -296,7 +296,6 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
-          onClick={() => setShowCustomersModal(false)}
         >
           <div
             className="h-[96vh] w-[96vw] max-w-[1410px] rounded-xl overflow-hidden border border-pos-border shadow-2xl"

@@ -68,7 +68,7 @@ export function WebordersModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div
         className="bg-pos-panel rounded-lg shadow-xl flex flex-col w-full max-w-[1600px] p-5 px-20 h-[800px] max-h-[85vh] text-gray-900"
         onClick={(e) => e.stopPropagation()}

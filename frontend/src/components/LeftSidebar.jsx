@@ -70,7 +70,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
       </div>
 
       {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowLogoutModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-pos-panel border border-pos-border rounded-xl shadow-xl p-8 py-14 max-w-4xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <p className="text-pos-text text-5xl mb-8 text-center">{t('logoutConfirm')}</p>
             <div className="flex gap-4 justify-around mt-20 items-center">

@@ -22,7 +22,7 @@ function MonthPickerModal({ open, onClose, value, onChange, prevYearLabel, nextY
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[52] flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[52] flex items-center justify-center bg-black/40">
       <div
         className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[710px]"
         onClick={(e) => e.stopPropagation()}
@@ -169,16 +169,9 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const qwertyBot = 'w x c v b n , €'.split(' ');
   const numPad = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
 
-  const handleBackdropClick = () => {
-    if (showMonthPickerModal) setShowMonthPickerModal(false);
-    else if (calendarFor !== null) setCalendarFor(null);
-    else onClose();
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={handleBackdropClick}
     >
       <div
         className="bg-pos-panel rounded-lg shadow-xl flex flex-col w-full max-w-[1400px] h-[1000px] overflow-hidden"
@@ -460,10 +453,6 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
       {showPrintOptionsModal && (
         <div
           className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowPrintOptionsModal(false);
-          }}
         >
           <div
             className="bg-white rounded-lg shadow-xl border border-gray-300 p-6 grid grid-rows-2 gap-6 min-w-[600px] h-[300px]"

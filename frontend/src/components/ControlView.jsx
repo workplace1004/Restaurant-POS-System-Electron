@@ -5725,7 +5725,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit user modal — General + Privileges tabs, keyboard like other modals */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeUserModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeUserModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -5819,7 +5819,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit discount modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeDiscountModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full min-h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeDiscountModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -5944,7 +5944,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit kitchen message modal */}
       {showKitchenMessageModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeKitchenMessageModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative justify-between bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] h-[1000px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeKitchenMessageModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -5981,7 +5981,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit table location modal */}
       {showTableLocationModal && topNavId === 'tables' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeTableLocationModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border justify-between items-center shadow-2xl max-w-[1430px] w-full overflow-hidden h-[1000px]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeTableLocationModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6041,7 +6041,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* Device Settings modal */}
       {showDeviceSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDeviceSettingsModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative text-2xl bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] h-[1000px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowDeviceSettingsModal(false)} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6448,7 +6448,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* System Settings modal */}
       {showSystemSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowSystemSettingsModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative px-20 text-2xl bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] h-[1000px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowSystemSettingsModal(false)} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6681,7 +6681,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit payment type modal */}
       {showPaymentTypeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closePaymentTypeModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative flex flex-col bg-pos-bg justify-between items-center rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1000px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePaymentTypeModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6745,7 +6745,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit label modal */}
       {showLabelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeLabelModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1000px] justify-center items-between items-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeLabelModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6807,7 +6807,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* Production messages modal */}
       {showProductionMessagesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowProductionMessagesModal(false); setProductionMessagesPage(0); cancelEditProductionMessage(); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] justify-center items-center w-full mx-4 overflow-hidden flex flex-col h-[1000px]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowProductionMessagesModal(false); setProductionMessagesPage(0); cancelEditProductionMessage(); }} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6878,7 +6878,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New price group modal */}
       {showPriceGroupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closePriceGroupModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1450px] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePriceGroupModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6927,7 +6927,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* Add / Edit category modal */}
       {showCategoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeCategoryModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1380px] h-[980px] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeCategoryModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -6999,7 +6999,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit product modal */}
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={closeProductModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1380px] h-[1050px] w-full mx-4 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -7669,7 +7669,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeProductPositioningModal}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="relative bg-gray-100 rounded-xl shadow-2xl w-full max-w-[1320px] h-[850px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
@@ -7840,7 +7840,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* Product search keyboard modal */}
       {showProductSearchKeyboard && subNavId === 'Products' && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowProductSearchKeyboard(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
           <div className="relative bg-pos-bg rounded-t-xl shadow-2xl w-full max-w-[1415px] overflow-hidden flex flex-col max-h-[70vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -7854,7 +7854,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* Product row -> Subproducts modal */}
       {showProductSubproductsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeProductSubproductsModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl min-w-[1200px] max-w-[1200px] min-h-[820px] p-10" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 p-2 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900" onClick={closeProductSubproductsModal} aria-label="Close">
               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -7954,7 +7954,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
       {/* New / Edit subproduct modal */}
       {showSubproductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeSubproductModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -8128,7 +8128,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         const canMoveUp = selectedIdx > 0;
         const canMoveDown = selectedIdx >= 0 && selectedIdx < sortedGroups.length - 1;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { setShowManageGroupsModal(false); setSelectedManageGroupId(null); }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] w-full h-[1000px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowManageGroupsModal(false); setSelectedManageGroupId(null); }} aria-label="Close">
                 <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

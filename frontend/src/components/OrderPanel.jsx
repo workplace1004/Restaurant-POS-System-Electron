@@ -916,7 +916,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           role="dialog"
           aria-modal="true"
           aria-labelledby="pay-differently-title"
-          onClick={() => setShowPayDifferentlyModal(false)}
         >
           <div
             className="flex flex-col h-[60vh] bg-gray-100 rounded-xl shadow-2xl max-w-[1800px] w-full overflow-auto text-gray-800"
@@ -1029,7 +1028,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           role="dialog"
           aria-modal="true"
           aria-labelledby="final-settlement-options-title"
-          onClick={() => setShowFinalSettlementModal(false)}
         >
           <div
             className="bg-gray-100 rounded-xl shadow-2xl max-w-6xl w-full px-8 py-10"
@@ -1097,7 +1095,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           role="dialog"
           aria-modal="true"
           aria-labelledby="settlement-subtotal-title"
-          onClick={() => setShowSettlementSubtotalModal(false)}
         >
           <div
             className="bg-pos-panel rounded-xl shadow-2xl w-full max-w-[1400px] h-[86vh] p-4 border border-pos-border flex flex-col"
@@ -1353,7 +1350,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           role="dialog"
           aria-modal="true"
           aria-labelledby="payment-success-title"
-          onClick={() => setPaymentSuccessMessage('')}
         >
           <div
             className="bg-pos-panel rounded-lg shadow-xl px-10 py-8 max-w-3xl w-full mx-4 border border-pos-border"
@@ -1382,7 +1378,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-all-title"
-          onClick={() => setShowDeleteAllModal(false)}
         >
           <div
             className="bg-pos-panel rounded-lg shadow-xl px-16 py-8 max-w-3xl w-full mx-4 border border-pos-border"
@@ -1436,7 +1431,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           role="dialog"
           aria-modal="true"
           aria-labelledby="payment-error-title"
-          onClick={() => setPaymentErrorMessage('')}
         >
           <div
             className="bg-pos-panel rounded-lg shadow-xl px-10 py-8 max-w-3xl w-full mx-4 border border-pos-border"

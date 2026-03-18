@@ -15,7 +15,6 @@ export function DeleteConfirmModal({ open, onClose, onConfirm, message = 'Are yo
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
-      onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-confirm-title"

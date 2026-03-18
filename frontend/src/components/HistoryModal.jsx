@@ -36,7 +36,6 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
     >
       <div
         className="bg-gray-200 min-h-[800px] p-5 bg-pos-panel rounded-lg shadow-xl flex flex-col border border-gray-400 w-full max-w-7xl max-h-[90vh] overflow-hidden"

@@ -75,10 +75,6 @@ export function CalendarModal({ open, onClose, value, onChange }) {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClose?.();
-      }}
     >
       <div className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[800px]" onClick={(e) => e.stopPropagation()}>
         <div className="bg-pos-bg px-4 py-7 flex items-center justify-between">

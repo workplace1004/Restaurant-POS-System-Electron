@@ -39,6 +39,11 @@ const OPTION_BUTTON_LABELS = {
   'leeggoed-terugnemen': { key: 'control.optionButton.depositReturn', fallback: 'Deposit\nReturn' },
   'webshop-tijdsloten': { key: 'control.optionButton.webshopTimeslots', fallback: 'Webshop timeslots' }
 };
+const KEYPAD_ROWS = [
+  ['C', '7', '8', '9'],
+  [',', '4', '5', '6'],
+  ['0', '1', '2', '3']
+];
 
 function normalizeOptionButtonSlots(value) {
   if (!Array.isArray(value)) return [...DEFAULT_OPTION_BUTTON_LAYOUT];
@@ -62,6 +67,9 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
   };
   const [optionButtonSlots, setOptionButtonSlots] = useState(() => normalizeOptionButtonSlots(null));
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showExtraBcModal, setShowExtraBcModal] = useState(false);
+  const [extraBcInput, setExtraBcInput] = useState('');
+  const [activeExtraBcButtonId, setActiveExtraBcButtonId] = useState('');
 
   useEffect(() => {
     try {
@@ -95,9 +103,36 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
       return;
     }
     setShowMoreMenu(false);
+    if (id === 'extra-bc-bedrag') {
+      setShowExtraBcModal(true);
+      setExtraBcInput('');
+      return;
+    }
     if (id === 'klanten') onCustomersClick?.();
     if (id === 'historiek') onHistoryClick?.();
     if (id === 'subtotaal') onSubtotalClick?.();
+  };
+  const handleExtraBcKeypad = (key) => {
+    if (key === 'C') {
+      setExtraBcInput('');
+      return;
+    }
+    if (key === ',') {
+      setExtraBcInput((prev) => (prev.includes(',') ? prev : `${prev},`));
+      return;
+    }
+    setExtraBcInput((prev) => `${prev}${key}`);
+  };
+  const closeExtraBcModal = () => {
+    setShowExtraBcModal(false);
+    setExtraBcInput('');
+    setActiveExtraBcButtonId('');
+  };
+  const pulseExtraBcButton = (id) => {
+    setActiveExtraBcButtonId(id);
+    window.setTimeout(() => {
+      setActiveExtraBcButtonId((prev) => (prev === id ? '' : prev));
+    }, 180);
   };
 
   return (
@@ -156,6 +191,85 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
           </div>
         ) : null}
       </div>
+      {showExtraBcModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-[540px] rounded-md bg-[#d8d8da] px-6 pb-6 pt-8 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto mb-8 h-[48px] w-[150px] flex justify-center items-center rounded bg-white/35 px-3 text-center text-4xl leading-[28px] text-pos-bg">
+              {extraBcInput}
+            </div>
+            <div className="flex flex-col gap-6">
+              {KEYPAD_ROWS.map((row, rowIndex) => (
+                <div key={`bc-row-${rowIndex}`} className="grid grid-cols-4 gap-6">
+                  {row.map((key) => (
+                    <button
+                      key={`bc-key-${key}`}
+                      type="button"
+                      className={`h-[58px] rounded bg-transparent text-5xl hover:bg-white/30 ${
+                        activeExtraBcButtonId === `keypad-${key}` ? 'text-rose-500' : 'text-[#3f5478]'
+                      }`}
+                      onClick={() => {
+                        pulseExtraBcButton(`keypad-${key}`);
+                        handleExtraBcKeypad(key);
+                      }}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 grid grid-cols-3 gap-8">
+              <button
+                type="button"
+                className={`h-[56px] rounded bg-white/45 text-3xl hover:bg-white/70 ${
+                  activeExtraBcButtonId === 'action-cancel' ? 'text-rose-500' : 'text-[#3f5478]'
+                }`}
+                onClick={() => {
+                  pulseExtraBcButton('action-cancel');
+                  closeExtraBcModal();
+                }}
+              >
+                {t('cancel')}
+              </button>
+              <button
+                type="button"
+                className={`h-[56px] rounded bg-white/45 text-3xl hover:bg-white/70 ${
+                  activeExtraBcButtonId === 'action-reset' ? 'text-rose-500' : 'text-[#3f5478]'
+                }`}
+                onClick={() => {
+                  pulseExtraBcButton('action-reset');
+                  setExtraBcInput('');
+                }}
+              >
+                {t('reset')}
+              </button>
+              <button
+                type="button"
+                disabled={!extraBcInput}
+                className={`h-[56px] rounded text-3xl ${
+                  extraBcInput
+                    ? `${activeExtraBcButtonId === 'action-ok' ? 'text-rose-500' : 'text-[#3f5478]'} bg-white/45 hover:bg-white/70`
+                    : 'bg-white/30 text-[#9aa7bd] cursor-not-allowed'
+                }`}
+                onClick={() => {
+                  if (!extraBcInput) return;
+                  pulseExtraBcButton('action-ok');
+                  closeExtraBcModal();
+                }}
+              >
+                {t('ok')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </footer>
   );
 }
