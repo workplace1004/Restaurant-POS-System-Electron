@@ -163,29 +163,16 @@ app.get('/api/products/:id/subproducts', async (req, res) => {
   try {
     const linksMap = await loadProductSubproductLinksMap();
     const links = normalizeProductSubproductLinks(linksMap?.[req.params.id]);
-    if (links.length > 0) {
-      const idOrder = new Map(links.map((l, idx) => [l.subproductId, idx]));
-      const ids = links.map((l) => l.subproductId);
-      const items = await prisma.subproduct.findMany({
-        where: { id: { in: ids } }
-      });
-      const sorted = items
-        .filter((sp) => idOrder.has(sp.id))
-        .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
-      return res.json(sorted);
-    }
-
-    const product = await prisma.product.findUnique({ where: { id: req.params.id } });
-    if (!product || !product.addition || String(product.addition).trim() === '') {
-      return res.json([]);
-    }
-    const addition = String(product.addition).trim();
-    const group = await prisma.subproductGroup.findFirst({
-      where: { OR: [{ id: addition }, { name: addition }] },
-      include: { subproducts: { orderBy: { sortOrder: 'asc' } } }
+    const idOrder = new Map(links.map((l, idx) => [l.subproductId, idx]));
+    const ids = links.map((l) => l.subproductId);
+    if (ids.length === 0) return res.json([]);
+    const items = await prisma.subproduct.findMany({
+      where: { id: { in: ids } }
     });
-    if (!group) return res.json([]);
-    res.json(group.subproducts);
+    const sorted = items
+      .filter((sp) => idOrder.has(sp.id))
+      .sort((a, b) => idOrder.get(a.id) - idOrder.get(b.id));
+    res.json(sorted);
   } catch (err) {
     console.error('GET /api/products/:id/subproducts', err);
     res.status(500).json({ error: err.message || 'Failed to load subproducts' });
@@ -539,6 +526,30 @@ app.delete('/api/discounts/:id', async (req, res) => {
 const SETTING_KEY_LANGUAGE = 'language';
 const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
 const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
+const SETTING_KEY_TABLE_SAVED_ORDER_IDS = 'table_saved_order_ids';
+const normalizeSavedTableOrderEntries = (value) => {
+  if (!Array.isArray(value)) return [];
+  const byOrderId = new Map();
+  for (const raw of value) {
+    if (raw == null) continue;
+    if (typeof raw === 'string') {
+      const orderId = String(raw).trim();
+      if (!orderId) continue;
+      byOrderId.set(orderId, { orderId, cashierName: '', savedAt: null });
+      continue;
+    }
+    if (typeof raw === 'object') {
+      const orderId = String(raw.orderId ?? raw.id ?? '').trim();
+      if (!orderId) continue;
+      const cashierName = String(raw.cashierName ?? raw.userName ?? raw.name ?? '').trim();
+      const savedAtRaw = raw.savedAt != null ? String(raw.savedAt).trim() : '';
+      const parsedSavedAt = savedAtRaw ? new Date(savedAtRaw) : null;
+      const savedAt = parsedSavedAt && !Number.isNaN(parsedSavedAt.getTime()) ? parsedSavedAt.toISOString() : null;
+      byOrderId.set(orderId, { orderId, cashierName, savedAt });
+    }
+  }
+  return Array.from(byOrderId.values());
+};
 
 app.get('/api/settings/language', async (req, res) => {
   try {
@@ -628,6 +639,39 @@ app.put('/api/settings/product-positioning-colors', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/product-positioning-colors', err);
     res.status(500).json({ error: err.message || 'Failed to save product positioning colors' });
+  }
+});
+
+app.get('/api/settings/table-saved-orders', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_TABLE_SAVED_ORDER_IDS } });
+    if (!row?.value) {
+      res.json({ value: [] });
+      return;
+    }
+    const parsed = JSON.parse(row.value);
+    const safeValue = normalizeSavedTableOrderEntries(parsed);
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('GET /api/settings/table-saved-orders', err);
+    res.status(500).json({ error: err.message || 'Failed to get saved table orders' });
+  }
+});
+
+app.put('/api/settings/table-saved-orders', async (req, res) => {
+  try {
+    const incoming = req.body?.value;
+    const safeValue = normalizeSavedTableOrderEntries(incoming);
+    const serialized = JSON.stringify(safeValue);
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_TABLE_SAVED_ORDER_IDS },
+      create: { key: SETTING_KEY_TABLE_SAVED_ORDER_IDS, value: serialized },
+      update: { value: serialized }
+    });
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('PUT /api/settings/table-saved-orders', err);
+    res.status(500).json({ error: err.message || 'Failed to save table orders' });
   }
 });
 
@@ -780,7 +824,6 @@ app.patch('/api/orders/:id/items/:itemId', async (req, res) => {
   try {
     const orderId = req.params.id;
     const itemId = req.params.itemId;
-    const quantity = Math.max(1, Math.floor(Number(req.body?.quantity)) || 1);
 
     const item = await prisma.orderItem.findFirst({
       where: { id: itemId, orderId }
@@ -789,9 +832,28 @@ app.patch('/api/orders/:id/items/:itemId', async (req, res) => {
       return res.status(404).json({ error: 'Order item not found' });
     }
 
+    const patchData = {};
+    if (req.body?.quantity !== undefined) {
+      patchData.quantity = Math.max(1, Math.floor(Number(req.body?.quantity)) || 1);
+    }
+    if (req.body?.notes !== undefined) {
+      const notes = String(req.body.notes ?? '').trim();
+      patchData.notes = notes ? notes : null;
+    }
+    if (req.body?.price !== undefined) {
+      const parsedPrice = Number(req.body.price);
+      if (!Number.isFinite(parsedPrice)) {
+        return res.status(400).json({ error: 'Invalid price value' });
+      }
+      patchData.price = Math.max(0, parsedPrice);
+    }
+    if (Object.keys(patchData).length === 0) {
+      return res.status(400).json({ error: 'No item fields to update' });
+    }
+
     await prisma.orderItem.update({
       where: { id: itemId },
-      data: { quantity }
+      data: patchData
     });
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -912,13 +974,13 @@ app.get('/api/orders/in-planning/count', async (req, res) => {
   res.json({ count });
 });
 
-// REST: order history (paid orders, newest first)
+// REST: order history (paid orders, newest settlement first)
 app.get('/api/orders/history', async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       where: { status: 'paid' },
       include: { table: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
     });
     res.json(orders);
   } catch (err) {
@@ -1542,26 +1604,31 @@ app.post('/api/printers/receipt', async (req, res) => {
       visa > 0 ? `VISA: ${formatEuroAmount(visa)}` : null,
     ].filter(Boolean);
 
-    const requestedPrinterId = req.body?.printerId ? String(req.body.printerId) : null;
-    const printer = requestedPrinterId
-      ? await prisma.printer.findUnique({ where: { id: requestedPrinterId } })
-      : await prisma.printer.findFirst({
-          where: { enabled: 1 },
-          orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }]
-        });
-
-    if (!printer || printer.enabled !== 1) {
+    const requestedPrinterId = req.body?.printerId ? String(req.body.printerId).trim() : null;
+    const enabledPrinters = await prisma.printer.findMany({
+      where: { enabled: 1 },
+      orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }]
+    });
+    if (!enabledPrinters.length) {
       return res.status(400).json({ error: 'No enabled printer configured for receipt printing.' });
     }
-    serverLog('printer', 'Receipt printer selected', {
+    const printersById = new Map(enabledPrinters.map((p) => [p.id, p]));
+    const defaultPrinter = requestedPrinterId
+      ? printersById.get(requestedPrinterId) || null
+      : enabledPrinters[0] || null;
+    if (requestedPrinterId && !defaultPrinter) {
+      return res.status(400).json({ error: 'Requested printer is not enabled or not found.' });
+    }
+    if (!defaultPrinter) {
+      return res.status(400).json({ error: 'No fallback printer available.' });
+    }
+    serverLog('printer', 'Receipt default/fallback printer selected', {
       orderId,
-      printerId: printer.id,
-      printerName: printer.name,
-      printerType: printer.type,
+      printerId: defaultPrinter.id,
+      printerName: defaultPrinter.name,
+      printerType: defaultPrinter.type,
+      requestedPrinterId: requestedPrinterId || null,
     });
-
-    const validation = validatePrinterConnection(printer.type, printer.connectionString);
-    if (!validation.ok) return res.status(400).json({ error: validation.error });
 
     const itemLines = order.items.map((item) => {
       const productName = item?.product?.name || 'Unknown item';
@@ -1569,36 +1636,64 @@ app.post('/api/printers/receipt', async (req, res) => {
       const qty = Math.max(1, Number(item.quantity) || 1);
       const unitPrice = Math.round((Number(item.price) || 0) * 100) / 100;
       const lineTotal = Math.round(unitPrice * qty * 100) / 100;
+      const preferredPrinterId = String(item?.product?.printer1 || '').trim();
       return {
         product: `${productName}${note}`,
         quantity: qty,
         unitPrice,
-        lineTotal
+        lineTotal,
+        preferredPrinterId
       };
     });
 
     const printedAt = new Date().toISOString();
-    const receiptLines = [
-      `Receipt ${order.id}`,
-      `Printed at ${printedAt}`,
-      `Table: ${order.table?.name || '-'}`,
-      `Customer: ${order.customer?.name || '-'}`,
-      '------------------------------',
-      ...itemLines.map((line) => `${line.quantity}x ${line.product}  ${formatEuroAmount(line.lineTotal)}`),
-      '------------------------------',
-      `TOTAL: ${formatEuroAmount(dbTotal)}`,
-      `PAID: ${formatEuroAmount(paidTotal)}`,
-      ...paymentMethodLines
-    ];
+    const groupedByPrinterId = new Map();
+    for (const line of itemLines) {
+      const preferred = line.preferredPrinterId;
+      const targetPrinter = (preferred && printersById.get(preferred)) || defaultPrinter;
+      if (!groupedByPrinterId.has(targetPrinter.id)) groupedByPrinterId.set(targetPrinter.id, []);
+      groupedByPrinterId.get(targetPrinter.id).push(line);
+    }
 
-    const sendResult = await sendToPrinter(printer, receiptLines);
-    serverLog('printer', 'Receipt sent to printer', {
-      orderId: order.id,
-      printerId: printer.id,
-      transport: sendResult?.transport || 'unknown',
-      sentBytes: sendResult?.sentBytes ?? 0,
-      receivedBytes: sendResult?.receivedBytes ?? 0,
-    });
+    const printJobs = [];
+    for (const [printerId, lines] of groupedByPrinterId.entries()) {
+      const printer = printersById.get(printerId) || defaultPrinter;
+      const validation = validatePrinterConnection(printer.type, printer.connectionString);
+      if (!validation.ok) return res.status(400).json({ error: validation.error });
+      const groupSubtotal = Math.round(lines.reduce((sum, line) => sum + (Number(line.lineTotal) || 0), 0) * 100) / 100;
+      const receiptLines = [
+        `Receipt ${order.id}`,
+        `Printed at ${printedAt}`,
+        `Table: ${order.table?.name || '-'}`,
+        `Customer: ${order.customer?.name || '-'}`,
+        `Printer: ${printer.name || printer.id}`,
+        '------------------------------',
+        ...lines.map((line) => `${line.quantity}x ${line.product}  ${formatEuroAmount(line.lineTotal)}`),
+        '------------------------------',
+        `SUBTOTAL: ${formatEuroAmount(groupSubtotal)}`,
+        `TOTAL: ${formatEuroAmount(dbTotal)}`,
+        `PAID: ${formatEuroAmount(paidTotal)}`,
+        ...paymentMethodLines
+      ];
+      const sendResult = await sendToPrinter(printer, receiptLines);
+      printJobs.push({
+        printerId: printer.id,
+        printerName: printer.name,
+        items: lines.length,
+        subtotal: groupSubtotal,
+        receipt_text: receiptLines.join('\n'),
+        ...sendResult
+      });
+      serverLog('printer', 'Receipt sent to printer', {
+        orderId: order.id,
+        printerId: printer.id,
+        printerName: printer.name,
+        items: lines.length,
+        transport: sendResult?.transport || 'unknown',
+        sentBytes: sendResult?.sentBytes ?? 0,
+        receivedBytes: sendResult?.receivedBytes ?? 0,
+      });
+    }
     serverLog('printer', 'Receipt payload prepared', {
       orderId: order.id,
       items: itemLines.length,
@@ -1611,15 +1706,14 @@ app.post('/api/printers/receipt', async (req, res) => {
       message: `Receipt print request sent for order "${order.id}"`,
       data: {
         orderId: order.id,
-        printerId: printer.id,
-        printerName: printer.name,
+        printerId: defaultPrinter.id,
+        printerName: defaultPrinter.name,
         total: dbTotal,
         paidTotal,
         paymentMethods: { cash, bancontact, visa },
         items: itemLines,
-        receipt_text: receiptLines.join('\n'),
+        printJobs,
         printed: true,
-        ...sendResult,
       }
     });
   } catch (err) {
