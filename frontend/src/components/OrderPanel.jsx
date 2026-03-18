@@ -1012,10 +1012,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   </button>
                   <button
                     type="button"
-                    className="min-w-[200px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
-                    onClick={() => setShowSettlementSubtotalModal(false)}
+                    disabled={settlementSubtotalLeftLines.length > 0}
+                    className={`min-w-[200px] py-3 px-6 rounded text-2xl ${
+                      settlementSubtotalLeftLines.length > 0
+                        ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                        : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                    }`}
+                    onClick={() => {
+                      if (settlementSubtotalLeftLines.length > 0) return;
+                      setShowSettlementSubtotalModal(false);
+                      openPayDifferentlyModal();
+                    }}
                   >
-                    {t('historyReprintTicket')}
+                    {t('checkout')}
                   </button>
                 </div>
               </div>
