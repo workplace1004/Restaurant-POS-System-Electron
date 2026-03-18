@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const KEYPAD = [
@@ -29,10 +29,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [showFinalSettlementModal, setShowFinalSettlementModal] = useState(false);
   const [showSettlementSubtotalModal, setShowSettlementSubtotalModal] = useState(false);
   const [settlementModalType, setSettlementModalType] = useState('subtotal');
+  const [pendingSplitCheckout, setPendingSplitCheckout] = useState(null);
   const [subtotalLineGroups, setSubtotalLineGroups] = useState([]);
   const [subtotalSelectedLeftIds, setSubtotalSelectedLeftIds] = useState([]);
   const [subtotalSelectedRightIds, setSubtotalSelectedRightIds] = useState([]);
   const [savedTableOrders, setSavedTableOrders] = useState([]);
+  const splitRightPanelScrollRef = useRef(null);
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
@@ -74,6 +76,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       };
     })
     .filter((group) => group.lines.length > 0);
+  const hasSplitBillSelection = settlementSubtotalRightGroups.some((group) => group.lines.length > 0);
+  const splitSelectedLineIds = settlementSubtotalRightGroups.flatMap((group) => group.lines.map((line) => line.id));
+  const splitSelectedTotal = roundCurrency(settlementSubtotalRightGroups.reduce((sum, group) => sum + (Number(group.total) || 0), 0));
+  const scrollSplitRightPanel = (direction) => {
+    const el = splitRightPanelScrollRef.current;
+    if (!el) return;
+    el.scrollTop += direction * 120;
+  };
   const computeOrderTotal = (sourceOrder) =>
     roundCurrency((sourceOrder?.items || []).reduce((sum, item) => sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 0), 0));
   const currentOrderTotal = hasOrderItems ? computeOrderTotal({ items }) : roundCurrency(total);
@@ -186,8 +196,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setCustomAmount((prev) => prev + key);
   };
 
-  const openPayDifferentlyModal = () => {
-    const targetTotal = roundCurrency(payableTotal);
+  const openPayDifferentlyModal = (overrideTotal = null) => {
+    const targetTotal = roundCurrency(overrideTotal ?? payableTotal);
     setShowPayDifferentlyModal(true);
     setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
     setSelectedPayment('cash');
@@ -316,6 +326,86 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     return printData?.data || {};
   };
 
+  const toApiOrderItem = (item) => {
+    const productId = String(item?.productId || item?.product?.id || '').trim();
+    if (!productId) throw new Error('Split bill contains an item without product id.');
+    return {
+      productId,
+      quantity: Math.max(1, Number(item?.quantity) || 1),
+      price: Number(item?.price) || 0,
+      notes: item?.notes || null
+    };
+  };
+
+  const patchOrderItems = async (orderId, nextItems) => {
+    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: nextItems.map(toApiOrderItem) })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || 'Failed to update split order items.');
+    return data;
+  };
+
+  const createPaidSplitOrder = async (sourceItems) => {
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableId: selectedTable?.id || null,
+        items: sourceItems.map(toApiOrderItem)
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.id) {
+      throw new Error(data?.error || 'Failed to create split checkout order.');
+    }
+    await onStatusChange?.(data.id, 'paid');
+    return data.id;
+  };
+
+  const settleSplitBillSelection = async (selectedLineIds) => {
+    const selectedByOrderId = new Map();
+    for (const lineId of selectedLineIds) {
+      const [orderId, itemId] = String(lineId || '').split(':');
+      if (!orderId || !itemId) continue;
+      if (!selectedByOrderId.has(orderId)) selectedByOrderId.set(orderId, new Set());
+      selectedByOrderId.get(orderId).add(itemId);
+    }
+    if (selectedByOrderId.size === 0) throw new Error('No split bill items selected.');
+
+    const paidOrderIds = [];
+    const fullySettledSourceOrderIds = [];
+
+    for (const sourceOrder of savedOrdersForSelectedTable) {
+      const selectedItemIds = selectedByOrderId.get(sourceOrder?.id);
+      if (!selectedItemIds || selectedItemIds.size === 0) continue;
+
+      const sourceItems = Array.isArray(sourceOrder?.items) ? sourceOrder.items : [];
+      const selectedItems = sourceItems.filter((item) => selectedItemIds.has(item?.id));
+      const remainingItems = sourceItems.filter((item) => !selectedItemIds.has(item?.id));
+      if (selectedItems.length === 0) continue;
+
+      if (remainingItems.length === 0) {
+        await onStatusChange?.(sourceOrder.id, 'paid');
+        paidOrderIds.push(sourceOrder.id);
+        fullySettledSourceOrderIds.push(sourceOrder.id);
+      } else {
+        const paidSplitOrderId = await createPaidSplitOrder(selectedItems);
+        await patchOrderItems(sourceOrder.id, remainingItems);
+        paidOrderIds.push(paidSplitOrderId);
+      }
+    }
+
+    if (fullySettledSourceOrderIds.length > 0) {
+      const nextSaved = savedTableOrders.filter((entry) => !fullySettledSourceOrderIds.includes(entry.orderId));
+      await persistSavedTableOrders(nextSaved);
+    }
+
+    return paidOrderIds;
+  };
+
   const resetAfterSuccessfulPayment = () => {
     setShowPayDifferentlyModal(false);
     setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
@@ -328,6 +418,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setShowDeleteAllModal(false);
     setShowSettlementSubtotalModal(false);
     setSettlementModalType('subtotal');
+    setPendingSplitCheckout(null);
     setSubtotalLineGroups([]);
     setSubtotalSelectedLeftIds([]);
     setSubtotalSelectedRightIds([]);
@@ -379,6 +470,40 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         setPaymentSuccessMessage(`Partial payment successful (${formatPaymentAmount(assignedTotal)}). Remaining: ${formatPaymentAmount(remainingDue)}.`);
         return;
       }
+      if (pendingSplitCheckout?.type === 'splitBill') {
+        const paidOrderIds = await settleSplitBillSelection(pendingSplitCheckout.lineIds || []);
+        if (paidOrderIds.length === 0) {
+          throw new Error('No split bill order available for checkout.');
+        }
+
+        let printedSuccessfully = true;
+        let printResult = null;
+        try {
+          for (const paidOrderId of paidOrderIds) {
+            // Split checkout prints only selected(right panel) items because paid split orders contain only those items.
+            printResult = await printTicketAutomatically(paidOrderId);
+          }
+        } catch (printErr) {
+          printedSuccessfully = false;
+          setPaymentErrorMessage(printErr?.message || 'Automatic ticket print failed.');
+        }
+
+        await onPaymentCompleted?.(paidOrderIds);
+        if (printedSuccessfully) {
+          setPaymentSuccessMessage(
+            `Payment successful (${formatPaymentAmount(orderTotal)}). Receipt printed successfully${printResult?.printerName ? ` on ${printResult.printerName}` : ''}.`
+          );
+        }
+
+        const nextAction = pendingSplitCheckout.action;
+        resetAfterSuccessfulPayment();
+        if (nextAction === 'continue') {
+          setSettlementModalType('splitBill');
+          setShowSettlementSubtotalModal(true);
+        }
+        return;
+      }
+
       const targetOrderIds = showSettlementActions
         ? savedOrdersForSelectedTable.map((o) => o.id).filter(Boolean)
         : (order?.id ? [order.id] : []);
@@ -809,7 +934,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 type="button"
                 disabled={payConfirmLoading}
                 className="mt-auto w-[230px] py-3 px-6 bg-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-400"
-                onClick={() => setShowPayDifferentlyModal(false)}
+                onClick={() => {
+                  setShowPayDifferentlyModal(false);
+                  setPendingSplitCheckout(null);
+                }}
               >
                 {t('cancel')}
               </button>
@@ -1000,7 +1128,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
               <div className="flex flex-col h-full w-full">
                 <div className="flex-1 border border-pos-border bg-pos-bg flex flex-col">
-                  <div className="flex-1 overflow-auto">
+                  <div ref={splitRightPanelScrollRef} className="flex-1 overflow-auto">
                     {settlementSubtotalRightGroups.map((group) => (
                       <div
                         key={group.id}
@@ -1037,7 +1165,15 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       </div>
                     ))}
                   </div>
-                  <div className="py-3 flex items-center justify-center border-t border-pos-border/50">
+                  <div className="py-3 flex items-center justify-around gap-5">
+                    <button
+                      type="button"
+                      className="w-16 h-14 rounded bg-pos-surface text-pos-text text-4xl leading-none hover:bg-pos-surface-hover"
+                      onClick={() => scrollSplitRightPanel(-1)}
+                      aria-label={t('scrollUp')}
+                    >
+                      ↑
+                    </button>
                     <button
                       type="button"
                       className="min-w-[200px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
@@ -1048,6 +1184,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       }}
                     >
                       {t('again')}
+                    </button>
+                    <button
+                      type="button"
+                      className="w-16 h-14 rounded bg-pos-surface text-pos-text text-4xl leading-none hover:bg-pos-surface-hover"
+                      onClick={() => scrollSplitRightPanel(1)}
+                      aria-label={t('scrollDown')}
+                    >
+                      ↓
                     </button>
                   </div>
                 </div>
@@ -1069,32 +1213,42 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <>
                       <button
                         type="button"
-                        disabled={settlementSubtotalLeftLines.length > 0}
+                        disabled={!hasSplitBillSelection}
                         className={`min-w-[200px] min-h-[80px] py-3 px-6 rounded text-2xl ${
-                          settlementSubtotalLeftLines.length > 0
+                          !hasSplitBillSelection
                             ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                             : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                         }`}
                         onClick={() => {
-                          if (settlementSubtotalLeftLines.length > 0) return;
+                          if (!hasSplitBillSelection) return;
                           setShowSettlementSubtotalModal(false);
-                          openPayDifferentlyModal();
+                          setPendingSplitCheckout({
+                            type: 'splitBill',
+                            action: 'return',
+                            lineIds: splitSelectedLineIds
+                          });
+                          openPayDifferentlyModal(splitSelectedTotal);
                         }}
                       >
                         {t('checkoutAndReturn')}
                       </button>
                       <button
                         type="button"
-                        disabled={settlementSubtotalLeftLines.length > 0}
+                        disabled={!hasSplitBillSelection}
                         className={`min-w-[220px] min-h-[80px] py-3 px-6 rounded text-2xl ${
-                          settlementSubtotalLeftLines.length > 0
+                          !hasSplitBillSelection
                             ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                             : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                         }`}
                         onClick={() => {
-                          if (settlementSubtotalLeftLines.length > 0) return;
+                          if (!hasSplitBillSelection) return;
                           setShowSettlementSubtotalModal(false);
-                          openPayDifferentlyModal();
+                          setPendingSplitCheckout({
+                            type: 'splitBill',
+                            action: 'continue',
+                            lineIds: splitSelectedLineIds
+                          });
+                          openPayDifferentlyModal(splitSelectedTotal);
                         }}
                       >
                         {t('checkoutAndContinueSplit')}
@@ -1112,6 +1266,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       onClick={() => {
                         if (settlementSubtotalLeftLines.length > 0) return;
                         setShowSettlementSubtotalModal(false);
+                        setPendingSplitCheckout(null);
                         openPayDifferentlyModal();
                       }}
                     >
