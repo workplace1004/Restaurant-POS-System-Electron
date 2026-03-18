@@ -28,9 +28,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
   const [showFinalSettlementModal, setShowFinalSettlementModal] = useState(false);
   const [showSettlementSubtotalModal, setShowSettlementSubtotalModal] = useState(false);
-  const [subtotalMovedLineIds, setSubtotalMovedLineIds] = useState([]);
+  const [settlementModalType, setSettlementModalType] = useState('subtotal');
+  const [subtotalLineGroups, setSubtotalLineGroups] = useState([]);
   const [subtotalSelectedLeftIds, setSubtotalSelectedLeftIds] = useState([]);
-  const [subtotalSelectedRightId, setSubtotalSelectedRightId] = useState(null);
+  const [subtotalSelectedRightIds, setSubtotalSelectedRightIds] = useState([]);
   const [savedTableOrders, setSavedTableOrders] = useState([]);
 
   const total = order?.total ?? 0;
@@ -59,8 +60,20 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       amount: roundCurrency((Number(item?.price) || 0) * Math.max(1, Number(item?.quantity) || 1))
     }))
   );
-  const settlementSubtotalLeftLines = settlementSubtotalLines.filter((line) => !subtotalMovedLineIds.includes(line.id));
-  const settlementSubtotalRightLines = settlementSubtotalLines.filter((line) => subtotalMovedLineIds.includes(line.id));
+  const settlementSubtotalLineById = new Map(settlementSubtotalLines.map((line) => [line.id, line]));
+  const subtotalAssignedLineIds = new Set(subtotalLineGroups.flatMap((group) => group?.lineIds || []));
+  const settlementSubtotalLeftLines = settlementSubtotalLines.filter((line) => !subtotalAssignedLineIds.has(line.id));
+  const settlementSubtotalRightGroups = subtotalLineGroups
+    .map((group, index) => {
+      const lines = (group?.lineIds || []).map((id) => settlementSubtotalLineById.get(id)).filter(Boolean);
+      return {
+        id: group?.id || `group-${index + 1}`,
+        label: `${t('group')} ${index + 1}`,
+        lines,
+        total: roundCurrency(lines.reduce((sum, line) => sum + (Number(line?.amount) || 0), 0))
+      };
+    })
+    .filter((group) => group.lines.length > 0);
   const computeOrderTotal = (sourceOrder) =>
     roundCurrency((sourceOrder?.items || []).reduce((sum, item) => sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 0), 0));
   const currentOrderTotal = hasOrderItems ? computeOrderTotal({ items }) : roundCurrency(total);
@@ -314,9 +327,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setCustomAmount('');
     setShowDeleteAllModal(false);
     setShowSettlementSubtotalModal(false);
-    setSubtotalMovedLineIds([]);
+    setSettlementModalType('subtotal');
+    setSubtotalLineGroups([]);
     setSubtotalSelectedLeftIds([]);
-    setSubtotalSelectedRightId(null);
+    setSubtotalSelectedRightIds([]);
   };
 
   const handleConfirmPayment = async () => {
@@ -848,9 +862,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   onClick={() => {
                     setShowFinalSettlementModal(false);
                     setShowSettlementSubtotalModal(true);
-                    setSubtotalMovedLineIds([]);
+                    setSettlementModalType('subtotal');
+                    setSubtotalLineGroups([]);
                     setSubtotalSelectedLeftIds([]);
-                    setSubtotalSelectedRightId(null);
+                    setSubtotalSelectedRightIds([]);
                   }}
                 >
                   {t('subtotal')}
@@ -866,6 +881,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <button
                 type="button"
                 className="h-20 bg-gray-200 border-none rounded text-3xl font-semibold text-gray-700 hover:bg-gray-300"
+                onClick={() => {
+                  setShowFinalSettlementModal(false);
+                  setShowSettlementSubtotalModal(true);
+                  setSettlementModalType('splitBill');
+                  setSubtotalLineGroups([]);
+                  setSubtotalSelectedLeftIds([]);
+                  setSubtotalSelectedRightIds([]);
+                }}
               >
                 {t('splitBill')}
               </button>
@@ -905,7 +928,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                         setSubtotalSelectedLeftIds((prev) =>
                           prev.includes(line.id) ? prev.filter((id) => id !== line.id) : [...prev, line.id]
                         );
-                        setSubtotalSelectedRightId(null);
+                        setSubtotalSelectedRightIds([]);
                       }}
                     >
                       <span>- {line.label}</span>
@@ -924,7 +947,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     }`}
                     onClick={() => {
                       setSubtotalSelectedLeftIds(settlementSubtotalLeftLines.map((line) => line.id));
-                      setSubtotalSelectedRightId(null);
+                      setSubtotalSelectedRightIds([]);
                     }}
                   >
                     {t('all')}
@@ -939,12 +962,16 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   disabled={subtotalSelectedLeftIds.length === 0}
                   onClick={() => {
                     if (subtotalSelectedLeftIds.length === 0) return;
-                    setSubtotalMovedLineIds((prev) => {
-                      const merged = new Set(prev);
-                      subtotalSelectedLeftIds.forEach((id) => merged.add(id));
-                      return Array.from(merged);
-                    });
+                    const idsToMove = subtotalSelectedLeftIds.filter((id) =>
+                      settlementSubtotalLeftLines.some((line) => line.id === id)
+                    );
+                    if (idsToMove.length === 0) return;
+                    setSubtotalLineGroups((prev) => [
+                      ...prev,
+                      { id: `group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, lineIds: idsToMove }
+                    ]);
                     setSubtotalSelectedLeftIds([]);
+                    setSubtotalSelectedRightIds([]);
                   }}
                 >
                   →
@@ -952,11 +979,18 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <button
                   type="button"
                   className="text-6xl leading-none hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
-                  disabled={!subtotalSelectedRightId}
+                  disabled={subtotalSelectedRightIds.length === 0}
                   onClick={() => {
-                    if (!subtotalSelectedRightId) return;
-                    setSubtotalMovedLineIds((prev) => prev.filter((id) => id !== subtotalSelectedRightId));
-                    setSubtotalSelectedRightId(null);
+                    if (subtotalSelectedRightIds.length === 0) return;
+                    setSubtotalLineGroups((prev) =>
+                      prev
+                        .map((group) => ({
+                          ...group,
+                          lineIds: (group?.lineIds || []).filter((id) => !subtotalSelectedRightIds.includes(id))
+                        }))
+                        .filter((group) => (group?.lineIds || []).length > 0)
+                    );
+                    setSubtotalSelectedRightIds([]);
                     setSubtotalSelectedLeftIds([]);
                   }}
                 >
@@ -967,20 +1001,40 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <div className="flex flex-col h-full w-full">
                 <div className="flex-1 border border-pos-border bg-pos-bg flex flex-col">
                   <div className="flex-1 overflow-auto">
-                    {settlementSubtotalRightLines.map((line) => (
-                      <button
-                        key={line.id}
-                        type="button"
-                        className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-2xl text-pos-text flex items-center justify-between ${subtotalSelectedRightId === line.id ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
-                          }`}
-                        onClick={() => {
-                          setSubtotalSelectedRightId(line.id);
-                        setSubtotalSelectedLeftIds([]);
-                        }}
+                    {settlementSubtotalRightGroups.map((group) => (
+                      <div
+                        key={group.id}
+                        className={`px-4 py-3 border-b ${
+                          group.lines.length > 0 && group.lines.every((line) => subtotalSelectedRightIds.includes(line.id))
+                            ? 'border-2 border-rose-500 rounded-md'
+                            : ''
+                        }`}
                       >
-                        <span>- {line.label}</span>
-                        <span>€ {line.amount.toFixed(2)}</span>
-                      </button>
+                        <div className="text-center text-3xl font-semibold text-pos-text mb-2">
+                          {group.label}
+                        </div>
+                        {group.lines.map((line) => (
+                          <button
+                            key={line.id}
+                            type="button"
+                            className={`w-full text-left px-2 py-1 text-2xl text-pos-text flex items-center justify-between ${
+                              subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                            }`}
+                            onClick={() => {
+                              setSubtotalSelectedRightIds((prev) =>
+                                prev.includes(line.id) ? prev.filter((id) => id !== line.id) : [...prev, line.id]
+                              );
+                              setSubtotalSelectedLeftIds([]);
+                            }}
+                          >
+                            <span>- {line.label}</span>
+                            <span>€ {line.amount.toFixed(2)}</span>
+                          </button>
+                        ))}
+                        <div className="text-center text-3xl font-semibold text-pos-text mt-2">
+                          € {group.total.toFixed(2)}
+                        </div>
+                      </div>
                     ))}
                   </div>
                   <div className="py-3 flex items-center justify-center border-t border-pos-border/50">
@@ -988,9 +1042,9 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       type="button"
                       className="min-w-[200px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
                       onClick={() => {
-                        setSubtotalMovedLineIds([]);
+                        setSubtotalLineGroups([]);
                         setSubtotalSelectedLeftIds([]);
-                        setSubtotalSelectedRightId(null);
+                        setSubtotalSelectedRightIds([]);
                       }}
                     >
                       {t('again')}
@@ -1000,32 +1054,70 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <div className="pt-4 flex items-center justify-center gap-12">
                   <button
                     type="button"
-                    className="min-w-[200px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
+                    className="min-w-[200px] min-h-[80px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
                     onClick={() => {
                       setShowSettlementSubtotalModal(false);
-                      setSubtotalMovedLineIds([]);
+                      setSettlementModalType('subtotal');
+                      setSubtotalLineGroups([]);
                       setSubtotalSelectedLeftIds([]);
-                      setSubtotalSelectedRightId(null);
+                      setSubtotalSelectedRightIds([]);
                     }}
                   >
                     {t('cancel')}
                   </button>
-                  <button
-                    type="button"
-                    disabled={settlementSubtotalLeftLines.length > 0}
-                    className={`min-w-[200px] py-3 px-6 rounded text-2xl ${
-                      settlementSubtotalLeftLines.length > 0
-                        ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                        : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
-                    }`}
-                    onClick={() => {
-                      if (settlementSubtotalLeftLines.length > 0) return;
-                      setShowSettlementSubtotalModal(false);
-                      openPayDifferentlyModal();
-                    }}
-                  >
-                    {t('checkout')}
-                  </button>
+                  {settlementModalType === 'splitBill' ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={settlementSubtotalLeftLines.length > 0}
+                        className={`min-w-[200px] min-h-[80px] py-3 px-6 rounded text-2xl ${
+                          settlementSubtotalLeftLines.length > 0
+                            ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                            : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                        }`}
+                        onClick={() => {
+                          if (settlementSubtotalLeftLines.length > 0) return;
+                          setShowSettlementSubtotalModal(false);
+                          openPayDifferentlyModal();
+                        }}
+                      >
+                        {t('checkoutAndReturn')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={settlementSubtotalLeftLines.length > 0}
+                        className={`min-w-[220px] min-h-[80px] py-3 px-6 rounded text-2xl ${
+                          settlementSubtotalLeftLines.length > 0
+                            ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                            : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                        }`}
+                        onClick={() => {
+                          if (settlementSubtotalLeftLines.length > 0) return;
+                          setShowSettlementSubtotalModal(false);
+                          openPayDifferentlyModal();
+                        }}
+                      >
+                        {t('checkoutAndContinueSplit')}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={settlementSubtotalLeftLines.length > 0}
+                      className={`min-w-[200px] py-3 px-6 rounded text-2xl ${
+                        settlementSubtotalLeftLines.length > 0
+                          ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                          : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                      }`}
+                      onClick={() => {
+                        if (settlementSubtotalLeftLines.length > 0) return;
+                        setShowSettlementSubtotalModal(false);
+                        openPayDifferentlyModal();
+                      }}
+                    >
+                      {t('checkout')}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
