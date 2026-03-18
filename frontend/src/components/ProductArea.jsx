@@ -203,7 +203,7 @@ export function ProductArea({
                     />
                   ) : null}
                   <div className="flex flex-col items-start justify-center">
-                    <span className="text-2xl">{product.name}</span>
+                    <span className="text-xl">{product.name}</span>
                     <span className="font-semibold text-2xl">€{Number(product.price).toFixed(2)}</span>
                   </div>
                 </button>

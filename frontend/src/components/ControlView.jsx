@@ -309,6 +309,7 @@ const OPTION_BUTTON_ITEMS = [
   { id: 'webshop-tijdsloten', labelKey: 'control.optionButton.webshopTimeslots', fallbackLabel: 'Webshop tijdsloten' }
 ];
 const OPTION_BUTTON_SLOT_COUNT = 28;
+const OPTION_BUTTON_LOCKED_ID = 'meer';
 const OPTION_BUTTON_ITEM_IDS = OPTION_BUTTON_ITEMS.map((item) => item.id);
 const OPTION_BUTTON_ITEM_BY_ID = Object.fromEntries(
   OPTION_BUTTON_ITEMS.map((item) => [item.id, item])
@@ -346,6 +347,9 @@ function normalizeOptionButtonSlots(value) {
     if (used.has(candidate)) continue;
     next[i] = candidate;
     used.add(candidate);
+  }
+  if (!next.includes(OPTION_BUTTON_LOCKED_ID)) {
+    next[OPTION_BUTTON_SLOT_COUNT - 1] = OPTION_BUTTON_LOCKED_ID;
   }
   return next;
 }
@@ -2647,6 +2651,13 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     event.dataTransfer.setData('text/plain', itemId);
     event.dataTransfer.effectAllowed = 'move';
   };
+  const handleOptionButtonDragStartFromSlot = (event, slotIndex) => {
+    const itemId = String(optionButtonSlots[slotIndex] || '').trim();
+    if (!itemId || itemId === OPTION_BUTTON_LOCKED_ID) return;
+    event.dataTransfer.setData('text/plain', itemId);
+    event.dataTransfer.effectAllowed = 'move';
+    setSelectedOptionButtonSlotIndex(slotIndex);
+  };
 
   const handleOptionButtonDropOnSlot = (event, slotIndex) => {
     event.preventDefault();
@@ -2655,6 +2666,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     if (!OPTION_BUTTON_ITEM_IDS.includes(droppedId)) return;
     setOptionButtonSlots((prev) => {
       const next = [...prev];
+      if (next[slotIndex] === OPTION_BUTTON_LOCKED_ID && droppedId !== OPTION_BUTTON_LOCKED_ID) {
+        return prev;
+      }
       const existingIndex = next.findIndex((id) => id === droppedId);
       if (existingIndex >= 0) next[existingIndex] = '';
       next[slotIndex] = droppedId;
@@ -2668,6 +2682,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setOptionButtonSlots((prev) => {
       const next = [...prev];
       if (!next[selectedOptionButtonSlotIndex]) return prev;
+      if (next[selectedOptionButtonSlotIndex] === OPTION_BUTTON_LOCKED_ID) return prev;
       next[selectedOptionButtonSlotIndex] = '';
       return next;
     });
@@ -2675,6 +2690,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   const hasSelectedOptionButton = Number.isInteger(selectedOptionButtonSlotIndex)
     && !!optionButtonSlots[selectedOptionButtonSlotIndex];
+  const hasSelectedRemovableOptionButton = Number.isInteger(selectedOptionButtonSlotIndex)
+    && !!optionButtonSlots[selectedOptionButtonSlotIndex]
+    && optionButtonSlots[selectedOptionButtonSlotIndex] !== OPTION_BUTTON_LOCKED_ID;
 
   useEffect(() => {
     if (!showSystemSettingsModal) return;
@@ -6290,6 +6308,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             <button
                               key={`option-slot-${slotIndex}`}
                               type="button"
+                              draggable={!!assignedId && assignedId !== OPTION_BUTTON_LOCKED_ID}
+                              onDragStart={(event) => handleOptionButtonDragStartFromSlot(event, slotIndex)}
                               onClick={() => setSelectedOptionButtonSlotIndex(slotIndex)}
                               onDragOver={(event) => event.preventDefault()}
                               onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
@@ -6306,9 +6326,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         <button
                           type="button"
                           onClick={handleRemoveOptionButtonFromSlot}
-                          disabled={!hasSelectedOptionButton}
+                          disabled={!hasSelectedRemovableOptionButton}
                           className={`text-[20px] ${
-                            hasSelectedOptionButton
+                            hasSelectedRemovableOptionButton
                               ? 'text-[#858d99] hover:text-[#5c6370]'
                               : 'text-[#9ca3af] opacity-60 cursor-not-allowed'
                           }`}
