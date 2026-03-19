@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dropdown } from './Dropdown';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { KeyboardWithNumpad } from './KeyboardWithNumpad';
@@ -407,6 +407,128 @@ const TABLE_LOCATION_BACKGROUND_OPTIONS = [
   { value: 'blue', label: 'Blue' }
 ];
 
+const TABLE_LAYOUT_EDITOR_STORAGE_KEY = 'pos.table_layout_editor_by_location';
+
+const TABLE_TEMPLATE_OPTIONS = [
+  { id: '4table', src: '/4table.svg', chairs: 4, width: 130, height: 155 },
+  { id: '5table', src: '/5table.svg', chairs: 5, width: 145, height: 173 },
+  { id: '6table', src: '/6table.svg', chairs: 6, width: 150, height: 179 }
+];
+
+const TABLE_BOARD_COLOR_OPTIONS = [
+  '#facc15', // yellow
+  '#22c55e', // green
+  '#3b82f6', // blue
+  '#ef4444', // red
+  '#a855f7', // purple
+  '#ffffff'  // white
+];
+
+const createDefaultBoard = (table, color = '#facc15') => {
+  const tableW = Math.max(60, Number(table?.width) || 120);
+  const tableH = Math.max(40, Number(table?.height) || 80);
+  const boardW = Math.max(120, Math.round(tableW + 40));
+  const boardH = Math.max(120, Math.round(tableH + 40));
+  return {
+    id: `board-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    color,
+    x: 0,
+    y: 0,
+    width: boardW,
+    height: boardH,
+    rotation: 0
+  };
+};
+
+const normalizeBoardToItem = (b, defaultColor = '#facc15') => ({
+  id: b?.id && typeof b.id === 'string' ? b.id : `board-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  color: typeof b?.color === 'string' && b.color.trim() ? b.color.trim() : defaultColor,
+  x: Number(b?.x) || 0,
+  y: Number(b?.y) || 0,
+  width: Math.max(10, Number(b?.width) || 120),
+  height: Math.max(10, Number(b?.height) || 120),
+  rotation: Number(b?.rotation) || 0
+});
+
+const createDefaultFlowerPot = () => ({
+  id: `flowerpot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  x: 0,
+  y: 0,
+  width: 60,
+  height: 72,
+  rotation: 0
+});
+
+const normalizeFlowerPotToItem = (fp) => ({
+  id: fp?.id && typeof fp.id === 'string' ? fp.id : `flowerpot-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  x: Number(fp?.x) || 0,
+  y: Number(fp?.y) || 0,
+  width: Math.max(10, Number(fp?.width) || 60),
+  height: Math.max(10, Number(fp?.height) || 72),
+  rotation: Number(fp?.rotation) || 0
+});
+
+const createDefaultLayoutTable = (index = 1, templateType = '4table') => {
+  const tpl = TABLE_TEMPLATE_OPTIONS.find((item) => item.id === templateType) || TABLE_TEMPLATE_OPTIONS[0];
+  return {
+    id: `tbl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: `T-${String(index).padStart(2, '0')}`,
+    x: 120 + (index - 1) * 180,
+    y: 120 + ((index - 1) % 3) * 120,
+    width: tpl.width,
+    height: tpl.height,
+    chairs: tpl.chairs,
+    rotation: 0,
+    round: false,
+    templateType: tpl.id,
+    boards: [],
+    flowerPots: []
+  };
+};
+
+const normalizeLayoutEditorDraft = (raw, locationName = 'Restaurant') => {
+  const hasTablesArray = Array.isArray(raw?.tables);
+  const tables = Array.isArray(raw?.tables)
+    ? raw.tables.map((table, index) => ({
+      id: String(table?.id || `tbl-${index + 1}`),
+      name: String(table?.name || `T-${String(index + 1).padStart(2, '0')}`),
+      x: Number(table?.x) || 0,
+      y: Number(table?.y) || 0,
+      width: Math.max(60, Number(table?.width) || 120),
+      height: Math.max(40, Number(table?.height) || 80),
+      chairs: Math.max(0, Number(table?.chairs) || 4),
+      rotation: Number(table?.rotation) || 0,
+      round: !!table?.round,
+      templateType: TABLE_TEMPLATE_OPTIONS.some((tpl) => tpl.id === table?.templateType)
+        ? table.templateType
+        : ((Number(table?.chairs) || 4) >= 6 ? '6table' : (Number(table?.chairs) || 4) >= 5 ? '5table' : '4table'),
+      boards: (() => {
+        if (Array.isArray(table?.boards) && table.boards.length > 0) {
+          return table.boards.map((b) => normalizeBoardToItem(b));
+        }
+        if (table?.board && typeof table.board === 'object') {
+          return [normalizeBoardToItem(table.board)];
+        }
+        if (typeof table?.boardColor === 'string' && table.boardColor.trim()) {
+          return [normalizeBoardToItem(createDefaultBoard(table, table.boardColor.trim()))];
+        }
+        return [];
+      })(),
+      flowerPots: Array.isArray(table?.flowerPots) && table.flowerPots.length > 0
+        ? table.flowerPots.map((fp) => normalizeFlowerPotToItem(fp))
+        : (table?.flowerPot && typeof table.flowerPot === 'object' ? [normalizeFlowerPotToItem(table.flowerPot)] : [])
+    }))
+    : [];
+  return {
+    floorName: String(raw?.floorName || locationName || 'Restaurant'),
+    floorWidth: Math.max(400, Number(raw?.floorWidth) || 2048),
+    floorHeight: Math.max(300, Number(raw?.floorHeight) || 654),
+    bookingCapacity: Math.max(0, Number(raw?.bookingCapacity) || 0),
+    floors: Math.max(1, Number(raw?.floors) || 1),
+    tables: hasTablesArray ? tables : [createDefaultLayoutTable(1)]
+  };
+};
+
 const DEFAULT_PAYMENT_TYPES = [
   { id: '1', name: 'Cash', active: true, sortOrder: 0 },
   { id: '2', name: 'Bancontact', active: true, sortOrder: 1 },
@@ -770,6 +892,19 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const [savingTableLocation, setSavingTableLocation] = useState(false);
   const [deleteConfirmTableLocationId, setDeleteConfirmTableLocationId] = useState(null);
   const [tableLocationsPage, setTableLocationsPage] = useState(0);
+  const [showSetTablesModal, setShowSetTablesModal] = useState(false);
+  const [setTablesLocationId, setSetTablesLocationId] = useState(null);
+  const [setTablesLocationName, setSetTablesLocationName] = useState('');
+  const [setTablesDraft, setSetTablesDraft] = useState(() => normalizeLayoutEditorDraft(null, 'Restaurant'));
+  const [setTablesSelectedTableId, setSetTablesSelectedTableId] = useState(null);
+  const [setTablesSelectedBoardIndex, setSetTablesSelectedBoardIndex] = useState(null);
+  const [setTablesSelectedFlowerPotIndex, setSetTablesSelectedFlowerPotIndex] = useState(null);
+  const [showSetTableTypeModal, setShowSetTableTypeModal] = useState(false);
+  const [showSetBoardColorModal, setShowSetBoardColorModal] = useState(false);
+  const setTablesCanvasRef = useRef(null);
+  const setTablesDragRef = useRef(null);
+  const [setTablesDraggingId, setSetTablesDraggingId] = useState(null);
+  const [setTablesDraggingType, setSetTablesDraggingType] = useState(null);
 
   const [templateTheme, setTemplateTheme] = useState(() => {
     try {
@@ -2458,6 +2593,307 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       fetchTableLocations();
     }
     setDeleteConfirmTableLocationId(null);
+  };
+
+  const openSetTablesModal = (loc) => {
+    const locationId = String(loc?.id || '');
+    const locationName = String(loc?.name || 'Restaurant');
+    let draft = normalizeLayoutEditorDraft(null, locationName);
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem(TABLE_LAYOUT_EDITOR_STORAGE_KEY);
+      const allLayouts = raw ? JSON.parse(raw) : {};
+      if (allLayouts && typeof allLayouts === 'object' && allLayouts[locationId]) {
+        draft = normalizeLayoutEditorDraft(allLayouts[locationId], locationName);
+      }
+    } catch {
+      draft = normalizeLayoutEditorDraft(null, locationName);
+    }
+    setSetTablesLocationId(locationId);
+    setSetTablesLocationName(locationName);
+    setSetTablesDraft(draft);
+    setSetTablesSelectedTableId(draft.tables[0]?.id || null);
+    setShowSetTablesModal(true);
+  };
+
+  const closeSetTablesModal = () => {
+    setShowSetTablesModal(false);
+    setShowSetTableTypeModal(false);
+    setShowSetBoardColorModal(false);
+    setSetTablesLocationId(null);
+    setSetTablesLocationName('');
+    setSetTablesSelectedTableId(null);
+    setSetTablesSelectedBoardIndex(null);
+    setSetTablesSelectedFlowerPotIndex(null);
+  };
+
+  const selectedSetTable = setTablesDraft.tables.find((table) => table.id === setTablesSelectedTableId) || null;
+  const boards = selectedSetTable?.boards ?? [];
+  const flowerPots = selectedSetTable?.flowerPots ?? [];
+  const selectedSetBoardIndex = setTablesSelectedBoardIndex != null && setTablesSelectedBoardIndex >= 0 && setTablesSelectedBoardIndex < boards.length ? setTablesSelectedBoardIndex : null;
+  const selectedSetBoard = selectedSetBoardIndex != null ? boards[selectedSetBoardIndex] : null;
+  const selectedSetFlowerPotIndex = setTablesSelectedFlowerPotIndex != null && setTablesSelectedFlowerPotIndex >= 0 && setTablesSelectedFlowerPotIndex < flowerPots.length ? setTablesSelectedFlowerPotIndex : null;
+  const selectedSetFlowerPot = selectedSetFlowerPotIndex != null ? flowerPots[selectedSetFlowerPotIndex] : null;
+
+  const updateSelectedSetTable = (patch) => {
+    if (!setTablesSelectedTableId) return;
+    setSetTablesDraft((prev) => ({
+      ...prev,
+      tables: prev.tables.map((table) => {
+        if (table.id !== setTablesSelectedTableId) return table;
+        return { ...table, ...patch };
+      })
+    }));
+  };
+
+  const updateSelectedSetBoard = (patch) => {
+    if (!setTablesSelectedTableId || selectedSetBoardIndex == null) return;
+    setSetTablesDraft((prev) => ({
+      ...prev,
+      tables: prev.tables.map((table) => {
+        if (table.id !== setTablesSelectedTableId || !Array.isArray(table.boards) || selectedSetBoardIndex >= table.boards.length) return table;
+        const nextBoards = [...table.boards];
+        nextBoards[selectedSetBoardIndex] = { ...nextBoards[selectedSetBoardIndex], ...patch };
+        return { ...table, boards: nextBoards };
+      })
+    }));
+  };
+
+  const updateSelectedSetFlowerPot = (patch) => {
+    if (!setTablesSelectedTableId || selectedSetFlowerPotIndex == null) return;
+    setSetTablesDraft((prev) => ({
+      ...prev,
+      tables: prev.tables.map((table) => {
+        if (table.id !== setTablesSelectedTableId || !Array.isArray(table.flowerPots) || selectedSetFlowerPotIndex >= table.flowerPots.length) return table;
+        const nextFlowerPots = [...table.flowerPots];
+        nextFlowerPots[selectedSetFlowerPotIndex] = { ...nextFlowerPots[selectedSetFlowerPotIndex], ...patch };
+        return { ...table, flowerPots: nextFlowerPots };
+      })
+    }));
+  };
+
+  const addSetTable = () => {
+    setShowSetTableTypeModal(true);
+  };
+
+  const addSetTableWithTemplate = (templateType) => {
+    setSetTablesDraft((prev) => {
+      const nextTable = createDefaultLayoutTable(prev.tables.length + 1, templateType);
+      const next = { ...prev, tables: [...prev.tables, nextTable] };
+      setSetTablesSelectedTableId(nextTable.id);
+      return next;
+    });
+    setShowSetTableTypeModal(false);
+  };
+
+  const handleAddBoard = () => {
+    if (!setTablesSelectedTableId) return;
+    setShowSetBoardColorModal(true);
+  };
+
+  const handleRemoveBoard = () => {
+    if (!setTablesSelectedTableId) return;
+    setSetTablesDraft((prev) => {
+      const table = prev.tables.find((t) => t.id === setTablesSelectedTableId);
+      if (!table || !Array.isArray(table.boards) || table.boards.length === 0) return prev;
+      const idx = selectedSetBoardIndex != null && selectedSetBoardIndex < table.boards.length ? selectedSetBoardIndex : table.boards.length - 1;
+      const nextBoards = table.boards.filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        tables: prev.tables.map((t) => (t.id !== setTablesSelectedTableId ? t : { ...t, boards: nextBoards }))
+      };
+    });
+    setSetTablesSelectedBoardIndex(null);
+  };
+
+  const handleSelectBoardColor = (color) => {
+    if (!setTablesSelectedTableId) return;
+    setSetTablesDraft((prev) => ({
+      ...prev,
+      tables: prev.tables.map((table) => {
+        if (table.id !== setTablesSelectedTableId) return table;
+        const newBoard = { ...createDefaultBoard(table, color), color, x: 0, y: 0 };
+        const nextBoards = [...(Array.isArray(table.boards) ? table.boards : []), newBoard];
+        return { ...table, boards: nextBoards };
+      })
+    }));
+    setShowSetBoardColorModal(false);
+  };
+
+  const handleAddFlowerPot = () => {
+    if (!setTablesSelectedTableId) return;
+    setSetTablesDraft((prev) => ({
+      ...prev,
+      tables: prev.tables.map((table) => {
+        if (table.id !== setTablesSelectedTableId) return table;
+        const newFlowerPot = createDefaultFlowerPot();
+        const nextFlowerPots = [...(Array.isArray(table.flowerPots) ? table.flowerPots : []), newFlowerPot];
+        return { ...table, flowerPots: nextFlowerPots };
+      })
+    }));
+  };
+
+  const handleRemoveFlowerPot = () => {
+    if (!setTablesSelectedTableId) return;
+    setSetTablesDraft((prev) => {
+      const table = prev.tables.find((t) => t.id === setTablesSelectedTableId);
+      if (!table || !Array.isArray(table.flowerPots) || table.flowerPots.length === 0) return prev;
+      const idx = selectedSetFlowerPotIndex != null && selectedSetFlowerPotIndex < table.flowerPots.length ? selectedSetFlowerPotIndex : table.flowerPots.length - 1;
+      const nextFlowerPots = table.flowerPots.filter((_, i) => i !== idx);
+      return {
+        ...prev,
+        tables: prev.tables.map((t) => (t.id !== setTablesSelectedTableId ? t : { ...t, flowerPots: nextFlowerPots }))
+      };
+    });
+    setSetTablesSelectedFlowerPotIndex(null);
+  };
+
+  const startSetTableDrag = (event, table) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setSetTablesSelectedTableId(table.id);
+    setTablesDragRef.current = {
+      type: 'table',
+      id: table.id,
+      startMouseX: event.clientX,
+      startMouseY: event.clientY,
+      startX: Number(table.x) || 0,
+      startY: Number(table.y) || 0
+    };
+    setSetTablesDraggingId(table.id);
+    setSetTablesDraggingType('table');
+  };
+
+  const startSetBoardDrag = (event, table, boardIndex) => {
+    const boards = table?.boards;
+    if (!Array.isArray(boards) || boardIndex < 0 || boardIndex >= boards.length) return;
+    const board = boards[boardIndex];
+    event.preventDefault();
+    event.stopPropagation();
+    setSetTablesSelectedTableId(table.id);
+    setSetTablesSelectedBoardIndex(boardIndex);
+    setTablesDragRef.current = {
+      type: 'board',
+      id: table.id,
+      boardIndex,
+      startMouseX: event.clientX,
+      startMouseY: event.clientY,
+      startX: Number(board.x) || 0,
+      startY: Number(board.y) || 0
+    };
+    setSetTablesDraggingId(table.id);
+    setSetTablesDraggingType('board');
+  };
+
+  const startSetFlowerPotDrag = (event, table, flowerPotIndex) => {
+    const pots = table?.flowerPots;
+    if (!Array.isArray(pots) || flowerPotIndex < 0 || flowerPotIndex >= pots.length) return;
+    const fp = pots[flowerPotIndex];
+    event.preventDefault();
+    event.stopPropagation();
+    setSetTablesSelectedTableId(table.id);
+    setSetTablesSelectedFlowerPotIndex(flowerPotIndex);
+    setTablesDragRef.current = {
+      type: 'flowerPot',
+      id: table.id,
+      flowerPotIndex,
+      startMouseX: event.clientX,
+      startMouseY: event.clientY,
+      startX: Number(fp.x) || 0,
+      startY: Number(fp.y) || 0
+    };
+    setSetTablesDraggingId(table.id);
+    setSetTablesDraggingType('flowerPot');
+  };
+
+  useEffect(() => {
+    if (!setTablesDraggingId) return undefined;
+
+    const onMouseMove = (event) => {
+      const drag = setTablesDragRef.current;
+      if (!drag) return;
+      const dx = event.clientX - drag.startMouseX;
+      const dy = event.clientY - drag.startMouseY;
+      const canvas = setTablesCanvasRef.current;
+      const canvasWidth = canvas?.clientWidth || 0;
+      const canvasHeight = canvas?.clientHeight || 0;
+
+      setSetTablesDraft((prev) => ({
+        ...prev,
+        tables: prev.tables.map((table) => {
+          if (table.id !== drag.id) return table;
+          if (drag.type === 'flowerPot' && Array.isArray(table.flowerPots) && drag.flowerPotIndex != null && table.flowerPots[drag.flowerPotIndex]) {
+            const fp = table.flowerPots[drag.flowerPotIndex];
+            const fpWidth = Math.max(10, Number(fp.width) || 0);
+            const fpHeight = Math.max(10, Number(fp.height) || 0);
+            const maxX = Math.max(0, canvasWidth - fpWidth);
+            const maxY = Math.max(0, canvasHeight - fpHeight);
+            const x = Math.min(maxX, Math.max(0, drag.startX + dx));
+            const y = Math.min(maxY, Math.max(0, drag.startY + dy));
+            const nextFlowerPots = [...table.flowerPots];
+            nextFlowerPots[drag.flowerPotIndex] = { ...fp, x, y };
+            return { ...table, flowerPots: nextFlowerPots };
+          }
+          if (drag.type === 'board' && Array.isArray(table.boards) && drag.boardIndex != null && table.boards[drag.boardIndex]) {
+            const board = table.boards[drag.boardIndex];
+            const boardWidth = Math.max(10, Number(board.width) || 0);
+            const boardHeight = Math.max(10, Number(board.height) || 0);
+            const maxX = Math.max(0, canvasWidth - boardWidth);
+            const maxY = Math.max(0, canvasHeight - boardHeight);
+            const x = Math.min(maxX, Math.max(0, drag.startX + dx));
+            const y = Math.min(maxY, Math.max(0, drag.startY + dy));
+            const nextBoards = [...table.boards];
+            nextBoards[drag.boardIndex] = { ...board, x, y };
+            return { ...table, boards: nextBoards };
+          }
+          const tableWidth = table.round ? Math.max(70, Number(table.width) || 0) : Math.max(60, Number(table.width) || 0);
+          const tableHeight = table.round ? tableWidth : Math.max(40, Number(table.height) || 0);
+          const maxX = Math.max(0, canvasWidth - tableWidth);
+          const maxY = Math.max(0, canvasHeight - tableHeight);
+          const x = Math.min(maxX, Math.max(0, drag.startX + dx));
+          const y = Math.min(maxY, Math.max(0, drag.startY + dy));
+          return { ...table, x, y };
+        })
+      }));
+    };
+
+    const onMouseUp = () => {
+      setTablesDragRef.current = null;
+      setSetTablesDraggingId(null);
+      setSetTablesDraggingType(null);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [setTablesDraggingId]);
+
+  const removeSetTable = () => {
+    if (!setTablesSelectedTableId) return;
+    setSetTablesDraft((prev) => {
+      const nextTables = prev.tables.filter((table) => table.id !== setTablesSelectedTableId);
+      setSetTablesSelectedTableId(nextTables[0]?.id || null);
+      return { ...prev, tables: nextTables };
+    });
+  };
+
+  const saveSetTablesLayout = () => {
+    if (!setTablesLocationId) return;
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem(TABLE_LAYOUT_EDITOR_STORAGE_KEY);
+      const allLayouts = raw ? JSON.parse(raw) : {};
+      const nextLayouts = allLayouts && typeof allLayouts === 'object' ? allLayouts : {};
+      nextLayouts[setTablesLocationId] = setTablesDraft;
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(TABLE_LAYOUT_EDITOR_STORAGE_KEY, JSON.stringify(nextLayouts));
+      }
+      showToast('success', tr('control.tables.layoutSaved', 'Table layout saved.'));
+      closeSetTablesModal();
+    } catch {
+      showToast('error', tr('control.tables.layoutSaveFailed', 'Failed to save table layout.'));
+    }
   };
 
   const handleDeleteGroup = async (id) => {
@@ -5593,7 +6029,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     disabled={tableLocationsLoading}
                     onClick={openTableLocationModal}
                   >
-                    {tr('control.tables.new', 'New table')}
+                    {tr('control.tables.new', 'New table setting')}
                   </button>
                 </div>
                 <ul className="w-full flex flex-col">
@@ -5612,6 +6048,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           <button
                             type="button"
                             className="px-4 pr-20 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
+                            onClick={() => openSetTablesModal(loc)}
                           >
                             {tr('control.tables.setTables', 'Set tables')}
                           </button>
@@ -6039,6 +6476,470 @@ export function ControlView({ currentUser, onLogout, onBack }) {
         </div>
       )}
 
+      {showSetTablesModal && topNavId === 'tables' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1600px] w-full h-[1040px] overflow-hidden flex">
+            <button
+              type="button"
+              className="absolute top-4 right-4 z-20 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+              onClick={closeSetTablesModal}
+              aria-label="Close"
+            >
+              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="w-[420px] shrink-0 border-r border-pos-border bg-black px-6 py-8 overflow-auto">
+              <h3 className="text-pos-text text-2xl font-semibold mb-6">
+                {tr('control.tables.setTables', 'Set tables')} - {setTablesLocationName || 'Restaurant'}
+              </h3>
+
+              <div className="space-y-4 text-pos-text text-xl">
+                <div className="flex items-center gap-3">
+                  <span className="w-[120px] shrink-0">{tr('name', 'Name')}</span>
+                  <input
+                    type="text"
+                    value={selectedSetTable?.name || ''}
+                    onChange={(e) => updateSelectedSetTable({ name: e.target.value })}
+                    className="flex-1 px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                  />
+                </div>
+
+                {[
+                  { key: 'x', label: 'x' },
+                  { key: 'y', label: 'y' },
+                  { key: 'width', label: tr('control.tables.width', 'Width') },
+                  { key: 'height', label: tr('control.tables.height', 'Height') }
+                ].map((field) => (
+                  <div key={field.key} className="flex items-center gap-3">
+                    <span className="w-[120px] shrink-0">{field.label}</span>
+                    <input
+                      type="number"
+                      value={selectedSetTable ? selectedSetTable[field.key] : 0}
+                      onChange={(e) => {
+                        const nextVal = Number(e.target.value);
+                        const safe = Number.isFinite(nextVal) ? nextVal : 0;
+                        if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, safe) });
+                        else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, safe) });
+                        else updateSelectedSetTable({ [field.key]: safe });
+                      }}
+                      className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                    />
+                    <button
+                      type="button"
+                      className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                      onClick={() => {
+                        const current = Number(selectedSetTable?.[field.key]) || 0;
+                        const nextVal = current - 10;
+                        if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, nextVal) });
+                        else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, nextVal) });
+                        else updateSelectedSetTable({ [field.key]: nextVal });
+                      }}
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                      onClick={() => {
+                        const current = Number(selectedSetTable?.[field.key]) || 0;
+                        const nextVal = current + 10;
+                        if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, nextVal) });
+                        else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, nextVal) });
+                        else updateSelectedSetTable({ [field.key]: nextVal });
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex items-center gap-3 w-full justify-between">
+                  <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={360}
+                    value={selectedSetTable?.rotation || 0}
+                    onChange={(e) => updateSelectedSetTable({ rotation: Number(e.target.value) || 0 })}
+                    className="flex-1"
+                  />
+                  <span className="w-14 text-right">{selectedSetTable?.rotation || 0}</span>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <span className="w-[120px] shrink-0">{tr('control.tables.round', 'Round')}</span>
+                  <input
+                    type="checkbox"
+                    checked={!!selectedSetTable?.round}
+                    onChange={(e) => updateSelectedSetTable({ round: e.target.checked })}
+                    className="w-7 h-7"
+                  />
+                </label>
+
+                <div className="h-px bg-pos-border my-3" />
+
+                <div className="flex gap-2 pt-2">
+                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={addSetTable}>
+                    + {tr('control.tables.table', 'table')}
+                  </button>
+                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={removeSetTable}>
+                    - {tr('control.tables.table', 'table')}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    onClick={handleAddBoard}
+                    disabled={!setTablesSelectedTableId}
+                  >
+                    + {tr('control.tables.board', 'board')}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    onClick={handleRemoveBoard}
+                    disabled={!setTablesSelectedTableId || boards.length === 0}
+                  >
+                    - {tr('control.tables.board', 'board')}
+                  </button>
+
+                </div>
+
+                <div className='flex gap-2 w-full justify-around'>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    onClick={handleAddFlowerPot}
+                    disabled={!setTablesSelectedTableId}
+                  >
+                    + flower pot
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    onClick={handleRemoveFlowerPot}
+                    disabled={!setTablesSelectedTableId || flowerPots.length === 0}
+                  >
+                    - flower pot
+                  </button>
+                </div>
+
+                {selectedSetBoard ? (
+                  <div className="space-y-3 pt-2">
+                    {[
+                      { key: 'x', label: 'board x' },
+                      { key: 'y', label: 'board y' },
+                      { key: 'width', label: tr('control.tables.width', 'Width') },
+                      { key: 'height', label: tr('control.tables.height', 'Height') }
+                    ].map((field) => (
+                      <div key={`board-${field.key}`} className="flex items-center gap-3">
+                        <span className="w-[120px] shrink-0">{field.label}</span>
+                        <input
+                          type="number"
+                          value={selectedSetBoard[field.key]}
+                          onChange={(e) => {
+                            const nextVal = Number(e.target.value);
+                            const safe = Number.isFinite(nextVal) ? nextVal : 0;
+                            if (field.key === 'width') updateSelectedSetBoard({ width: Math.max(10, safe) });
+                            else if (field.key === 'height') updateSelectedSetBoard({ height: Math.max(10, safe) });
+                            else updateSelectedSetBoard({ [field.key]: safe });
+                          }}
+                          className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                        />
+                        <button
+                          type="button"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          onClick={() => {
+                            const current = Number(selectedSetBoard[field.key]) || 0;
+                            const nextVal = current - 10;
+                            if (field.key === 'width') updateSelectedSetBoard({ width: Math.max(10, nextVal) });
+                            else if (field.key === 'height') updateSelectedSetBoard({ height: Math.max(10, nextVal) });
+                            else updateSelectedSetBoard({ [field.key]: nextVal });
+                          }}
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          onClick={() => {
+                            const current = Number(selectedSetBoard[field.key]) || 0;
+                            const nextVal = current + 10;
+                            if (field.key === 'width') updateSelectedSetBoard({ width: Math.max(10, nextVal) });
+                            else if (field.key === 'height') updateSelectedSetBoard({ height: Math.max(10, nextVal) });
+                            else updateSelectedSetBoard({ [field.key]: nextVal });
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-3">
+                      <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        value={selectedSetBoard.rotation || 0}
+                        onChange={(e) => updateSelectedSetBoard({ rotation: Number(e.target.value) || 0 })}
+                        className="flex-1"
+                      />
+                      <span className="w-14 text-right">{selectedSetBoard.rotation || 0}</span>
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedSetFlowerPot ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="text-pos-text font-medium">{tr('control.tables.flowerPot', 'Flower pot')}</div>
+                    {[
+                      { key: 'x', label: 'flower pot x' },
+                      { key: 'y', label: 'flower pot y' },
+                      { key: 'width', label: tr('control.tables.width', 'Width') },
+                      { key: 'height', label: tr('control.tables.height', 'Height') }
+                    ].map((field) => (
+                      <div key={`flowerpot-${field.key}`} className="flex items-center gap-3">
+                        <span className="w-[120px] shrink-0">{field.label}</span>
+                        <input
+                          type="number"
+                          value={selectedSetFlowerPot[field.key]}
+                          onChange={(e) => {
+                            const nextVal = Number(e.target.value);
+                            const safe = Number.isFinite(nextVal) ? nextVal : 0;
+                            if (field.key === 'width') updateSelectedSetFlowerPot({ width: Math.max(10, safe) });
+                            else if (field.key === 'height') updateSelectedSetFlowerPot({ height: Math.max(10, safe) });
+                            else updateSelectedSetFlowerPot({ [field.key]: safe });
+                          }}
+                          className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                        />
+                        <button
+                          type="button"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          onClick={() => {
+                            const current = Number(selectedSetFlowerPot[field.key]) || 0;
+                            const nextVal = current - 10;
+                            if (field.key === 'width') updateSelectedSetFlowerPot({ width: Math.max(10, nextVal) });
+                            else if (field.key === 'height') updateSelectedSetFlowerPot({ height: Math.max(10, nextVal) });
+                            else updateSelectedSetFlowerPot({ [field.key]: nextVal });
+                          }}
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          onClick={() => {
+                            const current = Number(selectedSetFlowerPot[field.key]) || 0;
+                            const nextVal = current + 10;
+                            if (field.key === 'width') updateSelectedSetFlowerPot({ width: Math.max(10, nextVal) });
+                            else if (field.key === 'height') updateSelectedSetFlowerPot({ height: Math.max(10, nextVal) });
+                            else updateSelectedSetFlowerPot({ [field.key]: nextVal });
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-3">
+                      <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        value={selectedSetFlowerPot.rotation || 0}
+                        onChange={(e) => updateSelectedSetFlowerPot({ rotation: Number(e.target.value) || 0 })}
+                        className="flex-1"
+                      />
+                      <span className="w-14 text-right">{selectedSetFlowerPot.rotation || 0}</span>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="pt-4 flex gap-3 w-full justify-center">
+                  <button
+                    type="button"
+                    className="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                    onClick={saveSetTablesLayout}
+                  >
+                    {tr('control.save', 'Save')}
+                  </button>
+                  <button
+                    type="button"
+                    className="px-5 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg"
+                    onClick={closeSetTablesModal}
+                  >
+                    {tr('cancel', 'Cancel')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0 bg-[#1f2b36] p-6">
+              <div ref={setTablesCanvasRef} className="w-full h-full rounded-lg border border-pos-border bg-[#2f3e50] relative overflow-hidden">
+                {setTablesDraft.tables.map((table) => {
+                  const template = TABLE_TEMPLATE_OPTIONS.find((item) => item.id === table.templateType) || null;
+                  const sizeStyle = table.round
+                    ? { width: `${Math.max(70, table.width)}px`, height: `${Math.max(70, table.width)}px` }
+                    : { width: `${table.width}px`, height: `${table.height}px` };
+                  return (
+                    <button
+                      key={table.id}
+                      type="button"
+                      className={`absolute flex items-center justify-center font-semibold border-2 text-white transition-colors overflow-hidden ${table.round
+                          ? 'rounded-full border-transparent bg-transparent'
+                          : 'rounded-md border-transparent bg-transparent'
+                        } ${setTablesSelectedTableId === table.id && selectedSetBoardIndex == null && selectedSetFlowerPotIndex == null ? 'ring-4 ring-yellow-400' : ''} ${setTablesDraggingId === table.id ? 'cursor-grabbing' : 'cursor-grab'}`}
+                      style={{
+                        left: `${Math.max(0, table.x)}px`,
+                        top: `${Math.max(0, table.y)}px`,
+                        transform: `rotate(${table.rotation || 0}deg)`,
+                        zIndex: 20,
+                        ...sizeStyle
+                      }}
+                      onClick={() => {
+                        setSetTablesSelectedTableId(table.id);
+                        setSetTablesSelectedBoardIndex(null);
+                        setSetTablesSelectedFlowerPotIndex(null);
+                      }}
+                      onMouseDown={(event) => startSetTableDrag(event, table)}
+                    >
+                      {template ? (
+                        <img src={template.src} alt={table.name} className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
+                      ) : null}
+                      <span className="relative z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)]">{table.name}</span>
+                    </button>
+                  );
+                })}
+                {setTablesDraft.tables.flatMap((table) =>
+                  (Array.isArray(table.boards) ? table.boards : []).map((board, idx) => {
+                    const isSelected = setTablesSelectedTableId === table.id && setTablesSelectedBoardIndex === idx;
+                    const isDraggingBoard = setTablesDraggingId === table.id && setTablesDraggingType === 'board' && setTablesDragRef.current?.boardIndex === idx;
+                    return (
+                      <button
+                        key={board.id || `board-${table.id}-${idx}`}
+                        type="button"
+                        className={`absolute border-2 ${isSelected ? 'border-yellow-300' : 'border-transparent'} ${isDraggingBoard ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        style={{
+                          left: `${Math.max(0, Number(board.x) || 0)}px`,
+                          top: `${Math.max(0, Number(board.y) || 0)}px`,
+                          width: `${Math.max(10, Number(board.width) || 10)}px`,
+                          height: `${Math.max(10, Number(board.height) || 10)}px`,
+                          transform: `rotate(${Number(board.rotation) || 0}deg)`,
+                          zIndex: 10,
+                          backgroundColor: board.color || '#facc15',
+                          opacity: 0.55
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSetTablesSelectedTableId(table.id);
+                          setSetTablesSelectedBoardIndex(idx);
+                          setSetTablesSelectedFlowerPotIndex(null);
+                        }}
+                        onMouseDown={(event) => startSetBoardDrag(event, table, idx)}
+                      />
+                    );
+                  })
+                )}
+                {setTablesDraft.tables.flatMap((table) =>
+                  (Array.isArray(table.flowerPots) ? table.flowerPots : []).map((fp, idx) => {
+                    const isSelected = setTablesSelectedTableId === table.id && setTablesSelectedFlowerPotIndex === idx;
+                    const isDragging = setTablesDraggingId === table.id && setTablesDraggingType === 'flowerPot' && setTablesDragRef.current?.flowerPotIndex === idx;
+                    return (
+                      <button
+                        key={fp.id || `flowerpot-${table.id}-${idx}`}
+                        type="button"
+                        className={`absolute border-2 ${isSelected ? 'border-yellow-300' : 'border-transparent'} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        style={{
+                          left: `${Math.max(0, Number(fp.x) || 0)}px`,
+                          top: `${Math.max(0, Number(fp.y) || 0)}px`,
+                          width: `${Math.max(10, Number(fp.width) || 10)}px`,
+                          height: `${Math.max(10, Number(fp.height) || 10)}px`,
+                          transform: `rotate(${Number(fp.rotation) || 0}deg)`,
+                          zIndex: 15
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSetTablesSelectedTableId(table.id);
+                          setSetTablesSelectedBoardIndex(null);
+                          setSetTablesSelectedFlowerPotIndex(idx);
+                        }}
+                        onMouseDown={(event) => startSetFlowerPotDrag(event, table, idx)}
+                      >
+                        <img src="/flowerpot.svg" alt="Flower pot" className="w-full h-full object-contain pointer-events-none" />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSetTableTypeModal && showSetTablesModal && topNavId === 'tables' && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[900px] w-full p-8">
+            <h3 className="text-pos-text text-3xl font-semibold text-center mb-8">
+              {tr('control.tables.chooseTableType', 'Choose table type')}
+            </h3>
+            <div className="grid grid-cols-3 gap-6">
+              {TABLE_TEMPLATE_OPTIONS.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className="rounded-xl border border-pos-border bg-pos-panel hover:bg-pos-bg p-5 flex flex-col items-center gap-4"
+                  onClick={() => addSetTableWithTemplate(template.id)}
+                >
+                  <img src={template.src} alt={template.id} className="w-[170px] h-[170px] object-contain" />
+                  <span className="text-pos-text text-xl font-medium">{template.id}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-center mt-8">
+              <button
+                type="button"
+                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl"
+                onClick={() => setShowSetTableTypeModal(false)}
+              >
+                {tr('cancel', 'Cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSetBoardColorModal && showSetTablesModal && topNavId === 'tables' && (
+        <div className="fixed inset-0 z-[61] flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[640px] w-full p-8">
+            <h3 className="text-pos-text text-3xl font-semibold text-center mb-8">
+              {tr('control.tables.chooseBoardColor', 'Choose board color')}
+            </h3>
+            <div className="grid grid-cols-3 gap-4">
+              {TABLE_BOARD_COLOR_OPTIONS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className="h-16 rounded-lg border-2 border-pos-border"
+                  style={{ backgroundColor: color }}
+                  onClick={() => handleSelectBoardColor(color)}
+                  aria-label={`Board color ${color}`}
+                />
+              ))}
+            </div>
+            <div className="flex justify-center mt-8 gap-3">
+              <button
+                type="button"
+                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl"
+                onClick={() => setShowSetBoardColorModal(false)}
+              >
+                {tr('cancel', 'Cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Device Settings modal */}
       {showDeviceSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -6313,9 +7214,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                               onClick={() => setSelectedOptionButtonSlotIndex(slotIndex)}
                               onDragOver={(event) => event.preventDefault()}
                               onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
-                              className={`h-[74px] max-w-[120px] min-w-[120px] border px-2 text-center text-[18px] leading-[1.2] whitespace-pre-line transition-colors ${
-                                assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
-                              } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} hover:brightness-95`}
+                              className={`h-[74px] max-w-[120px] min-w-[120px] border px-2 text-center text-[18px] leading-[1.2] whitespace-pre-line transition-colors ${assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
+                                } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} hover:brightness-95`}
                             >
                               {assignedLabel || ' '}
                             </button>
@@ -6327,11 +7227,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           type="button"
                           onClick={handleRemoveOptionButtonFromSlot}
                           disabled={!hasSelectedRemovableOptionButton}
-                          className={`text-[20px] ${
-                            hasSelectedRemovableOptionButton
+                          className={`text-[20px] ${hasSelectedRemovableOptionButton
                               ? 'text-[#858d99] hover:text-[#5c6370]'
                               : 'text-[#9ca3af] opacity-60 cursor-not-allowed'
-                          }`}
+                            }`}
                         >
                           {tr('control.optionButtons.removeFromPlace', 'Remove from place')}
                         </button>
@@ -6383,9 +7282,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                             onClick={() => setSelectedFunctionButtonSlotIndex(slotIndex)}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => handleFunctionButtonDropOnSlot(event, slotIndex)}
-                            className={`h-[62px] border bg-transparent text-3xl text-white transition-colors ${
-                              isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
-                            } hover:bg-white/10`}
+                            className={`h-[62px] border bg-transparent text-3xl text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
+                              } hover:bg-white/10`}
                           >
                             {assignedLabel}
                           </button>
@@ -6399,11 +7297,10 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         type="button"
                         onClick={handleRemoveFunctionButtonFromSlot}
                         disabled={!hasSelectedFunctionButton}
-                        className={`text-[30px] ${
-                          hasSelectedFunctionButton
+                        className={`text-[30px] ${hasSelectedFunctionButton
                             ? 'text-[#8e959d] hover:text-[#b2b8be]'
                             : 'text-[#646d76] opacity-50 cursor-not-allowed'
-                        }`}
+                          }`}
                       >
                         {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
                       </button>

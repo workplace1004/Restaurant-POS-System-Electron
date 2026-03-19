@@ -10,9 +10,7 @@ const TABLE_PAID_HIGHLIGHT_WINDOW_MS = 15 * 60 * 1000;
 export function TablesView({ tables = [], selectedTableId = null, onSelectTable, onBack, time }) {
   const { t } = useLanguage();
   const canvasRef = useRef(null);
-  const dragRef = useRef(null);
   const [positions, setPositions] = useState({});
-  const [draggingId, setDraggingId] = useState(null);
   const [positionsReady, setPositionsReady] = useState(false);
   const [lastPaidAtByTableId, setLastPaidAtByTableId] = useState({});
 
@@ -80,55 +78,6 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
     onBack?.();
   };
 
-  const startDrag = (event, table) => {
-    event.preventDefault();
-    const id = String(table?.id);
-    const current = positions[id] || { x: 0, y: 0 };
-    dragRef.current = {
-      id,
-      table,
-      startMouseX: event.clientX,
-      startMouseY: event.clientY,
-      startX: current.x,
-      startY: current.y,
-      moved: false
-    };
-    setDraggingId(id);
-  };
-
-  useEffect(() => {
-    if (!draggingId) return undefined;
-
-    const onMouseMove = (event) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      const dx = event.clientX - drag.startMouseX;
-      const dy = event.clientY - drag.startMouseY;
-      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) drag.moved = true;
-      const canvas = canvasRef.current;
-      const maxX = Math.max(0, (canvas?.clientWidth || 0) - TABLE_SIZE);
-      const maxY = Math.max(0, (canvas?.clientHeight || 0) - TABLE_SIZE);
-      const x = Math.min(maxX, Math.max(0, drag.startX + dx));
-      const y = Math.min(maxY, Math.max(0, drag.startY + dy));
-      setPositions((prev) => ({ ...prev, [drag.id]: { x, y } }));
-    };
-
-    const onMouseUp = () => {
-      if (!dragRef.current) return;
-      const { moved, table } = dragRef.current;
-      dragRef.current = null;
-      setDraggingId(null);
-      if (!moved) handleSelectAndClose(table);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [draggingId]);
-
   const contentHeight = useMemo(() => {
     const ys = Object.values(positions).map((item) => item?.y || 0);
     const maxY = ys.length ? Math.max(...ys) : 0;
@@ -149,7 +98,6 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
             const isSelected = selectedTableId != null && String(selectedTableId) === id;
             const tableNumber = String(table?.name ?? id).replace(/^Table\s*/i, '') || id;
             const pos = positions[id] || { x: 0, y: 0 };
-            const isDragging = draggingId === id;
             const hasOpenOrders = Array.isArray(table?.orders) && table.orders.length > 0;
             const lastPaidAt = Number(lastPaidAtByTableId?.[id]) || 0;
             const wasPaidRecently = !hasOpenOrders && lastPaidAt > 0 && Date.now() - lastPaidAt <= TABLE_PAID_HIGHLIGHT_WINDOW_MS;
@@ -162,10 +110,10 @@ export function TablesView({ tables = [], selectedTableId = null, onSelectTable,
               <button
                 key={id}
                 type="button"
-                onMouseDown={(event) => startDrag(event, table)}
+                onClick={() => handleSelectAndClose(table)}
                 className={`w-[200px] h-[200px] absolute overflow-hidden rounded-[4px] border-2 transition-colors ${
                   isSelected ? 'border-[#e67e22]' : 'border-transparent'
-                } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                } cursor-pointer`}
                 style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
               >
                 <img src="/table.png" alt={`${t('table')} ${tableNumber}`} className="w-full h-full object-contain" />
