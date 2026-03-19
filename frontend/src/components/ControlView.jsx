@@ -6496,90 +6496,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               </h3>
 
               <div className="space-y-4 text-pos-text text-xl">
-                <div className="flex items-center gap-3">
-                  <span className="w-[120px] shrink-0">{tr('name', 'Name')}</span>
-                  <input
-                    type="text"
-                    value={selectedSetTable?.name || ''}
-                    onChange={(e) => updateSelectedSetTable({ name: e.target.value })}
-                    className="flex-1 px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
-                  />
-                </div>
-
-                {[
-                  { key: 'x', label: 'x' },
-                  { key: 'y', label: 'y' },
-                  { key: 'width', label: tr('control.tables.width', 'Width') },
-                  { key: 'height', label: tr('control.tables.height', 'Height') }
-                ].map((field) => (
-                  <div key={field.key} className="flex items-center gap-3">
-                    <span className="w-[120px] shrink-0">{field.label}</span>
-                    <input
-                      type="number"
-                      value={selectedSetTable ? selectedSetTable[field.key] : 0}
-                      onChange={(e) => {
-                        const nextVal = Number(e.target.value);
-                        const safe = Number.isFinite(nextVal) ? nextVal : 0;
-                        if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, safe) });
-                        else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, safe) });
-                        else updateSelectedSetTable({ [field.key]: safe });
-                      }}
-                      className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
-                    />
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
-                      onClick={() => {
-                        const current = Number(selectedSetTable?.[field.key]) || 0;
-                        const nextVal = current - 10;
-                        if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, nextVal) });
-                        else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, nextVal) });
-                        else updateSelectedSetTable({ [field.key]: nextVal });
-                      }}
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
-                      onClick={() => {
-                        const current = Number(selectedSetTable?.[field.key]) || 0;
-                        const nextVal = current + 10;
-                        if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, nextVal) });
-                        else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, nextVal) });
-                        else updateSelectedSetTable({ [field.key]: nextVal });
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                ))}
-
-                <div className="flex items-center gap-3 w-full justify-between">
-                  <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={360}
-                    value={selectedSetTable?.rotation || 0}
-                    onChange={(e) => updateSelectedSetTable({ rotation: Number(e.target.value) || 0 })}
-                    className="flex-1"
-                  />
-                  <span className="w-14 text-right">{selectedSetTable?.rotation || 0}</span>
-                </div>
-
-                <label className="flex items-center gap-3">
-                  <span className="w-[120px] shrink-0">{tr('control.tables.round', 'Round')}</span>
-                  <input
-                    type="checkbox"
-                    checked={!!selectedSetTable?.round}
-                    onChange={(e) => updateSelectedSetTable({ round: e.target.checked })}
-                    className="w-7 h-7"
-                  />
-                </label>
-
-                <div className="h-px bg-pos-border my-3" />
-
                 <div className="flex gap-2 pt-2">
                   <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={addSetTable}>
                     + {tr('control.tables.table', 'table')}
@@ -6603,7 +6519,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   >
                     - {tr('control.tables.board', 'board')}
                   </button>
-
                 </div>
 
                 <div className='flex gap-2 w-full justify-around'>
@@ -6624,6 +6539,106 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                     - flower pot
                   </button>
                 </div>
+                <div className="h-px bg-pos-border my-3" />
+
+                {!selectedSetBoard && !selectedSetFlowerPot ? (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <span className="w-[120px] shrink-0">{tr('name', 'Name')}</span>
+                      <input
+                        type="text"
+                        value={selectedSetTable?.name || ''}
+                        onChange={(e) => updateSelectedSetTable({ name: e.target.value })}
+                        className="flex-1 px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                      />
+                    </div>
+
+                    {[
+                      { key: 'x', label: 'x' },
+                      { key: 'y', label: 'y' },
+                      { key: 'width', label: tr('control.tables.width', 'Width') },
+                      { key: 'height', label: tr('control.tables.height', 'Height') }
+                    ].map((field) => (
+                      <div key={field.key} className="flex items-center gap-3">
+                        <span className="w-[120px] shrink-0">{field.label}</span>
+                        <input
+                          type="number"
+                          value={selectedSetTable ? selectedSetTable[field.key] : 0}
+                          onChange={(e) => {
+                            const nextVal = Number(e.target.value);
+                            const safe = Number.isFinite(nextVal) ? nextVal : 0;
+                            if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, safe) });
+                            else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, safe) });
+                            else updateSelectedSetTable({ [field.key]: safe });
+                          }}
+                          className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                        />
+                        <button
+                          type="button"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          onClick={() => {
+                            const current = Number(selectedSetTable?.[field.key]) || 0;
+                            const nextVal = current - 10;
+                            if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, nextVal) });
+                            else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, nextVal) });
+                            else updateSelectedSetTable({ [field.key]: nextVal });
+                          }}
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          onClick={() => {
+                            const current = Number(selectedSetTable?.[field.key]) || 0;
+                            const nextVal = current + 10;
+                            if (field.key === 'width') updateSelectedSetTable({ width: Math.max(60, nextVal) });
+                            else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, nextVal) });
+                            else updateSelectedSetTable({ [field.key]: nextVal });
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ))}
+
+                    <div className="flex items-center gap-3 w-full justify-between">
+                      <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        value={selectedSetTable?.rotation ?? 0}
+                        onChange={(e) => updateSelectedSetTable({ rotation: Number(e.target.value) || 0 })}
+                        className="flex-1"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={360}
+                        value={selectedSetTable?.rotation ?? 0}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          const clamped = Number.isFinite(v) ? Math.min(360, Math.max(0, v)) : 0;
+                          updateSelectedSetTable({ rotation: clamped });
+                        }}
+                        className="min-w-[40px] max-w-[80px] px-2 py-2 rounded bg-pos-panel border border-pos-border text-pos-text text-right"
+                      />
+                    </div>
+
+                    <label className="flex items-center gap-3">
+                      <span className="w-[120px] shrink-0">{tr('control.tables.round', 'Round')}</span>
+                      <input
+                        type="checkbox"
+                        checked={!!selectedSetTable?.round}
+                        onChange={(e) => updateSelectedSetTable({ round: e.target.checked })}
+                        className="w-7 h-7"
+                      />
+                    </label>
+
+                    <div className="h-px bg-pos-border my-3" />
+                  </>
+                ) : null}
 
                 {selectedSetBoard ? (
                   <div className="space-y-3 pt-2">
@@ -6787,8 +6802,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       key={table.id}
                       type="button"
                       className={`absolute flex items-center justify-center font-semibold border-2 text-white transition-colors overflow-hidden ${table.round
-                          ? 'rounded-full border-transparent bg-transparent'
-                          : 'rounded-md border-transparent bg-transparent'
+                        ? 'rounded-full border-transparent bg-transparent'
+                        : 'rounded-md border-transparent bg-transparent'
                         } ${setTablesSelectedTableId === table.id && selectedSetBoardIndex == null && selectedSetFlowerPotIndex == null ? 'ring-4 ring-yellow-400' : ''} ${setTablesDraggingId === table.id ? 'cursor-grabbing' : 'cursor-grab'}`}
                       style={{
                         left: `${Math.max(0, table.x)}px`,
@@ -7228,8 +7243,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           onClick={handleRemoveOptionButtonFromSlot}
                           disabled={!hasSelectedRemovableOptionButton}
                           className={`text-[20px] ${hasSelectedRemovableOptionButton
-                              ? 'text-[#858d99] hover:text-[#5c6370]'
-                              : 'text-[#9ca3af] opacity-60 cursor-not-allowed'
+                            ? 'text-[#858d99] hover:text-[#5c6370]'
+                            : 'text-[#9ca3af] opacity-60 cursor-not-allowed'
                             }`}
                         >
                           {tr('control.optionButtons.removeFromPlace', 'Remove from place')}
@@ -7298,8 +7313,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         onClick={handleRemoveFunctionButtonFromSlot}
                         disabled={!hasSelectedFunctionButton}
                         className={`text-[30px] ${hasSelectedFunctionButton
-                            ? 'text-[#8e959d] hover:text-[#b2b8be]'
-                            : 'text-[#646d76] opacity-50 cursor-not-allowed'
+                          ? 'text-[#8e959d] hover:text-[#b2b8be]'
+                          : 'text-[#646d76] opacity-50 cursor-not-allowed'
                           }`}
                       >
                         {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
