@@ -8,6 +8,7 @@ import net from 'net';
 import { execFile } from 'child_process';
 import { SerialPort } from 'serialport';
 import { createCashmaticService } from './services/cashmaticService.js';
+import { createPayworldService } from './services/payworldService.js';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -57,6 +58,32 @@ function summarizeCashmaticConnection(connectionString) {
       hasPassword: !!(parsed?.password || parsed?.pass || parsed?.pwd || parsed?.secret),
     };
   } catch {
+    return { configured: true, raw };
+  }
+}
+
+function summarizePayworldConnection(connectionString) {
+  const raw = String(connectionString || '').trim();
+  if (!raw) return { configured: false };
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      configured: true,
+      ip: parsed?.ip || parsed?.ipAddress || '',
+      port: parsed?.port || '',
+      posId: parsed?.posId || '',
+      currencyCode: parsed?.currencyCode || '',
+      timeoutMs: parsed?.timeoutMs || '',
+    };
+  } catch {
+    if (raw.startsWith('tcp://')) {
+      const match = raw.match(/tcp:\/\/([^:]+):?(\d+)?/i);
+      return {
+        configured: true,
+        ip: match?.[1] || '',
+        port: match?.[2] || '',
+      };
+    }
     return { configured: true, raw };
   }
 }
@@ -528,6 +555,7 @@ const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
 const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
 const SETTING_KEY_TABLE_SAVED_ORDER_IDS = 'table_saved_order_ids';
 const SETTING_KEY_FUNCTION_BUTTONS_LAYOUT = 'function_buttons_layout';
+const SETTING_KEY_TABLE_LAYOUTS = 'table_layouts';
 const FUNCTION_BUTTON_LAYOUT_ALLOWED_IDS = [
   'tables',
   'weborders',
@@ -728,6 +756,38 @@ app.put('/api/settings/function-buttons-layout', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/function-buttons-layout', err);
     res.status(500).json({ error: err.message || 'Failed to save function buttons layout' });
+  }
+});
+
+app.get('/api/settings/table-layouts', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_TABLE_LAYOUTS } });
+    if (!row?.value) {
+      res.json({ value: {} });
+      return;
+    }
+    const parsed = JSON.parse(row.value);
+    res.json({ value: parsed && typeof parsed === 'object' ? parsed : {} });
+  } catch (err) {
+    console.error('GET /api/settings/table-layouts', err);
+    res.status(500).json({ error: err.message || 'Failed to get table layouts' });
+  }
+});
+
+app.put('/api/settings/table-layouts', async (req, res) => {
+  try {
+    const incoming = req.body?.value;
+    const safeValue = incoming && typeof incoming === 'object' ? incoming : {};
+    const serialized = JSON.stringify(safeValue);
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_TABLE_LAYOUTS },
+      create: { key: SETTING_KEY_TABLE_LAYOUTS, value: serialized },
+      update: { value: serialized }
+    });
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('PUT /api/settings/table-layouts', err);
+    res.status(500).json({ error: err.message || 'Failed to save table layouts' });
   }
 });
 
@@ -956,11 +1016,13 @@ app.delete('/api/orders', async (req, res) => {
   res.json({ ok: true });
 });
 
-// REST: tables (table locations / areas)
+// REST: tables (table locations / areas). Optional ?roomId= to filter by room.
 app.get('/api/tables', async (req, res) => {
   try {
+    const roomId = req.query.roomId != null ? String(req.query.roomId).trim() || undefined : undefined;
     const tables = await prisma.table.findMany({
-      include: { orders: { where: { status: 'open' } } },
+      where: roomId != null ? { roomId } : undefined,
+      include: { orders: { where: { status: 'open' } }, room: true },
       orderBy: { name: 'asc' }
     });
     res.json(tables);
@@ -973,8 +1035,9 @@ app.get('/api/tables', async (req, res) => {
 app.post('/api/tables', async (req, res) => {
   try {
     const name = req.body.name != null ? String(req.body.name).trim() : 'New location';
+    const roomId = req.body.roomId != null ? String(req.body.roomId).trim() || null : null;
     const created = await prisma.table.create({
-      data: { name: name || 'New location', status: 'available' }
+      data: { name: name || 'New location', status: 'available', roomId }
     });
     res.status(201).json(created);
   } catch (err) {
@@ -986,10 +1049,14 @@ app.post('/api/tables', async (req, res) => {
 app.patch('/api/tables/:id', async (req, res) => {
   try {
     const name = req.body.name != null ? String(req.body.name).trim() : undefined;
-    if (name === undefined) return res.status(400).json({ error: 'No fields to update' });
+    const roomId = req.body.roomId !== undefined ? (req.body.roomId != null ? String(req.body.roomId).trim() || null : null) : undefined;
+    const data = {};
+    if (name !== undefined) data.name = name || 'New location';
+    if (roomId !== undefined) data.roomId = roomId;
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No fields to update' });
     const updated = await prisma.table.update({
       where: { id: req.params.id },
-      data: { name: name || 'New location' }
+      data
     });
     res.json(updated);
   } catch (err) {
@@ -1005,6 +1072,95 @@ app.delete('/api/tables/:id', async (req, res) => {
   } catch (err) {
     console.error('DELETE /api/tables/:id', err);
     res.status(500).json({ error: err.message || 'Failed to delete table location' });
+  }
+});
+
+// Sync table names from Set tables layout: ensure each name has a Table record for this room (create if missing)
+app.post('/api/tables/sync', async (req, res) => {
+  try {
+    const roomId = req.body?.roomId != null ? String(req.body.roomId).trim() || null : null;
+    const raw = req.body?.names;
+    const names = Array.isArray(raw) ? raw.map((n) => String(n ?? '').trim()).filter(Boolean) : [];
+    const seen = new Set();
+    const created = [];
+    for (const name of names) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      const existing = await prisma.table.findFirst({
+        where: { name, roomId: roomId ?? null }
+      });
+      if (!existing) {
+        const t = await prisma.table.create({
+          data: { name, status: 'available', roomId }
+        });
+        created.push(t);
+      }
+    }
+    res.json({ ok: true, created: created.length });
+  } catch (err) {
+    console.error('POST /api/tables/sync', err);
+    res.status(500).json({ error: err.message || 'Failed to sync tables' });
+  }
+});
+
+// REST: rooms (floor/area settings for table layouts)
+app.get('/api/rooms', async (req, res) => {
+  try {
+    const rooms = await prisma.room.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }]
+    });
+    res.json(rooms);
+  } catch (err) {
+    console.error('GET /api/rooms', err);
+    res.status(500).json({ error: err.message || 'Failed to load rooms' });
+  }
+});
+
+app.post('/api/rooms', async (req, res) => {
+  try {
+    const name = req.body?.name != null ? String(req.body.name).trim() : 'New room';
+    const background = req.body?.background != null ? String(req.body.background) : '';
+    const textColor = req.body?.textColor === 'dark' ? 'dark' : 'light';
+    const created = await prisma.room.create({
+      data: { name: name || 'New room', background, textColor }
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('POST /api/rooms', err);
+    res.status(500).json({ error: err.message || 'Failed to create room' });
+  }
+});
+
+app.patch('/api/rooms/:id', async (req, res) => {
+  try {
+    const name = req.body?.name != null ? String(req.body.name).trim() : undefined;
+    const background = req.body?.background != null ? String(req.body.background) : undefined;
+    const textColor = req.body?.textColor != null ? (req.body.textColor === 'dark' ? 'dark' : 'light') : undefined;
+    const layoutJson = req.body?.layoutJson !== undefined ? (req.body.layoutJson == null ? null : String(req.body.layoutJson)) : undefined;
+    const data = {};
+    if (name !== undefined) data.name = name || 'New room';
+    if (background !== undefined) data.background = background;
+    if (textColor !== undefined) data.textColor = textColor;
+    if (layoutJson !== undefined) data.layoutJson = layoutJson;
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No fields to update' });
+    const updated = await prisma.room.update({
+      where: { id: req.params.id },
+      data
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/rooms/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update room' });
+  }
+});
+
+app.delete('/api/rooms/:id', async (req, res) => {
+  try {
+    await prisma.room.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    console.error('DELETE /api/rooms/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete room' });
   }
 });
 
@@ -1284,6 +1440,11 @@ app.post('/api/payment-terminals/:id/test', async (req, res) => {
     if (!t) return res.status(404).json({ success: false, error: 'Payment terminal not found' });
     if (t.type === 'cashmatic') {
       const service = createCashmaticService({ connection_string: t.connectionString });
+      const result = await service.testConnection();
+      if (result.success) res.json({ success: true, message: result.message });
+      else res.status(500).json({ success: false, error: result.message });
+    } else if (t.type === 'payworld' || t.type === 'bancontact' || t.type === 'payword') {
+      const service = createPayworldService({ connection_string: t.connectionString });
       const result = await service.testConnection();
       if (result.success) res.json({ success: true, message: result.message });
       else res.status(500).json({ success: false, error: result.message });
@@ -1918,6 +2079,164 @@ app.post('/api/cashmatic/cancel/:sessionId', async (req, res) => {
   } catch (err) {
     console.error('POST /api/cashmatic/cancel/:sessionId', err);
     res.status(500).json({ success: false, error: err.message || 'Failed to cancel payment' });
+  }
+});
+
+// ---------- Payworld payment (session-based) ----------
+app.post('/api/payworld/start', async (req, res) => {
+  try {
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ ok: false, error: 'Invalid amount for Payworld' });
+    }
+
+    const terminal = await prisma.paymentTerminal.findFirst({
+      where: { type: { in: ['payworld', 'bancontact', 'payword'] }, enabled: 1 },
+      orderBy: { isMain: 'desc' },
+    });
+    if (!terminal) {
+      return res.status(503).json({
+        ok: false,
+        error: 'Payworld terminal not configured or not enabled.',
+      });
+    }
+
+    serverLog('payworld', 'Start payment requested', {
+      amount,
+      terminalId: terminal.id,
+      terminalName: terminal.name,
+      connection: summarizePayworldConnection(terminal.connectionString),
+    });
+
+    const service = createPayworldService({ connection_string: terminal.connectionString });
+    const result = service.createSession(amount);
+    if (!result?.success) {
+      return res.status(500).json({ ok: false, error: result?.message || 'Failed to start Payworld payment.' });
+    }
+
+    return res.json({
+      ok: true,
+      provider: 'payworld',
+      sessionId: result.sessionId,
+      state: result?.data?.state || 'IN_PROGRESS',
+      message: result?.data?.message || 'Starting payment...',
+      amountInCents: result?.data?.amountInCents,
+    });
+  } catch (err) {
+    console.error('POST /api/payworld/start', err);
+    return res.status(500).json({ ok: false, error: err.message || 'Failed to start Payworld payment' });
+  }
+});
+
+app.get('/api/payworld/status/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'No sessionId provided.' });
+
+    const terminal = await prisma.paymentTerminal.findFirst({
+      where: { type: { in: ['payworld', 'bancontact', 'payword'] }, enabled: 1 },
+      orderBy: { isMain: 'desc' },
+    });
+    if (!terminal) {
+      return res.status(503).json({ ok: false, error: 'Payworld terminal not configured or not enabled.' });
+    }
+
+    const service = createPayworldService({ connection_string: terminal.connectionString });
+    const status = service.getSessionStatus(sessionId);
+    if (!status?.success) return res.status(404).json({ ok: false, error: status?.message || 'Session not found' });
+    return res.json(status);
+  } catch (err) {
+    console.error('GET /api/payworld/status/:sessionId', err);
+    return res.status(500).json({ ok: false, error: err.message || 'Failed to get Payworld status' });
+  }
+});
+
+app.post('/api/payworld/cancel/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'No sessionId provided.' });
+
+    const terminal = await prisma.paymentTerminal.findFirst({
+      where: { type: { in: ['payworld', 'bancontact', 'payword'] }, enabled: 1 },
+      orderBy: { isMain: 'desc' },
+    });
+    if (!terminal) {
+      return res.status(503).json({ ok: false, error: 'Payworld terminal not configured or not enabled.' });
+    }
+
+    const service = createPayworldService({ connection_string: terminal.connectionString });
+    const result = await service.cancelSession(sessionId);
+    if (!result?.success) return res.status(400).json({ ok: false, error: result?.message || 'Cancel failed' });
+    return res.json({ ok: true, message: result.message || 'Payment cancelled.' });
+  } catch (err) {
+    console.error('POST /api/payworld/cancel/:sessionId', err);
+    return res.status(500).json({ ok: false, error: err.message || 'Failed to cancel Payworld payment' });
+  }
+});
+
+app.get('/api/payworld/config', async (req, res) => {
+  try {
+    const terminal = await prisma.paymentTerminal.findFirst({
+      where: { type: { in: ['payworld', 'bancontact', 'payword'] } },
+      orderBy: { isMain: 'desc' },
+    });
+    if (!terminal) return res.json({ ok: true, config: {} });
+
+    let config = {};
+    try {
+      config = JSON.parse(String(terminal.connectionString || '{}'));
+    } catch {
+      config = {};
+    }
+    return res.json({ ok: true, config });
+  } catch (err) {
+    console.error('GET /api/payworld/config', err);
+    return res.status(500).json({ ok: false, error: err.message || 'Failed to load Payworld config' });
+  }
+});
+
+app.post('/api/payworld/config', async (req, res) => {
+  try {
+    const cfg = req.body || {};
+    const connectionString = JSON.stringify({
+      ip: cfg.ip || '',
+      port: cfg.port || '',
+      posId: cfg.posId || '',
+      currencyCode: cfg.currencyCode || '',
+      timeoutMs: cfg.timeoutMs || 60000,
+    });
+
+    const existing = await prisma.paymentTerminal.findFirst({
+      where: { type: { in: ['payworld', 'bancontact', 'payword'] } },
+      orderBy: { isMain: 'desc' },
+    });
+
+    if (existing) {
+      await prisma.paymentTerminal.update({
+        where: { id: existing.id },
+        data: {
+          connectionString,
+          connectionType: existing.connectionType || 'tcp',
+          enabled: existing.enabled ?? 1,
+        },
+      });
+    } else {
+      await prisma.paymentTerminal.create({
+        data: {
+          name: 'Payworld Terminal',
+          type: 'payworld',
+          connectionType: 'tcp',
+          connectionString,
+          enabled: 1,
+          isMain: 0,
+        },
+      });
+    }
+
+    return res.json({ ok: true, message: 'Payworld config saved.', config: cfg });
+  } catch (err) {
+    console.error('POST /api/payworld/config', err);
+    return res.status(500).json({ ok: false, error: err.message || 'Failed to save Payworld config' });
   }
 });
 

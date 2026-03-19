@@ -106,6 +106,8 @@ model Table {
   id       String   @id @default(cuid())
   name     String
   status   String   @default("available") // available, occupied
+  roomId   String?
+  room     Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
   orders   Order[]
 }
 
@@ -205,6 +207,18 @@ model AppSetting {
   id    String @id @default(cuid())
   key   String @unique
   value String
+}
+
+model Room {
+  id         String   @id @default(cuid())
+  name       String
+  background String?  @default("")
+  textColor  String?  @default("light")
+  sortOrder  Int      @default(0)
+  layoutJson String?  // JSON table layout (tables, boards, flower pots) from Set tables
+  tables     Table[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // Receipt/kitchen printers – same as 123
