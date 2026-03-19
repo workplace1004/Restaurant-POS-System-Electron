@@ -885,11 +885,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [showTableLocationModal, setShowTableLocationModal] = useState(false);
   const [editingTableLocationId, setEditingTableLocationId] = useState(null);
   const [tableLocationName, setTableLocationName] = useState('');
+  const [tableLocationSelectionStart, setTableLocationSelectionStart] = useState(0);
+  const [tableLocationSelectionEnd, setTableLocationSelectionEnd] = useState(0);
   const [tableLocationBackground, setTableLocationBackground] = useState('');
   const [tableLocationTextColor, setTableLocationTextColor] = useState('light');
   const [savingTableLocation, setSavingTableLocation] = useState(false);
   const [deleteConfirmTableLocationId, setDeleteConfirmTableLocationId] = useState(null);
   const [tableLocationsPage, setTableLocationsPage] = useState(0);
+  const tableLocationNameInputRef = useRef(null);
   const [showSetTablesModal, setShowSetTablesModal] = useState(false);
   const [setTablesLocationId, setSetTablesLocationId] = useState(null);
   const [setTablesLocationName, setSetTablesLocationName] = useState('');
@@ -2511,14 +2514,19 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const openTableLocationModal = () => {
     setEditingTableLocationId(null);
     setTableLocationName('');
+    setTableLocationSelectionStart(0);
+    setTableLocationSelectionEnd(0);
     setTableLocationBackground('');
     setTableLocationTextColor('light');
     setShowTableLocationModal(true);
   };
 
   const openEditTableLocationModal = (loc) => {
+    const nextName = loc.name || '';
     setEditingTableLocationId(loc.id);
-    setTableLocationName(loc.name || '');
+    setTableLocationName(nextName);
+    setTableLocationSelectionStart(nextName.length);
+    setTableLocationSelectionEnd(nextName.length);
     setTableLocationBackground(typeof loc?.background === 'string' ? loc.background : '');
     setTableLocationTextColor(loc?.textColor === 'dark' ? 'dark' : 'light');
     setShowTableLocationModal(true);
@@ -2528,9 +2536,22 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setShowTableLocationModal(false);
     setEditingTableLocationId(null);
     setTableLocationName('');
+    setTableLocationSelectionStart(0);
+    setTableLocationSelectionEnd(0);
     setTableLocationBackground('');
     setTableLocationTextColor('light');
   };
+
+  useEffect(() => {
+    if (!showTableLocationModal) return;
+    const input = tableLocationNameInputRef.current;
+    if (!input) return;
+    if (document.activeElement !== input) input.focus();
+    const pos = Math.min(String(tableLocationName || '').length, Math.max(0, tableLocationSelectionStart));
+    try {
+      input.setSelectionRange(pos, Math.min(String(tableLocationName || '').length, Math.max(0, tableLocationSelectionEnd)));
+    } catch {}
+  }, [showTableLocationModal, tableLocationName, tableLocationSelectionStart, tableLocationSelectionEnd]);
 
   const handleSaveTableLocation = async () => {
     const name = tableLocationName.trim() || 'New location';
@@ -6442,10 +6463,23 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Table Name:</span>
                 <input
                   type="text"
-                  readOnly
+                  ref={tableLocationNameInputRef}
                   value={tableLocationName}
+                  onChange={(e) => setTableLocationName(e.target.value)}
+                  onClick={(e) => {
+                    setTableLocationSelectionStart(e.target.selectionStart ?? 0);
+                    setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
+                  }}
+                  onKeyUp={(e) => {
+                    setTableLocationSelectionStart(e.target.selectionStart ?? 0);
+                    setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
+                  }}
+                  onSelect={(e) => {
+                    setTableLocationSelectionStart(e.target.selectionStart ?? 0);
+                    setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
+                  }}
                   placeholder="e.g. room 1"
-                  className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                  className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text caret-white text-xl focus:outline-none focus:border-green-500"
                 />
               </div>
               <div className="flex items-center gap-3">
@@ -6484,7 +6518,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </div>
             </div>
             <div className="shrink-0">
-              <KeyboardWithNumpad value={tableLocationName} onChange={setTableLocationName} />
+              <KeyboardWithNumpad
+                value={tableLocationName}
+                onChange={setTableLocationName}
+                selectionStart={tableLocationSelectionStart}
+                selectionEnd={tableLocationSelectionEnd}
+                onSelectionChange={(start, end) => {
+                  setTableLocationSelectionStart(start);
+                  setTableLocationSelectionEnd(end);
+                }}
+              />
             </div>
           </div>
         </div>

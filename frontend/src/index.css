@@ -29,4 +29,7 @@
   input, select, textarea {
     font-family: inherit;
   }
+  input, textarea {
+    caret-color: #22c55e;
+  }
 }
