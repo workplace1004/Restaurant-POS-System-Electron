@@ -407,8 +407,6 @@ const TABLE_LOCATION_BACKGROUND_OPTIONS = [
   { value: 'blue', label: 'Blue' }
 ];
 
-const TABLE_LAYOUT_EDITOR_STORAGE_KEY = 'pos.table_layout_editor_by_location';
-
 const TABLE_TEMPLATE_OPTIONS = [
   { id: '4table', src: '/4table.svg', chairs: 4, width: 130, height: 155 },
   { id: '5table', src: '/5table.svg', chairs: 5, width: 145, height: 173 },
@@ -703,7 +701,7 @@ function TopNavIcon({ id, className }) {
   return null;
 }
 
-export function ControlView({ currentUser, onLogout, onBack }) {
+export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, fetchTables }) {
   const { lang, setLang, t } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [toast, setToast] = useState(null);
@@ -1505,7 +1503,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const fetchTableLocations = useCallback(async () => {
     setTableLocationsLoading(true);
     try {
-      const res = await fetch(`${API}/tables`);
+      const res = await fetch(`${API}/rooms`);
       const data = await res.json();
       setTableLocations(Array.isArray(data) ? data : []);
     } catch {
@@ -2521,16 +2519,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
   const openEditTableLocationModal = (loc) => {
     setEditingTableLocationId(loc.id);
     setTableLocationName(loc.name || '');
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_table_location_extra');
-      const extra = raw ? JSON.parse(raw) : {};
-      const saved = extra[loc.id] || {};
-      setTableLocationBackground(saved.background ?? '');
-      setTableLocationTextColor(saved.textColor === 'dark' ? 'dark' : 'light');
-    } catch (_) {
-      setTableLocationBackground('');
-      setTableLocationTextColor('light');
-    }
+    setTableLocationBackground(typeof loc?.background === 'string' ? loc.background : '');
+    setTableLocationTextColor(loc?.textColor === 'dark' ? 'dark' : 'light');
     setShowTableLocationModal(true);
   };
 
@@ -2547,33 +2537,25 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setSavingTableLocation(true);
     try {
       if (editingTableLocationId) {
-        const res = await fetch(`${API}/tables/${editingTableLocationId}`, {
+        const res = await fetch(`${API}/rooms/${editingTableLocationId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
+          body: JSON.stringify({ name, background: tableLocationBackground, textColor: tableLocationTextColor })
         });
         const updated = await res.json();
         if (res.ok && updated) {
           setTableLocations((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-          const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_table_location_extra');
-          const extra = raw ? JSON.parse(raw) : {};
-          extra[updated.id] = { background: tableLocationBackground, textColor: tableLocationTextColor };
-          if (typeof localStorage !== 'undefined') localStorage.setItem('pos_table_location_extra', JSON.stringify(extra));
           closeTableLocationModal();
         } else fetchTableLocations();
       } else {
-        const res = await fetch(`${API}/tables`, {
+        const res = await fetch(`${API}/rooms`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name })
+          body: JSON.stringify({ name, background: tableLocationBackground, textColor: tableLocationTextColor })
         });
         const created = await res.json();
         if (res.ok && created) {
           setTableLocations((prev) => [...prev, created].sort((a, b) => (a.name || '').localeCompare(b.name || '')));
-          const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_table_location_extra');
-          const extra = raw ? JSON.parse(raw) : {};
-          extra[created.id] = { background: tableLocationBackground, textColor: tableLocationTextColor };
-          if (typeof localStorage !== 'undefined') localStorage.setItem('pos_table_location_extra', JSON.stringify(extra));
           closeTableLocationModal();
         } else fetchTableLocations();
       }
@@ -2586,7 +2568,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
 
   const handleDeleteTableLocation = async (id) => {
     try {
-      const res = await fetch(`${API}/tables/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/rooms/${id}`, { method: 'DELETE' });
       if (res.ok) setTableLocations((prev) => prev.filter((t) => t.id !== id));
       else fetchTableLocations();
     } catch {
@@ -2595,18 +2577,18 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     setDeleteConfirmTableLocationId(null);
   };
 
-  const openSetTablesModal = (loc) => {
+  const openSetTablesModal = async (loc) => {
     const locationId = String(loc?.id || '');
     const locationName = String(loc?.name || 'Restaurant');
-    let draft = normalizeLayoutEditorDraft(null, locationName);
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem(TABLE_LAYOUT_EDITOR_STORAGE_KEY);
-      const allLayouts = raw ? JSON.parse(raw) : {};
-      if (allLayouts && typeof allLayouts === 'object' && allLayouts[locationId]) {
-        draft = normalizeLayoutEditorDraft(allLayouts[locationId], locationName);
+    const emptyDraft = () => ({ ...normalizeLayoutEditorDraft(null, locationName), tables: [] });
+    let draft = emptyDraft();
+    if (loc?.layoutJson != null && loc.layoutJson !== '') {
+      try {
+        const parsed = JSON.parse(loc.layoutJson);
+        if (parsed && typeof parsed === 'object') draft = normalizeLayoutEditorDraft(parsed, locationName);
+      } catch {
+        // keep empty draft
       }
-    } catch {
-      draft = normalizeLayoutEditorDraft(null, locationName);
     }
     setSetTablesLocationId(locationId);
     setSetTablesLocationName(locationName);
@@ -2879,16 +2861,33 @@ export function ControlView({ currentUser, onLogout, onBack }) {
     });
   };
 
-  const saveSetTablesLayout = () => {
+  const saveSetTablesLayout = async () => {
     if (!setTablesLocationId) return;
     try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem(TABLE_LAYOUT_EDITOR_STORAGE_KEY);
-      const allLayouts = raw ? JSON.parse(raw) : {};
-      const nextLayouts = allLayouts && typeof allLayouts === 'object' ? allLayouts : {};
-      nextLayouts[setTablesLocationId] = setTablesDraft;
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(TABLE_LAYOUT_EDITOR_STORAGE_KEY, JSON.stringify(nextLayouts));
+      const patchRes = await fetch(`${API}/rooms/${setTablesLocationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layoutJson: JSON.stringify(setTablesDraft) })
+      });
+      if (!patchRes.ok) throw new Error('Failed to save table layout');
+      const names = (setTablesDraft.tables || [])
+        .map((t) => String(t?.name ?? '').trim())
+        .filter(Boolean);
+      if (names.length > 0) {
+        const syncRes = await fetch(`${API}/tables/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: setTablesLocationId, names })
+        });
+        if (!syncRes.ok) throw new Error('Failed to sync tables');
       }
+      setTableLocations((prev) =>
+        prev.map((r) =>
+          r.id === setTablesLocationId ? { ...r, layoutJson: JSON.stringify(setTablesDraft) } : r
+        )
+      );
+      if (typeof fetchTableLayouts === 'function') fetchTableLayouts();
+      if (typeof fetchTables === 'function') fetchTables();
       showToast('success', tr('control.tables.layoutSaved', 'Table layout saved.'));
       closeSetTablesModal();
     } catch {
@@ -6038,23 +6037,37 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   ) : tableLocations.length === 0 ? (
                     <li className="text-pos-muted text-xl py-6 text-center">{tr('control.tables.empty', 'No table locations yet.')}</li>
                   ) : (
-                    paginatedTableLocations.map((loc) => (
+                    paginatedTableLocations.map((loc) => {
+                      const hasSavedLayout = (() => {
+                        try {
+                          if (loc?.layoutJson == null || loc.layoutJson === '') return false;
+                          const parsed = JSON.parse(loc.layoutJson);
+                          return Array.isArray(parsed?.tables) && parsed.tables.length > 0;
+                        } catch {
+                          return false;
+                        }
+                      })();
+                      return (
                       <li
                         key={loc.id}
-                        className="flex items-center w-full px-10 justify-between py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
+                        className="flex justify-between items-center w-full px-10 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
                       >
                         <span className="font-medium">{loc.name}</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex absolute left-1/2 justify-center">
                           <button
                             type="button"
-                            className="px-4 pr-20 py-2 rounded-lg text-pos-muted hover:text-pos-text text-xl hover:bg-pos-panel"
+                            className={`w-full text-center px-4 py-2 rounded-lg text-xl hover:bg-pos-panel ${
+                              hasSavedLayout ? 'text-white' : 'text-pos-muted hover:text-pos-text'
+                            }`}
                             onClick={() => openSetTablesModal(loc)}
                           >
                             {tr('control.tables.setTables', 'Set tables')}
                           </button>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            className="p-2 pr-20 rounded text-pos-text hover:bg-pos-panel"
+                            className="p-2 rounded text-pos-text hover:bg-pos-panel"
                             onClick={() => openEditTableLocationModal(loc)}
                             aria-label="Edit"
                           >
@@ -6070,7 +6083,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           </button>
                         </div>
                       </li>
-                    ))
+                      );
+                    })
                   )}
                 </ul>
                 {tableLocations.length > 0 && (
@@ -6496,8 +6510,8 @@ export function ControlView({ currentUser, onLogout, onBack }) {
               </h3>
 
               <div className="space-y-4 text-pos-text text-xl">
-                <div className="flex gap-2 pt-2">
-                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={addSetTable}>
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button type="button" className="px-3 py-3 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={addSetTable}>
                     + {tr('control.tables.table', 'table')}
                   </button>
                   <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={removeSetTable}>
@@ -6519,9 +6533,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   >
                     - {tr('control.tables.board', 'board')}
                   </button>
-                </div>
-
-                <div className='flex gap-2 w-full justify-around'>
                   <button
                     type="button"
                     className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
@@ -6622,7 +6633,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                           const clamped = Number.isFinite(v) ? Math.min(360, Math.max(0, v)) : 0;
                           updateSelectedSetTable({ rotation: clamped });
                         }}
-                        className="min-w-[40px] max-w-[80px] px-2 py-2 rounded bg-pos-panel border border-pos-border text-pos-text text-right"
+                        className="min-w-[40px] max-w-[80px] px-2 py-2 rounded bg-pos-panel border border-pos-border text-pos-text text-left"
                       />
                     </div>
 
@@ -6696,11 +6707,22 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         type="range"
                         min={0}
                         max={360}
-                        value={selectedSetBoard.rotation || 0}
+                        value={selectedSetBoard.rotation ?? 0}
                         onChange={(e) => updateSelectedSetBoard({ rotation: Number(e.target.value) || 0 })}
                         className="flex-1"
                       />
-                      <span className="w-14 text-right">{selectedSetBoard.rotation || 0}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={360}
+                        value={selectedSetBoard.rotation ?? 0}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          const clamped = Number.isFinite(v) ? Math.min(360, Math.max(0, v)) : 0;
+                          updateSelectedSetBoard({ rotation: clamped });
+                        }}
+                        className="min-w-[40px] max-w-[80px] px-2 py-2 rounded bg-pos-panel border border-pos-border text-pos-text text-left"
+                      />
                     </div>
                   </div>
                 ) : null}
@@ -6762,11 +6784,22 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                         type="range"
                         min={0}
                         max={360}
-                        value={selectedSetFlowerPot.rotation || 0}
+                        value={selectedSetFlowerPot.rotation ?? 0}
                         onChange={(e) => updateSelectedSetFlowerPot({ rotation: Number(e.target.value) || 0 })}
                         className="flex-1"
                       />
-                      <span className="w-14 text-right">{selectedSetFlowerPot.rotation || 0}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={360}
+                        value={selectedSetFlowerPot.rotation ?? 0}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          const clamped = Number.isFinite(v) ? Math.min(360, Math.max(0, v)) : 0;
+                          updateSelectedSetFlowerPot({ rotation: clamped });
+                        }}
+                        className="min-w-[40px] max-w-[80px] px-2 py-2 rounded bg-pos-panel border border-pos-border text-pos-text text-left"
+                      />
                     </div>
                   </div>
                 ) : null}
@@ -6895,9 +6928,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
       {showSetTableTypeModal && showSetTablesModal && topNavId === 'tables' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[900px] w-full p-8">
-            <h3 className="text-pos-text text-3xl font-semibold text-center mb-8">
-              {tr('control.tables.chooseTableType', 'Choose table type')}
-            </h3>
             <div className="grid grid-cols-3 gap-6">
               {TABLE_TEMPLATE_OPTIONS.map((template) => (
                 <button
@@ -6907,7 +6937,6 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                   onClick={() => addSetTableWithTemplate(template.id)}
                 >
                   <img src={template.src} alt={template.id} className="w-[170px] h-[170px] object-contain" />
-                  <span className="text-pos-text text-xl font-medium">{template.id}</span>
                 </button>
               ))}
             </div>

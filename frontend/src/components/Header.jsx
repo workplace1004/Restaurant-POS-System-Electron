@@ -5,7 +5,7 @@ const HEADER_FUNCTION_SLOT_COUNT = 3;
 
 function IconTable() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 44.999 44.999" fill="currentColor" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 44.999 44.999" fill="currentColor" aria-hidden="true" className="shrink-0">
       <g>
         <g>
           <path d="M42.558,23.378l2.406-10.92c0.18-0.816-0.336-1.624-1.152-1.803c-0.816-0.182-1.623,0.335-1.802,1.151l-2.145,9.733 h-9.647c-0.835,0-1.512,0.677-1.512,1.513c0,0.836,0.677,1.513,1.512,1.513h0.573l-3.258,7.713 c-0.325,0.771,0.034,1.657,0.805,1.982c0.19,0.081,0.392,0.12,0.588,0.12c0.59,0,1.15-0.348,1.394-0.925l2.974-7.038l4.717,0.001 l2.971,7.037c0.327,0.77,1.215,1.127,1.982,0.805c0.77-0.325,1.13-1.212,0.805-1.982l-3.257-7.713h0.573 C41.791,24.564,42.403,24.072,42.558,23.378z" />
@@ -41,25 +41,50 @@ function IconUser() {
   );
 }
 
-export function Header({ time, webordersCount, inPlanningCount, onOpenTables, onOpenWeborders, onOpenInPlanning, selectedTable, functionButtonSlots = [] }) {
+export function Header({
+  time,
+  webordersCount,
+  inPlanningCount,
+  onOpenTables,
+  onOpenWeborders,
+  onOpenInPlanning,
+  selectedTable,
+  selectedTableLabel,
+  selectedRoomName,
+  roomCount = null,
+  functionButtonSlots = []
+}) {
   const { t } = useLanguage();
   const slots = Array.from({ length: HEADER_FUNCTION_SLOT_COUNT }, (_, idx) => String(functionButtonSlots?.[idx] || '').trim());
   const displayTime = String(time || '--:--');
 
+  const tablesButtonLabel = (() => {
+    if (selectedTable?.name != null && String(selectedTable.name).trim()) return String(selectedTable.name).trim();
+    return t('noTable');
+  })();
+
+  const hasRoomAndTable = selectedRoomName != null && selectedTableLabel != null && String(selectedRoomName).trim() !== '' && String(selectedTableLabel).trim() !== '';
+  const showRoomNameInHeader = hasRoomAndTable && roomCount != null && roomCount > 1;
+
   const getButtonConfig = (id) => {
     switch (id) {
       case 'tables':
-        return { label: t('control.functionButton.tables'), icon: <IconTable />, onClick: onOpenTables };
+        return {
+          label: tablesButtonLabel,
+          icon: <IconTable />,
+          onClick: onOpenTables,
+          isTablesSlot: true
+        };
       case 'weborders':
-        return { label: t('control.functionButton.weborders'), icon: <IconCart />, onClick: onOpenWeborders };
+        return { label: t('control.functionButton.weborders'), icon: <IconCart />, onClick: onOpenWeborders, isTablesSlot: false };
       case 'in-wacht':
-        return { label: t('control.functionButton.inWaiting'), icon: <IconCalendar />, onClick: onOpenInPlanning };
+        return { label: t('control.functionButton.inWaiting'), icon: <IconCalendar />, onClick: onOpenInPlanning, isTablesSlot: false };
       case 'geplande-orders':
-        return { label: t('control.functionButton.scheduledOrders'), icon: <IconCalendar />, onClick: onOpenInPlanning };
+        return { label: t('control.functionButton.scheduledOrders'), icon: <IconCalendar />, onClick: onOpenInPlanning, isTablesSlot: false };
       case 'reservaties':
-        return { label: t('control.functionButton.reservations'), icon: <IconCalendar />, onClick: null };
+        return { label: t('control.functionButton.reservations'), icon: <IconCalendar />, onClick: null, isTablesSlot: false };
       case 'verkopers':
-        return { label: t('control.functionButton.sellers'), icon: <IconUser />, onClick: null };
+        return { label: t('control.functionButton.sellers'), icon: <IconUser />, onClick: null, isTablesSlot: false };
       default:
         return null;
     }
@@ -83,18 +108,34 @@ export function Header({ time, webordersCount, inPlanningCount, onOpenTables, on
               />
             );
           }
+          const isTablesSlot = cfg.isTablesSlot === true;
+          const showRoomAndTableLines = isTablesSlot && showRoomNameInHeader;
           return (
             <button
               key={`header-slot-${idx}-${slotId}`}
               type="button"
               onClick={cfg.onClick || undefined}
               disabled={!cfg.onClick}
-              className={`h-[100px] rounded-md bg-pos-panel text-pos-text text-4xl px-5 flex items-center gap-3 ${
+              className={`h-[100px] rounded-md bg-pos-panel text-pos-text text-4xl px-5 flex items-center gap-3 min-w-0 ${
                 cfg.onClick ? 'hover:bg-pos-rowHover' : 'opacity-80 cursor-default'
               }`}
             >
               <span className="opacity-90 shrink-0">{cfg.icon}</span>
-              <span className="truncate text-left h-full flex items-center">{cfg.label}</span>
+              {showRoomAndTableLines ? (
+                <span className="text-left flex flex-col w-full items-center justify-center min-w-0 flex-1 py-1">
+                  <span className="leading-tight truncate">{String(selectedRoomName).trim()}</span>
+                  <span className="border-t-2 border-white w-[80%] my-0.5 shrink-0" />
+                  <span className="leading-tight truncate">{String(selectedTableLabel).trim()}</span>
+                </span>
+              ) : (
+                <span
+                  className={`text-left flex items-center min-w-0 ${
+                    isTablesSlot ? 'line-clamp-2 break-words' : 'truncate h-full'
+                  }`}
+                >
+                  {cfg.label}
+                </span>
+              )}
             </button>
           );
         })}

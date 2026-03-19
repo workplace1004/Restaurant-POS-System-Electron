@@ -45,6 +45,19 @@ export default function App() {
   const [user, setUser] = useState(loadStoredUser);
   const [view, setView] = useState(loadStoredView);
   const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedTableLabel, setSelectedTableLabel] = useState(null);
+  const [selectedRoomName, setSelectedRoomName] = useState(null);
+  const [roomCount, setRoomCount] = useState(null);
+
+  const fetchRoomCount = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/rooms`);
+      const data = await res.json().catch(() => []);
+      setRoomCount(Array.isArray(data) ? data.length : 0);
+    } catch {
+      setRoomCount(null);
+    }
+  }, []);
 
   const setViewAndPersist = useCallback((nextView) => {
     setView(nextView);
@@ -96,6 +109,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchSavedPositioningColors,
     savedFunctionButtonsLayout,
     fetchSavedFunctionButtonsLayout,
+    tableLayouts,
+    fetchTableLayouts,
     appendSubproductNoteToItem
   } = usePos(API, socket, selectedTable?.id ?? null);
 
@@ -113,7 +128,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchSavedPositioningLayout();
     fetchSavedPositioningColors();
     fetchSavedFunctionButtonsLayout();
-  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout]);
+    fetchRoomCount();
+  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount]);
 
   useEffect(() => {
     if (selectedCategoryId) fetchProducts(selectedCategoryId);
@@ -124,8 +140,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       fetchSavedPositioningLayout();
       fetchSavedPositioningColors();
       fetchSavedFunctionButtonsLayout();
+      fetchRoomCount();
     }
-  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout]);
+  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount]);
 
   useEffect(() => {
     setSubtotalBreaks([]);
@@ -159,8 +176,15 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   };
 
   const handleSelectTable = useCallback(
-    (table) => {
+    (table, options) => {
       setSelectedTable(table);
+      if (table == null) {
+        setSelectedTableLabel(null);
+        setSelectedRoomName(null);
+      } else {
+        setSelectedTableLabel(options?.tableLabel ?? null);
+        setSelectedRoomName(options?.roomName ?? (table?.name ?? null));
+      }
       setViewAndPersist('pos');
     },
     [setViewAndPersist]
@@ -184,10 +208,13 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     return (
       <TablesView
         tables={tables}
+        tableLayouts={tableLayouts}
+        fetchTableLayouts={fetchTableLayouts}
         selectedTableId={selectedTable?.id ?? null}
         onSelectTable={handleSelectTable}
         onBack={() => setViewAndPersist('pos')}
         time={time}
+        api={API}
       />
     );
   }
@@ -198,6 +225,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         currentUser={user}
         onLogout={handleLogout}
         onBack={() => setViewAndPersist('pos')}
+        fetchTableLayouts={fetchTableLayouts}
+        fetchTables={fetchTables}
       />
     );
   }
@@ -219,6 +248,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           inPlanningCount={inPlanningCount}
           functionButtonSlots={savedFunctionButtonsLayout}
           selectedTable={selectedTable}
+          selectedTableLabel={selectedTableLabel}
+          selectedRoomName={selectedRoomName}
+          roomCount={roomCount}
           onOpenTables={() => setViewAndPersist('tables')}
           onOpenWeborders={() => {
             setOrdersModalTab('new');

@@ -38,6 +38,7 @@ export function usePos(API, socket, selectedTableId = null) {
   const [savedFunctionButtonsLayout, setSavedFunctionButtonsLayout] = useState(() =>
     Array(FUNCTION_BUTTON_SLOT_COUNT).fill('')
   );
+  const [tableLayouts, setTableLayouts] = useState({});
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -135,6 +136,30 @@ export function usePos(API, socket, selectedTableId = null) {
       setSavedFunctionButtonsLayout(normalizeFunctionButtonsLayout(data?.value));
     } catch {
       setSavedFunctionButtonsLayout(Array(FUNCTION_BUTTON_SLOT_COUNT).fill(''));
+    }
+  }, [API]);
+
+  const fetchTableLayouts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/rooms`);
+      const rooms = await safeJson(res);
+      if (!Array.isArray(rooms)) {
+        setTableLayouts({});
+        return;
+      }
+      const layouts = {};
+      for (const r of rooms) {
+        const id = r?.id;
+        if (!id) continue;
+        try {
+          layouts[id] = r.layoutJson != null && r.layoutJson !== '' ? JSON.parse(r.layoutJson) : { tables: [] };
+        } catch {
+          layouts[id] = { tables: [] };
+        }
+      }
+      setTableLayouts(layouts);
+    } catch {
+      setTableLayouts({});
     }
   }, [API]);
 
@@ -382,6 +407,8 @@ export function usePos(API, socket, selectedTableId = null) {
     fetchSavedPositioningColors,
     savedFunctionButtonsLayout,
     fetchSavedFunctionButtonsLayout,
+    tableLayouts,
+    fetchTableLayouts,
     appendSubproductNoteToItem
   };
 }
