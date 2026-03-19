@@ -53,7 +53,8 @@ const EXTERNAL_DEVICES_SUB_NAV_ITEMS = [
   'Barcode Scanner',
   'Credit Card',
   'Libra',
-  'Cashmatic'
+  'Cashmatic',
+  'Payworld'
 ];
 
 const PRINTER_TABS = ['General', 'Final tickets', 'Production Tickets', 'Labels'];
@@ -1132,6 +1133,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [cashmaticActiveField, setCashmaticActiveField] = useState('name');
   const [savingCashmatic, setSavingCashmatic] = useState(false);
   const [cashmaticTerminalId, setCashmaticTerminalId] = useState(null);
+
+  const [payworldName, setPayworldName] = useState('Payworld Terminal');
+  const [payworldIpAddress, setPayworldIpAddress] = useState('');
+  const [payworldPort, setPayworldPort] = useState('5015');
+  const [payworldActiveField, setPayworldActiveField] = useState('name');
+  const [savingPayworld, setSavingPayworld] = useState(false);
+  const [payworldTerminalId, setPayworldTerminalId] = useState(null);
 
   const [subproductGroups, setSubproductGroups] = useState([]);
   const [subproductGroupsLoading, setSubproductGroupsLoading] = useState(false);
@@ -4026,6 +4034,42 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   }, [topNavId, subNavId]);
 
   useEffect(() => {
+    if (topNavId !== 'external-devices' || subNavId !== 'Payworld') return;
+    let cancelled = false;
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_payworld');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.name != null) setPayworldName(String(s.name));
+        if (s.ip != null) setPayworldIpAddress(String(s.ip));
+        if (s.port != null) setPayworldPort(String(s.port));
+      }
+    } catch (_) { }
+    const loadPayworldFromDb = async () => {
+      try {
+        const res = await fetch(`${API}/payment-terminals`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok) return;
+        const terminals = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+        const payworld = terminals.find((t) => String(t?.type || '').toLowerCase() === 'payworld');
+        if (!payworld || cancelled) return;
+        let parsed = {};
+        try {
+          parsed = typeof payworld.connection_string === 'string' ? JSON.parse(payworld.connection_string) : (payworld.connection_string || {});
+        } catch (_) { }
+        setPayworldTerminalId(payworld.id || null);
+        if (payworld.name != null) setPayworldName(String(payworld.name));
+        if (parsed.ip != null) setPayworldIpAddress(String(parsed.ip));
+        if (parsed.port != null) setPayworldPort(String(parsed.port));
+      } catch {
+        // Keep local values if backend is unavailable.
+      }
+    };
+    loadPayworldFromDb();
+    return () => { cancelled = true; };
+  }, [topNavId, subNavId]);
+
+  useEffect(() => {
     if (controlSidebarId !== 'reports' || reportTabId !== 'settings') return;
     try {
       const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_report_settings');
@@ -4173,6 +4217,66 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     }
   };
 
+  const handleSavePayworld = async () => {
+    setSavingPayworld(true);
+    try {
+      const trimmedIp = String(payworldIpAddress || '').trim();
+      const trimmedPort = String(payworldPort || '').trim();
+      const resolvedPort = trimmedPort || '5015';
+      const validPort = Number.parseInt(resolvedPort, 10);
+      if (!trimmedIp) {
+        throw new Error('Payworld IP address is required.');
+      }
+      if (/^[0-9]+$/.test(trimmedIp)) {
+        throw new Error('Payworld IP address is invalid. Please enter a full IP like 192.168.1.60.');
+      }
+      if (!Number.isInteger(validPort) || validPort < 1 || validPort > 65535) {
+        throw new Error('Payworld port must be a number between 1 and 65535.');
+      }
+      const connectionConfig = { ip: trimmedIp, port: resolvedPort };
+      const terminalPayload = {
+        name: String(payworldName || '').trim() || 'Payworld Terminal',
+        type: 'payworld',
+        connection_type: 'tcp',
+        connection_string: JSON.stringify(connectionConfig),
+        enabled: 1,
+        is_main: 1,
+      };
+      let terminalId = payworldTerminalId;
+      if (!terminalId) {
+        const listRes = await fetch(`${API}/payment-terminals`);
+        const listData = await listRes.json().catch(() => null);
+        const list = Array.isArray(listData?.data) ? listData.data : (Array.isArray(listData) ? listData : []);
+        const existing = list.find((t) => String(t?.type || '').toLowerCase() === 'payworld');
+        if (existing?.id) terminalId = existing.id;
+      }
+      const endpoint = terminalId ? `${API}/payment-terminals/${terminalId}` : `${API}/payment-terminals`;
+      const method = terminalId ? 'PUT' : 'POST';
+      const saveRes = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(terminalPayload),
+      });
+      const saved = await saveRes.json().catch(() => ({}));
+      if (!saveRes.ok) {
+        throw new Error(saved?.error || `Failed to save Payworld terminal (HTTP ${saveRes.status})`);
+      }
+      if (saved?.id) setPayworldTerminalId(saved.id);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pos_payworld', JSON.stringify({
+          name: terminalPayload.name,
+          ip: connectionConfig.ip,
+          port: connectionConfig.port,
+        }));
+      }
+      showToast('success', 'Payworld settings saved.');
+    } catch (err) {
+      showToast('error', err?.message || 'Failed to save Payworld settings.');
+    } finally {
+      setSavingPayworld(false);
+    }
+  };
+
   const cashmaticKeyboardValue =
     cashmaticActiveField === 'name' ? cashmaticName
       : cashmaticActiveField === 'ip' ? cashmaticIpAddress
@@ -4189,6 +4293,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     else if (cashmaticActiveField === 'username') setCashmaticUsername(v);
     else if (cashmaticActiveField === 'password') setCashmaticPassword(v);
     else if (cashmaticActiveField === 'url') setCashmaticUrl(v);
+  };
+
+  const payworldKeyboardValue =
+    payworldActiveField === 'name' ? payworldName
+      : payworldActiveField === 'ip' ? payworldIpAddress
+        : payworldActiveField === 'port' ? payworldPort
+          : '';
+
+  const payworldKeyboardOnChange = (v) => {
+    if (payworldActiveField === 'name') setPayworldName(v);
+    else if (payworldActiveField === 'ip') setPayworldIpAddress(v);
+    else if (payworldActiveField === 'port') setPayworldPort(v);
   };
 
   const setReportSetting = (rowId, column, value) => {
@@ -6029,6 +6145,56 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                   <div className="shrink-0 w-full justify-center flex absolute bottom-0 left-0 right-0 -mb-10">
                     <KeyboardWithNumpad value={cashmaticKeyboardValue} onChange={cashmaticKeyboardOnChange} />
+                  </div>
+                </div>
+              )}
+              {subNavId === 'Payworld' && (
+                <div className="flex flex-col min-h-[820px] justify-between relative">
+                  <div className="flex flex-col gap-6 mb-6 mt-[30px] w-full justify-center items-center">
+                    <div className="flex items-center gap-8">
+                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Name *</label>
+                      <input
+                        type="text"
+                        value={payworldName}
+                        onChange={(e) => setPayworldName(e.target.value)}
+                        onFocus={() => setPayworldActiveField('name')}
+                        onClick={() => setPayworldActiveField('name')}
+                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-8">
+                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">IP address *</label>
+                      <input
+                        type="text"
+                        value={payworldIpAddress}
+                        onChange={(e) => setPayworldIpAddress(e.target.value)}
+                        onFocus={() => setPayworldActiveField('ip')}
+                        onClick={() => setPayworldActiveField('ip')}
+                        placeholder="e.g. 192.168.1.60"
+                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                      />
+                    </div>
+                    <div className="flex items-center gap-8">
+                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Port *</label>
+                      <input
+                        type="text"
+                        value={payworldPort}
+                        onChange={(e) => setPayworldPort(e.target.value)}
+                        onFocus={() => setPayworldActiveField('port')}
+                        onClick={() => setPayworldActiveField('port')}
+                        placeholder="5015"
+                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                      />
+                    </div>
+                    <div className="flex justify-center mt-[10px]">
+                      <button type="button" className="flex items-center text-2xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPayworld} onClick={handleSavePayworld}>
+                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                  <div className="shrink-0 w-full justify-center flex absolute bottom-0 left-0 right-0 -mb-10">
+                    <KeyboardWithNumpad value={payworldKeyboardValue} onChange={payworldKeyboardOnChange} />
                   </div>
                 </div>
               )}
@@ -8019,56 +8185,19 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex text-xl flex-col gap-4">
                       <div className="flex items-center gap-1">
                         <label className="text-xl font-medium text-gray-200 w-[300px]">{tr('name', 'Name')}:</label>
-                        <input
-                          type="text"
-                          value={productName}
-                          onChange={(e) => {
-                            setProductName(e.target.value);
-                            setProductFieldErrors((prev) => ({ ...prev, name: false }));
-                          }}
-                          className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`}
-                          onFocus={() => setProductActiveField('name')}
-                          onClick={() => setProductActiveField('name')}
-                        />
+                        <input type="text" readOnly value={productName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.testName', 'Test name')}:</label>
-                        <input
-                          type="text"
-                          value={productKeyName}
-                          onChange={(e) => {
-                            setProductKeyName(e.target.value);
-                            setProductFieldErrors((prev) => ({ ...prev, keyName: false }));
-                          }}
-                          className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`}
-                          onFocus={() => setProductActiveField('keyName')}
-                          onClick={() => setProductActiveField('keyName')}
-                        />
+                        <input type="text" readOnly value={productKeyName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.productionName', 'Production name')}:</label>
-                        <input
-                          type="text"
-                          value={productProductionName}
-                          onChange={(e) => {
-                            setProductProductionName(e.target.value);
-                            setProductFieldErrors((prev) => ({ ...prev, productionName: false }));
-                          }}
-                          className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`}
-                          onFocus={() => setProductActiveField('productionName')}
-                          onClick={() => setProductActiveField('productionName')}
-                        />
+                        <input type="text" readOnly value={productProductionName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="w-[170px] font-medium text-gray-200">{tr('control.productModal.price', 'Price')}:</label>
-                        <input
-                          type="text"
-                          value={productPrice}
-                          onChange={(e) => setProductPrice(e.target.value)}
-                          className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl max-w-[150px]"
-                          onFocus={() => setProductActiveField('price')}
-                          onClick={() => setProductActiveField('price')}
-                        />
+                        <input type="text" readOnly value={productPrice} className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="min-w-[170px] font-medium text-gray-200">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
@@ -8147,14 +8276,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="flex gap-1 items-center">
                         <label className="min-w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
                         <div className="flex gap-2 items-center w-full">
-                          <input
-                            type="text"
-                            value={productBarcode}
-                            onChange={(e) => setProductBarcode(e.target.value)}
-                            className="flex-1 px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl"
-                            onFocus={() => setProductActiveField('barcode')}
-                            onClick={() => setProductActiveField('barcode')}
-                          />
+                          <input type="text" readOnly value={productBarcode} className="flex-1 px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl " onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
                           <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
                             <svg className={`w-6 h-6 ${barcodeButtonSpinning ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           </button>
