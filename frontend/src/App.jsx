@@ -12,6 +12,7 @@ import { InPlanningModal } from './components/InPlanningModal';
 import { HistoryModal } from './components/HistoryModal';
 import { LoginScreen } from './components/LoginScreen';
 import { ControlView } from './components/ControlView';
+import { LoadingSpinner } from './components/LoadingSpinner';
 import { usePos } from './hooks/usePos';
 
 const API = '/api';
@@ -48,6 +49,7 @@ export default function App() {
   const [selectedTableLabel, setSelectedTableLabel] = useState(null);
   const [selectedRoomName, setSelectedRoomName] = useState(null);
   const [roomCount, setRoomCount] = useState(null);
+  const [isOpeningTables, setIsOpeningTables] = useState(false);
 
   const fetchRoomCount = useCallback(async () => {
     try {
@@ -195,6 +197,20 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     [addItemToOrder, selectedTable?.id]
   );
 
+  const handleOpenTables = useCallback(async () => {
+    setViewAndPersist('tables');
+    setIsOpeningTables(true);
+    try {
+      await Promise.all([
+        fetchTables(),
+        fetchTableLayouts(),
+        fetchRoomCount()
+      ]);
+    } finally {
+      setIsOpeningTables(false);
+    }
+  }, [setViewAndPersist, fetchTables, fetchTableLayouts, fetchRoomCount]);
+
   if (!user) {
     return (
       <LoginScreen
@@ -205,6 +221,13 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   }
 
   if (view === 'tables') {
+    if (isOpeningTables) {
+      return (
+        <div className="h-full w-full flex items-center justify-center bg-pos-bg">
+          <LoadingSpinner label="Loading tables..." />
+        </div>
+      );
+    }
     return (
       <TablesView
         tables={tables}
@@ -251,7 +274,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           selectedTableLabel={selectedTableLabel}
           selectedRoomName={selectedRoomName}
           roomCount={roomCount}
-          onOpenTables={() => setViewAndPersist('tables')}
+          onOpenTables={handleOpenTables}
           onOpenWeborders={() => {
             setOrdersModalTab('new');
             setShowOrdersModal(true);

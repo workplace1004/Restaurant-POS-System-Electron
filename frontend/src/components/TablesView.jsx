@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TableShapeSvg, getTableFill } from './TableShapeSvg';
+import { LoadingSpinner } from './LoadingSpinner';
 
 const TABLE_SIZE = 200;
 const TABLE_GAP = 24;
@@ -22,6 +23,8 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
   const { t } = useLanguage();
   const canvasRef = useRef(null);
   const [rooms, setRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [layoutsLoading, setLayoutsLoading] = useState(true);
   const [positions, setPositions] = useState({});
   const [positionsReady, setPositionsReady] = useState(false);
   const [lastPaidAtByTableId, setLastPaidAtByTableId] = useState({});
@@ -30,12 +33,25 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
   const [showRoomsModal, setShowRoomsModal] = useState(false);
 
   useEffect(() => {
-    if (typeof fetchTableLayouts === 'function') fetchTableLayouts();
+    let alive = true;
+    const loadLayouts = async () => {
+      setLayoutsLoading(true);
+      try {
+        if (typeof fetchTableLayouts === 'function') await fetchTableLayouts();
+      } finally {
+        if (alive) setLayoutsLoading(false);
+      }
+    };
+    loadLayouts();
+    return () => {
+      alive = false;
+    };
   }, [fetchTableLayouts]);
 
   useEffect(() => {
     let alive = true;
     const loadRooms = async () => {
+      setRoomsLoading(true);
       try {
         const res = await fetch(`${api}/rooms`);
         const data = await res.json().catch(() => []);
@@ -44,6 +60,8 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
       } catch {
         if (!alive) return;
         setRooms([]);
+      } finally {
+        if (alive) setRoomsLoading(false);
       }
     };
     loadRooms();
@@ -147,6 +165,16 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
     if (rooms.length === 0) return;
     setSelectedRoomIndex((prev) => (prev + 1) % rooms.length);
   };
+
+  const showLoading = roomsLoading || layoutsLoading;
+
+  if (showLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-pos-bg">
+        <LoadingSpinner label="Loading tables..." />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#b0b0b0] text-pos-text">

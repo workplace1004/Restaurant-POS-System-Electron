@@ -8019,19 +8019,56 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex text-xl flex-col gap-4">
                       <div className="flex items-center gap-1">
                         <label className="text-xl font-medium text-gray-200 w-[300px]">{tr('name', 'Name')}:</label>
-                        <input type="text" readOnly value={productName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
+                        <input
+                          type="text"
+                          value={productName}
+                          onChange={(e) => {
+                            setProductName(e.target.value);
+                            setProductFieldErrors((prev) => ({ ...prev, name: false }));
+                          }}
+                          className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`}
+                          onFocus={() => setProductActiveField('name')}
+                          onClick={() => setProductActiveField('name')}
+                        />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.testName', 'Test name')}:</label>
-                        <input type="text" readOnly value={productKeyName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
+                        <input
+                          type="text"
+                          value={productKeyName}
+                          onChange={(e) => {
+                            setProductKeyName(e.target.value);
+                            setProductFieldErrors((prev) => ({ ...prev, keyName: false }));
+                          }}
+                          className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`}
+                          onFocus={() => setProductActiveField('keyName')}
+                          onClick={() => setProductActiveField('keyName')}
+                        />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.productionName', 'Production name')}:</label>
-                        <input type="text" readOnly value={productProductionName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
+                        <input
+                          type="text"
+                          value={productProductionName}
+                          onChange={(e) => {
+                            setProductProductionName(e.target.value);
+                            setProductFieldErrors((prev) => ({ ...prev, productionName: false }));
+                          }}
+                          className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`}
+                          onFocus={() => setProductActiveField('productionName')}
+                          onClick={() => setProductActiveField('productionName')}
+                        />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="w-[170px] font-medium text-gray-200">{tr('control.productModal.price', 'Price')}:</label>
-                        <input type="text" readOnly value={productPrice} className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
+                        <input
+                          type="text"
+                          value={productPrice}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl max-w-[150px]"
+                          onFocus={() => setProductActiveField('price')}
+                          onClick={() => setProductActiveField('price')}
+                        />
                       </div>
                       <div className="flex items-center gap-1">
                         <label className="min-w-[170px] font-medium text-gray-200">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
@@ -8110,7 +8147,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="flex gap-1 items-center">
                         <label className="min-w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
                         <div className="flex gap-2 items-center w-full">
-                          <input type="text" readOnly value={productBarcode} className="flex-1 px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl " onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
+                          <input
+                            type="text"
+                            value={productBarcode}
+                            onChange={(e) => setProductBarcode(e.target.value)}
+                            className="flex-1 px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl"
+                            onFocus={() => setProductActiveField('barcode')}
+                            onClick={() => setProductActiveField('barcode')}
+                          />
                           <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
                             <svg className={`w-6 h-6 ${barcodeButtonSpinning ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           </button>

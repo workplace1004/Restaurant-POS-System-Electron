@@ -29,7 +29,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [payworldStatus, setPayworldStatus] = useState({ state: 'IDLE', message: '', details: null });
   const [payModalTargetTotal, setPayModalTargetTotal] = useState(0);
   const [payModalKeypadInput, setPayModalKeypadInput] = useState('');
-  const [payModalKeypadLocked, setPayModalKeypadLocked] = useState(false);
   const [payConfirmLoading, setPayConfirmLoading] = useState(false);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState('');
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('');
@@ -231,17 +230,24 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     if (targetTotal <= 0) return;
     setShowPayDifferentlyModal(true);
     setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
-    setSelectedPayment('cash');
+    setSelectedPayment(null);
     setPayModalTargetTotal(targetTotal);
     setPayModalKeypadInput(targetTotal.toFixed(2));
-    setPayModalKeypadLocked(false);
   };
 
   const payModalTotalAssigned = paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa + paymentAmounts.payworld;
   const payModalRemaining = Math.max(0, payModalTargetTotal - payModalTotalAssigned);
+  const payModalKeypadValue = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
+  /** Block assigning if keypad value would push assigned total over order total. */
+  const payModalWouldExceedTotal =
+    payModalKeypadValue > 0 &&
+    roundCurrency(payModalTotalAssigned + payModalKeypadValue) - payModalTargetTotal > 0.009;
+  /** When assigned matches total, lock keypad/methods/half/remaining/cancel; only Reset + To confirm remain active (To confirm runs payment). */
+  const payModalSplitComplete =
+    payModalTargetTotal > 0.009 && Math.abs(payModalTotalAssigned - payModalTargetTotal) <= 0.009;
 
   const handlePayModalKeypad = (key) => {
-    if (payModalKeypadLocked) return;
+    if (payModalSplitComplete) return;
     if (key === 'C') {
       setPayModalKeypadInput('');
       return;
@@ -252,60 +258,41 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     });
   };
 
-  const assignPayModalInput = () => {
-    if (selectedPayment == null) return;
-    const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
-    setPaymentAmounts((prev) => ({
-      ...prev,
-      [selectedPayment]: prev[selectedPayment] + value
-    }));
-    setPayModalKeypadInput('');
-    setPayModalKeypadLocked(true);
-  };
-
   const handleCashImageClick = () => {
-    if (payModalKeypadLocked) {
+    if (payModalSplitComplete || payModalWouldExceedTotal) return;
+    const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
+    if (value > 0) {
+      setPaymentAmounts((prev) => ({ ...prev, cash: prev.cash + value }));
+      setPayModalKeypadInput('');
+    } else {
       setSelectedPayment('cash');
-      return;
     }
-    const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
-    setPaymentAmounts((prev) => ({ ...prev, cash: prev.cash + value }));
-    setPayModalKeypadInput('');
-    setSelectedPayment('cash');
-    setPayModalKeypadLocked(true);
   };
   const handlePayworldImageClick = () => {
-    if (payModalKeypadLocked) {
+    if (payModalSplitComplete || payModalWouldExceedTotal) return;
+    const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
+    if (value > 0) {
+      setPaymentAmounts((prev) => ({ ...prev, payworld: prev.payworld + value }));
+      setPayModalKeypadInput('');
+    } else {
       setSelectedPayment('payworld');
-      return;
     }
-    const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
-    setPaymentAmounts((prev) => ({ ...prev, payworld: prev.payworld + value }));
-    setPayModalKeypadInput('');
-    setSelectedPayment('payworld');
-    setPayModalKeypadLocked(true);
   };
 
   const handlePayHalfAmount = () => {
-    if (payModalKeypadLocked) return;
-    const targetPayment = selectedPayment || 'cash';
+    if (payModalSplitComplete) return;
     const half = roundCurrency(payModalTargetTotal / 2);
-    setSelectedPayment(targetPayment);
-    setPaymentAmounts((prev) => ({ ...prev, [targetPayment]: half }));
-    setPayModalKeypadInput('');
+    setPayModalKeypadInput(half.toFixed(2));
   };
   const handlePayRemaining = () => {
-    if (payModalKeypadLocked) return;
-    const targetPayment = selectedPayment || 'cash';
-    setSelectedPayment(targetPayment);
-    setPaymentAmounts((prev) => ({ ...prev, [targetPayment]: prev[targetPayment] + payModalRemaining }));
-    setPayModalKeypadInput('');
+    if (payModalSplitComplete) return;
+    const remaining = roundCurrency(Math.max(0, payModalTargetTotal - payModalTotalAssigned));
+    setPayModalKeypadInput(remaining.toFixed(2));
   };
   const handlePayReset = () => {
     setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setPayModalKeypadInput(payModalTargetTotal.toFixed(2));
-    setSelectedPayment('cash');
-    setPayModalKeypadLocked(false);
+    setSelectedPayment(null);
   };
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -481,6 +468,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   })();
 
   const handleCancelPayDifferentlyModal = async () => {
+    if (payModalSplitComplete && !payConfirmLoading) return;
     if (payConfirmLoading) {
       cancelCashmaticRequestedRef.current = true;
       cancelPayworldRequestedRef.current = true;
@@ -617,7 +605,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setSelectedPayment(null);
     setPayModalTargetTotal(0);
     setPayModalKeypadInput('');
-    setPayModalKeypadLocked(false);
     setSelectedItemIds([]);
     setCustomAmount('');
     setShowDeleteAllModal(false);
@@ -632,53 +619,27 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
 
   const handleConfirmPayment = async () => {
-    if (selectedPayment == null || payConfirmLoading) return;
+    if (payConfirmLoading) return;
 
-    const pendingInput = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
-    const shouldAssignInput = !payModalKeypadLocked && pendingInput > 0;
-    const nextAmounts = {
-      ...paymentAmounts,
-      ...(shouldAssignInput ? { [selectedPayment]: paymentAmounts[selectedPayment] + pendingInput } : {})
-    };
-    const assignedTotal = roundCurrency(nextAmounts.cash + nextAmounts.bancontact + nextAmounts.visa + nextAmounts.payworld);
+    const assignedTotal = roundCurrency(payModalTotalAssigned);
     const orderTotal = roundCurrency(payModalTargetTotal);
 
     if (assignedTotal <= 0) {
       setPaymentErrorMessage(tr('orderPanel.assignedAmountGreaterThanZero', 'Assigned amount must be greater than 0.'));
       return;
     }
-    if (assignedTotal - orderTotal > 0.009) {
-      setPaymentErrorMessage(`Assigned amount (€${assignedTotal.toFixed(2)}) exceeds total (€${orderTotal.toFixed(2)}).`);
-      return;
-    }
-    if (Math.abs(assignedTotal - orderTotal) > 0.009 && nextAmounts.cash <= 0) {
+    if (Math.abs(assignedTotal - orderTotal) > 0.009) {
       setPaymentErrorMessage(`Assigned amount (€${assignedTotal.toFixed(2)}) must match total (€${orderTotal.toFixed(2)}).`);
       return;
     }
 
-    setPaymentAmounts(nextAmounts);
-    if (shouldAssignInput) {
-      setPayModalKeypadInput('');
-      setPayModalKeypadLocked(true);
-    }
-
     try {
       setPayConfirmLoading(true);
-      if (nextAmounts.cash > 0) {
-        await runCashmaticPayment(nextAmounts.cash);
+      if (paymentAmounts.cash > 0) {
+        await runCashmaticPayment(paymentAmounts.cash);
       }
-      if (nextAmounts.payworld > 0) {
-        await runPayworldPayment(nextAmounts.payworld);
-      }
-      if (Math.abs(assignedTotal - orderTotal) > 0.009) {
-        const remainingDue = roundCurrency(orderTotal - assignedTotal);
-        setPayModalTargetTotal(remainingDue);
-        setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
-        setSelectedPayment('cash');
-        setPayModalKeypadInput(remainingDue.toFixed(2));
-        setPayModalKeypadLocked(false);
-        setPaymentSuccessMessage(`Partial payment successful (${formatPaymentAmount(assignedTotal)}). Remaining: ${formatPaymentAmount(remainingDue)}.`);
-        return;
+      if (paymentAmounts.payworld > 0) {
+        await runPayworldPayment(paymentAmounts.payworld);
       }
       if (pendingSplitCheckout?.type === 'splitBill') {
         const paidOrderIds = await settleSplitBillSelection(pendingSplitCheckout.lineIds || []);
@@ -734,7 +695,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       let printResult = null;
       try {
         if (targetOrderIds.length === 1) {
-          printResult = await printTicketAutomatically(targetOrderIds[0], nextAmounts);
+          printResult = await printTicketAutomatically(targetOrderIds[0], paymentAmounts);
         } else {
           for (const targetId of targetOrderIds) {
             // Print each settled order ticket separately; backend computes each order total.
@@ -747,10 +708,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       }
       if (printedSuccessfully) {
         const methodLines = [
-          nextAmounts.cash > 0 ? `Cashmatic: ${formatPaymentAmount(nextAmounts.cash)}` : null,
-          nextAmounts.bancontact > 0 ? `Bancontact: ${formatPaymentAmount(nextAmounts.bancontact)}` : null,
-          nextAmounts.visa > 0 ? `Visa: ${formatPaymentAmount(nextAmounts.visa)}` : null,
-          nextAmounts.payworld > 0 ? `Payworld: ${formatPaymentAmount(nextAmounts.payworld)}` : null,
+          paymentAmounts.cash > 0 ? `Cashmatic: ${formatPaymentAmount(paymentAmounts.cash)}` : null,
+          paymentAmounts.bancontact > 0 ? `Bancontact: ${formatPaymentAmount(paymentAmounts.bancontact)}` : null,
+          paymentAmounts.visa > 0 ? `Visa: ${formatPaymentAmount(paymentAmounts.visa)}` : null,
+          paymentAmounts.payworld > 0 ? `Payworld: ${formatPaymentAmount(paymentAmounts.payworld)}` : null,
         ].filter(Boolean);
         setPaymentSuccessMessage([
           `Payment successful (${formatPaymentAmount(orderTotal)}).`,
@@ -1077,25 +1038,37 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex items-center justify-center">
               <div className="p-10 min-w-[46%] w-full h-full flex flex-col">
                 <div className="text-3xl font-semibold mb-4 flex w-full justify-center items-center">{t('total')}: €{payModalTargetTotal.toFixed(2)}</div>
-                <div className="flex gap-3 w-full mb-6 h-full items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={handleCashImageClick}
-                    className={`rounded-lg border-2 p-2 transition-colors ${selectedPayment === 'cash' ? 'bg-gray-300 border-gray-400' : 'bg-white'
-                      }`}
-                    aria-label={t('cash')}
-                  >
-                    <img src="/cash.png" alt={t('cash')} className="max-h-[280px] w-auto object-contain" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePayworldImageClick}
-                    className={`rounded-lg border-2 p-2 transition-colors ${selectedPayment === 'payworld' ? 'bg-gray-300 border-gray-400' : 'bg-white'
-                      }`}
-                    aria-label={t('payworld')}
-                  >
-                    <img src="/payworld.png" alt={t('payworld')} className="max-h-[280px] w-auto object-contain" />
-                  </button>
+                <div className="flex gap-6 w-full mb-6 h-full items-start justify-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={payModalSplitComplete || payModalWouldExceedTotal}
+                      onClick={handleCashImageClick}
+                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'cash' || (paymentAmounts.cash || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
+                        }`}
+                      aria-label={t('cash')}
+                    >
+                      <img src="/cash.png" alt={t('cash')} className="max-h-[280px] w-auto object-contain" />
+                    </button>
+                    <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
+                      {formatPaymentAmount(paymentAmounts.cash || 0)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={payModalSplitComplete || payModalWouldExceedTotal}
+                      onClick={handlePayworldImageClick}
+                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'payworld' || (paymentAmounts.payworld || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
+                        }`}
+                      aria-label={t('payworld')}
+                    >
+                      <img src="/payworld.png" alt={t('payworld')} className="max-h-[280px] w-auto object-contain" />
+                    </button>
+                    <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
+                      {formatPaymentAmount(paymentAmounts.payworld || 0)}
+                    </div>
+                  </div>
                 </div>
               </div>
               {/* Right: Assigned + input + keypad + actions + To confirm */}
@@ -1118,9 +1091,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                           <button
                             key={key}
                             type="button"
-                            disabled={payModalKeypadLocked}
-                            className={`py-9 rounded-lg text-3xl font-medium ${payModalKeypadLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
-                              }`}
+                            disabled={payModalSplitComplete}
+                            className={`py-9 rounded-lg text-3xl font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
                             onClick={() => handlePayModalKeypad(key)}
                           >
                             {key}
@@ -1134,18 +1106,16 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <div className="min-w-[24%] flex flex-col items-center justify-center gap-10">
                 <button
                   type="button"
-                  disabled={payModalKeypadLocked}
-                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${payModalKeypadLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
-                    }`}
+                  disabled={payModalSplitComplete}
+                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
                   onClick={handlePayHalfAmount}
                 >
                   {t('halfAmount')}
                 </button>
                 <button
                   type="button"
-                  disabled={payModalKeypadLocked}
-                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${payModalKeypadLocked ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
-                    }`}
+                  disabled={payModalSplitComplete}
+                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
                   onClick={handlePayRemaining}
                 >
                   {t('remainingAmount')}
@@ -1162,15 +1132,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex justify-between px-[250px] text-3xl gap-10 w-full pt-10">
               <button
                 type="button"
-                className="mt-auto w-[230px] py-3 px-6 bg-gray-300 rounded-lg text-gray-800 font-medium hover:bg-gray-400"
+                disabled={payModalSplitComplete && !payConfirmLoading}
+                className={`mt-auto w-[230px] py-3 px-6 rounded-lg font-medium ${payModalSplitComplete && !payConfirmLoading
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                  }`}
                 onClick={handleCancelPayDifferentlyModal}
               >
                 {t('cancel')}
               </button>
               <button
                 type="button"
-                disabled={selectedPayment == null || payConfirmLoading}
-                className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${selectedPayment == null || payConfirmLoading
+                disabled={Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading}
+                className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
                   }`}
