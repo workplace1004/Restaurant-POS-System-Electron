@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const DEVICE_SETTINGS_STORAGE_KEY = 'pos_device_settings';
+const API = '/api';
 const OPTION_BUTTON_SLOT_COUNT = 28;
 const OPTION_BUTTON_MORE_ID = 'meer';
 const DEFAULT_OPTION_BUTTON_LAYOUT = [
@@ -11,33 +12,33 @@ const DEFAULT_OPTION_BUTTON_LAYOUT = [
   'lade', 'klanten', 'historiek', 'subtotaal', 'terugname', '', 'meer'
 ];
 const OPTION_BUTTON_LABELS = {
-  'extra-bc-bedrag': { key: 'control.optionButton.extraBcAmount', fallback: 'Extra BC\nAmount' },
+  'extra-bc-bedrag': { key: 'control.optionButton.extraBcAmount', fallback: 'Extra BC\namount' },
   'bc-refund': { key: 'control.optionButton.bcRefund', fallback: 'BC Refund' },
-  'stock-retour': { key: 'control.optionButton.stockRetour', fallback: 'Stock Return' },
+  'stock-retour': { key: 'control.optionButton.stockRetour', fallback: 'Stock\nreturn' },
   'product-labels': { key: 'control.optionButton.productLabels', fallback: 'Product\nLabels' },
-  'ticket-afdrukken': { key: 'control.optionButton.printTicket', fallback: 'Print\nTicket' },
+  'ticket-afdrukken': { key: 'control.optionButton.printTicket', fallback: 'Add\nticket' },
   tegoed: { key: 'control.optionButton.credit', fallback: 'Credit' },
-  'tickets-optellen': { key: 'control.optionButton.sumTickets', fallback: 'Sum Tickets' },
-  'product-info': { key: 'control.optionButton.productInfo', fallback: 'Product\nInfo' },
-  'personeel-ticket': { key: 'control.optionButton.staffTicket', fallback: 'Staff Ticket' },
-  'productie-bericht': { key: 'control.optionButton.productionMessage', fallback: 'Production\nMessage' },
-  'prijs-groep': { key: 'control.optionButton.priceGroup', fallback: 'Price Group' },
+  'tickets-optellen': { key: 'control.optionButton.sumTickets', fallback: 'Ticket\nTo' },
+  'product-info': { key: 'control.optionButton.productInfo', fallback: 'Product\ninfo' },
+  'personeel-ticket': { key: 'control.optionButton.staffTicket', fallback: 'Staff\nconsumables' },
+  'productie-bericht': { key: 'control.optionButton.productionMessage', fallback: 'Production\nmessage' },
+  'prijs-groep': { key: 'control.optionButton.priceGroup', fallback: 'Price\ngroup' },
   discount: { key: 'control.optionButton.discount', fallback: 'Discount' },
   kadobon: { key: 'control.optionButton.giftVoucher', fallback: 'Gift voucher' },
-  various: { key: 'control.optionButton.various', fallback: 'Various' },
+  various: { key: 'control.optionButton.various', fallback: 'Miscellaneous' },
   plu: { key: 'control.optionButton.plu', fallback: 'PLU' },
   'product-zoeken': { key: 'control.optionButton.searchProduct', fallback: 'Search\nProduct' },
   lade: { key: 'control.optionButton.drawer', fallback: 'Drawer' },
   klanten: { key: 'control.optionButton.customers', fallback: 'Customers' },
   historiek: { key: 'control.optionButton.history', fallback: 'History' },
   subtotaal: { key: 'control.optionButton.subtotal', fallback: 'Subtotal' },
-  terugname: { key: 'control.optionButton.return', fallback: 'Return' },
+  terugname: { key: 'control.optionButton.return', fallback: 'Return\nname' },
   meer: { key: 'control.optionButton.more', fallback: 'More...' },
-  'eat-in-take-out': { key: 'control.optionButton.eatInTakeOut', fallback: 'Eat In\nTake Out' },
+  'eat-in-take-out': { key: 'control.optionButton.eatInTakeOut', fallback: 'Take\nOut' },
   'externe-apps': { key: 'control.optionButton.externalApps', fallback: 'External\nApps' },
-  'voor-verpakken': { key: 'control.optionButton.forPacking', fallback: 'For\nPacking' },
-  'leeggoed-terugnemen': { key: 'control.optionButton.depositReturn', fallback: 'Deposit\nReturn' },
-  'webshop-tijdsloten': { key: 'control.optionButton.webshopTimeslots', fallback: 'Webshop timeslots' }
+  'voor-verpakken': { key: 'control.optionButton.forPacking', fallback: 'Pre-\npackaging' },
+  'leeggoed-terugnemen': { key: 'control.optionButton.depositReturn', fallback: 'Return empty\ncontainers' },
+  'webshop-tijdsloten': { key: 'control.optionButton.webshopTimeslots', fallback: 'Webshop\ntime slots' }
 };
 const KEYPAD_ROWS = [
   ['C', '7', '8', '9'],
@@ -68,8 +69,12 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
   const [optionButtonSlots, setOptionButtonSlots] = useState(() => normalizeOptionButtonSlots(null));
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showExtraBcModal, setShowExtraBcModal] = useState(false);
+  const [showPriceGroupModal, setShowPriceGroupModal] = useState(false);
+  const [priceGroups, setPriceGroups] = useState([]);
+  const [priceGroupsLoading, setPriceGroupsLoading] = useState(false);
   const [extraBcInput, setExtraBcInput] = useState('');
   const [activeExtraBcButtonId, setActiveExtraBcButtonId] = useState('');
+  const moreMenuAreaRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -95,6 +100,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
     if (!meta) return '';
     return tr(meta.key, meta.fallback);
   };
+  const getTwoLineLabel = (id) => getLabel(id).replace(/\s*\n\s*/g, ' ').trim();
 
   const handleFooterButtonClick = (id) => {
     if (!id) return;
@@ -106,6 +112,10 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
     if (id === 'extra-bc-bedrag') {
       setShowExtraBcModal(true);
       setExtraBcInput('');
+      return;
+    }
+    if (id === 'prijs-groep') {
+      setShowPriceGroupModal(true);
       return;
     }
     if (id === 'klanten') onCustomersClick?.();
@@ -128,6 +138,41 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
     setExtraBcInput('');
     setActiveExtraBcButtonId('');
   };
+  useEffect(() => {
+    if (!showMoreMenu) return undefined;
+    const handleDocumentMouseDown = (event) => {
+      const area = moreMenuAreaRef.current;
+      if (!area) return;
+      if (!area.contains(event.target)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleDocumentMouseDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentMouseDown);
+    };
+  }, [showMoreMenu]);
+  useEffect(() => {
+    if (!showPriceGroupModal) return;
+    let cancelled = false;
+    const run = async () => {
+      setPriceGroupsLoading(true);
+      try {
+        const res = await fetch(`${API}/price-groups`);
+        const data = await res.json().catch(() => []);
+        if (cancelled) return;
+        setPriceGroups(Array.isArray(data) ? data : []);
+      } catch {
+        if (!cancelled) setPriceGroups([]);
+      } finally {
+        if (!cancelled) setPriceGroupsLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [showPriceGroupModal]);
   const pulseExtraBcButton = (id) => {
     setActiveExtraBcButtonId(id);
     window.setTimeout(() => {
@@ -137,7 +182,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
 
   return (
     <footer className="flex items-center py-3 px-4 bg-pos-bg shrink-0">
-      <div className="flex gap-2 text-2xl w-full relative">
+      <div ref={moreMenuAreaRef} className="flex gap-2 text-2xl w-full relative">
         {footerRowSlotIds.map((slotId, index) => {
           if (!slotId) {
             return <div key={`footer-empty-${index}`} className="w-[150px] h-[74px]" />;
@@ -156,7 +201,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
               key={`footer-slot-${slotId}-${index}`}
               type="button"
               disabled={disabled}
-              className={`py-5 w-[150px] border-none rounded whitespace-pre-line leading-tight ${
+              className={`py-5 w-[150px] border-none rounded overflow-hidden ${
                 disabled
                   ? 'bg-pos-panel text-pos-text opacity-60 cursor-not-allowed'
                   : active
@@ -165,7 +210,9 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
               }`}
               onClick={() => handleFooterButtonClick(slotId)}
             >
-              {getLabel(slotId)}
+              <span className="block w-full truncate whitespace-nowrap">
+                {getLabel(slotId)}
+              </span>
             </button>
           );
         })}
@@ -174,16 +221,25 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
             <div className="grid grid-cols-7 gap-2">
               {moreGridSlotIds.map((id, idx) => {
                 if (!id) {
-                  return <div key={`more-grid-empty-${idx}`} className="w-[130px] h-[74px] rounded bg-pos-bg/40" />;
+                  return <div key={`more-grid-empty-${idx}`} className="w-[150px] h-[74px] rounded bg-pos-bg/40" />;
                 }
                 return (
                   <button
                     key={`more-grid-${id}-${idx}`}
                     type="button"
-                    className="w-[130px] h-[74px] px-2 rounded bg-pos-bg text-pos-text hover:bg-pos-surface whitespace-pre-line leading-tight text-center"
+                    className="w-[150px] h-[74px] px-2 rounded bg-pos-bg text-pos-text hover:bg-pos-surface text-center"
                     onClick={() => handleFooterButtonClick(id)}
                   >
-                    {getLabel(id)}
+                    <span
+                      className="block leading-tight overflow-hidden text-ellipsis"
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical'
+                      }}
+                    >
+                      {getTwoLineLabel(id)}
+                    </span>
                   </button>
                 );
               })}
@@ -265,6 +321,51 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                 }}
               >
                 {t('ok')}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {showPriceGroupModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-[1260px] rounded-md bg-pos-bg px-8 py-7 shadow-2xl">
+            <div className="mb-10 min-h-[120px]">
+              {priceGroupsLoading ? (
+                <div className="h-[54px] w-[220px] rounded bg-white/45 flex items-center justify-center text-2xl text-[#3f5478]">
+                  {tr('control.priceGroups.loading', 'Loading price groups...')}
+                </div>
+              ) : priceGroups.length === 0 ? (
+                <div className="h-[54px] w-[260px] rounded bg-white/45 flex items-center justify-center text-2xl text-[#3f5478]">
+                  {tr('control.priceGroups.empty', 'No price groups yet.')}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {priceGroups
+                    .slice()
+                    .sort((a, b) => (a?.name || '').localeCompare(b?.name || ''))
+                    .map((group) => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        className="h-[54px] px-6 rounded bg-white/45 text-3xl text-green-400 hover:bg-white/70"
+                      >
+                        {group.name || group.id}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                className="h-[62px] min-w-[190px] rounded bg-white/45 px-8 text-3xl hover:bg-white/70"
+                onClick={() => setShowPriceGroupModal(false)}
+              >
+                {t('cancel')}
               </button>
             </div>
           </div>

@@ -23,8 +23,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
-  const [paymentAmounts, setPaymentAmounts] = useState({ cash: 0, bancontact: 0, visa: 0 });
+  const [paymentAmounts, setPaymentAmounts] = useState({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showPayworldStatusModal, setShowPayworldStatusModal] = useState(false);
+  const [payworldStatus, setPayworldStatus] = useState({ state: 'IDLE', message: '', details: null });
   const [payModalTargetTotal, setPayModalTargetTotal] = useState(0);
   const [payModalKeypadInput, setPayModalKeypadInput] = useState('');
   const [payModalKeypadLocked, setPayModalKeypadLocked] = useState(false);
@@ -42,6 +44,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const splitRightPanelScrollRef = useRef(null);
   const activeCashmaticSessionIdRef = useRef(null);
   const cancelCashmaticRequestedRef = useRef(false);
+  const activePayworldSessionIdRef = useRef(null);
+  const cancelPayworldRequestedRef = useRef(false);
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
@@ -226,14 +230,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     const targetTotal = roundCurrency(overrideTotal ?? payableTotalForPaymentModal);
     if (targetTotal <= 0) return;
     setShowPayDifferentlyModal(true);
-    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setSelectedPayment('cash');
     setPayModalTargetTotal(targetTotal);
     setPayModalKeypadInput(targetTotal.toFixed(2));
     setPayModalKeypadLocked(false);
   };
 
-  const payModalTotalAssigned = paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa;
+  const payModalTotalAssigned = paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa + paymentAmounts.payworld;
   const payModalRemaining = Math.max(0, payModalTargetTotal - payModalTotalAssigned);
 
   const handlePayModalKeypad = (key) => {
@@ -270,6 +274,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setSelectedPayment('cash');
     setPayModalKeypadLocked(true);
   };
+  const handlePayworldImageClick = () => {
+    if (payModalKeypadLocked) {
+      setSelectedPayment('payworld');
+      return;
+    }
+    const value = parseFloat(payModalKeypadInput.replace(',', '.')) || 0;
+    setPaymentAmounts((prev) => ({ ...prev, payworld: prev.payworld + value }));
+    setPayModalKeypadInput('');
+    setSelectedPayment('payworld');
+    setPayModalKeypadLocked(true);
+  };
 
   const handlePayHalfAmount = () => {
     if (payModalKeypadLocked) return;
@@ -287,7 +302,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setPayModalKeypadInput('');
   };
   const handlePayReset = () => {
-    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setPayModalKeypadInput(payModalTargetTotal.toFixed(2));
     setSelectedPayment('cash');
     setPayModalKeypadLocked(false);
@@ -342,13 +357,142 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     throw new Error('Cashmatic payment timeout. Please try again.');
   };
 
+  const runPayworldPayment = async (amountEuro) => {
+    const amount = roundCurrency(Number(amountEuro) || 0);
+    if (amount <= 0) return;
+
+    setShowPayworldStatusModal(true);
+    setPayworldStatus({
+      state: 'IN_PROGRESS',
+      message: tr('orderPanel.payworldConnecting', 'Connecting to terminal...'),
+      details: null,
+    });
+
+    const startRes = await fetch('/api/payworld/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    });
+    const startData = await startRes.json().catch(() => ({}));
+    if (!startRes.ok || startData?.ok === false) {
+      throw new Error(startData?.error || 'Unable to start Payworld payment.');
+    }
+
+    const sessionId = startData?.sessionId || startData?.data?.sessionId;
+    if (!sessionId) throw new Error('Payworld session did not start.');
+
+    activePayworldSessionIdRef.current = sessionId;
+    cancelPayworldRequestedRef.current = false;
+    setPayworldStatus({
+      state: 'IN_PROGRESS',
+      message: tr('orderPanel.payworldInProgress', 'Payment in progress on terminal...'),
+      details: null,
+    });
+
+    for (let i = 0; i < 150; i += 1) {
+      if (cancelPayworldRequestedRef.current) {
+        await fetch(`/api/payworld/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+        setPayworldStatus({
+          state: 'CANCELLED',
+          message: tr('orderPanel.paymentCancelled', 'Payment cancelled.'),
+          details: null,
+        });
+        throw new Error(tr('orderPanel.paymentCancelled', 'Payment cancelled.'));
+      }
+      await sleep(1000);
+      const statusRes = await fetch(`/api/payworld/status/${encodeURIComponent(sessionId)}`);
+      const statusData = await statusRes.json().catch(() => ({}));
+      if (!statusRes.ok || statusData?.ok === false) {
+        throw new Error(statusData?.error || 'Unable to read Payworld payment status.');
+      }
+
+      const state = String(statusData?.state || '').toUpperCase();
+      const statusMessage = String(statusData?.message || '').trim();
+      const details = statusData?.details || null;
+      setPayworldStatus({
+        state: state || 'IN_PROGRESS',
+        message: statusMessage || tr('orderPanel.payworldInProgress', 'Payment in progress on terminal...'),
+        details,
+      });
+      if (state === 'APPROVED') {
+        setPayworldStatus({
+          state: 'APPROVED',
+          message: statusMessage || tr('orderPanel.payworldApproved', 'Payment approved.'),
+          details,
+        });
+        await sleep(800);
+        setShowPayworldStatusModal(false);
+        activePayworldSessionIdRef.current = null;
+        return;
+      }
+      if (state === 'DECLINED' || state === 'CANCELLED' || state === 'ERROR') {
+        setShowPayworldStatusModal(false);
+        throw new Error(statusMessage || `Payworld payment ${state.toLowerCase()}.`);
+      }
+    }
+
+    await fetch(`/api/payworld/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+    setPayworldStatus({
+      state: 'ERROR',
+      message: tr('orderPanel.payworldTimeout', 'Payworld payment timeout. Please try again.'),
+      details: null,
+    });
+    setShowPayworldStatusModal(false);
+    activePayworldSessionIdRef.current = null;
+    throw new Error('Payworld payment timeout. Please try again.');
+  };
+
+  const handleAbortPayworld = async () => {
+    const activeSessionId = activePayworldSessionIdRef.current;
+    if (!activeSessionId) {
+      setPayworldStatus({
+        state: 'ERROR',
+        message: tr('orderPanel.payworldNoActiveSession', 'No active Payworld session to cancel.'),
+        details: null,
+      });
+      return;
+    }
+
+    cancelPayworldRequestedRef.current = true;
+    setPayworldStatus({
+      state: 'IN_PROGRESS',
+      message: tr('orderPanel.payworldCancelling', 'Payment is being cancelled on the terminal...'),
+      details: null,
+    });
+
+    await fetch(`/api/payworld/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => {});
+  };
+
+  const payworldStatusTitle = (() => {
+    switch (String(payworldStatus.state || '').toUpperCase()) {
+      case 'IN_PROGRESS':
+        return tr('orderPanel.payworldStatusInProgress', 'Payment in progress on terminal...');
+      case 'APPROVED':
+        return tr('orderPanel.payworldStatusApproved', 'Payment approved.');
+      case 'DECLINED':
+        return tr('orderPanel.payworldStatusDeclined', 'Payment declined.');
+      case 'CANCELLED':
+        return tr('orderPanel.payworldStatusCancelled', 'Payment cancelled.');
+      case 'ERROR':
+        return tr('orderPanel.payworldStatusError', 'Error during payment.');
+      default:
+        return tr('orderPanel.payworldStatusReady', 'Ready.');
+    }
+  })();
+
   const handleCancelPayDifferentlyModal = async () => {
     if (payConfirmLoading) {
       cancelCashmaticRequestedRef.current = true;
+      cancelPayworldRequestedRef.current = true;
       const activeSessionId = activeCashmaticSessionIdRef.current;
       if (activeSessionId) {
         await fetch(`/api/cashmatic/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => {});
       }
+      const activePayworldSessionId = activePayworldSessionIdRef.current;
+      if (activePayworldSessionId) {
+        await fetch(`/api/payworld/cancel/${encodeURIComponent(activePayworldSessionId)}`, { method: 'POST' }).catch(() => {});
+      }
+      setShowPayworldStatusModal(false);
       setPaymentErrorMessage(tr('orderPanel.paymentCancelled', 'Payment cancelled.'));
     }
     setShowPayDifferentlyModal(false);
@@ -469,7 +613,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   const resetAfterSuccessfulPayment = () => {
     setShowPayDifferentlyModal(false);
-    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setSelectedPayment(null);
     setPayModalTargetTotal(0);
     setPayModalKeypadInput('');
@@ -483,6 +627,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setSubtotalLineGroups([]);
     setSubtotalSelectedLeftIds([]);
     setSubtotalSelectedRightIds([]);
+    setShowPayworldStatusModal(false);
+    setPayworldStatus({ state: 'IDLE', message: '', details: null });
   };
 
   const handleConfirmPayment = async () => {
@@ -494,7 +640,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       ...paymentAmounts,
       ...(shouldAssignInput ? { [selectedPayment]: paymentAmounts[selectedPayment] + pendingInput } : {})
     };
-    const assignedTotal = roundCurrency(nextAmounts.cash + nextAmounts.bancontact + nextAmounts.visa);
+    const assignedTotal = roundCurrency(nextAmounts.cash + nextAmounts.bancontact + nextAmounts.visa + nextAmounts.payworld);
     const orderTotal = roundCurrency(payModalTargetTotal);
 
     if (assignedTotal <= 0) {
@@ -521,10 +667,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       if (nextAmounts.cash > 0) {
         await runCashmaticPayment(nextAmounts.cash);
       }
+      if (nextAmounts.payworld > 0) {
+        await runPayworldPayment(nextAmounts.payworld);
+      }
       if (Math.abs(assignedTotal - orderTotal) > 0.009) {
         const remainingDue = roundCurrency(orderTotal - assignedTotal);
         setPayModalTargetTotal(remainingDue);
-        setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0 });
+        setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
         setSelectedPayment('cash');
         setPayModalKeypadInput(remainingDue.toFixed(2));
         setPayModalKeypadLocked(false);
@@ -601,6 +750,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           nextAmounts.cash > 0 ? `Cashmatic: ${formatPaymentAmount(nextAmounts.cash)}` : null,
           nextAmounts.bancontact > 0 ? `Bancontact: ${formatPaymentAmount(nextAmounts.bancontact)}` : null,
           nextAmounts.visa > 0 ? `Visa: ${formatPaymentAmount(nextAmounts.visa)}` : null,
+          nextAmounts.payworld > 0 ? `Payworld: ${formatPaymentAmount(nextAmounts.payworld)}` : null,
         ].filter(Boolean);
         setPaymentSuccessMessage([
           `Payment successful (${formatPaymentAmount(orderTotal)}).`,
@@ -617,7 +767,9 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     } finally {
       setPayConfirmLoading(false);
       activeCashmaticSessionIdRef.current = null;
+      activePayworldSessionIdRef.current = null;
       cancelCashmaticRequestedRef.current = false;
+      cancelPayworldRequestedRef.current = false;
     }
   };
 
@@ -935,6 +1087,15 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   >
                     <img src="/cash.png" alt={t('cash')} className="max-h-[280px] w-auto object-contain" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={handlePayworldImageClick}
+                    className={`rounded-lg border-2 p-2 transition-colors ${selectedPayment === 'payworld' ? 'bg-gray-300 border-gray-400' : 'bg-white'
+                      }`}
+                    aria-label={t('payworld')}
+                  >
+                    <img src="/payworld.png" alt={t('payworld')} className="max-h-[280px] w-auto object-contain" />
+                  </button>
                 </div>
               </div>
               {/* Right: Assigned + input + keypad + actions + To confirm */}
@@ -1017,6 +1178,55 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               >
                 {payConfirmLoading ? t('processing') : t('toConfirm')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPayworldStatusModal && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payworld-status-title"
+        >
+          <div className="bg-pos-panel rounded-lg shadow-xl px-10 py-8 max-w-2xl w-full mx-4 border border-pos-border">
+            <h2 id="payworld-status-title" className="text-3xl mb-6 font-semibold text-pos-text text-center">
+              {tr('orderPanel.payworldModalTitle', 'Payworld / PAX A35 Payment')}
+            </h2>
+            <div className="space-y-4 text-pos-text">
+              <div className="flex justify-between items-center text-2xl">
+                <span>{tr('orderPanel.payworldAmount', 'Amount')}:</span>
+                <span className="font-semibold">€ {payModalTargetTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-2xl">
+                <span>{tr('orderPanel.payworldStatusLabel', 'Status')}:</span>
+                <span className="font-semibold">{payworldStatusTitle}</span>
+              </div>
+              {payworldStatus.message && (
+                <div className="rounded-md bg-pos-surface px-4 py-3 text-xl whitespace-pre-line">
+                  {payworldStatus.message}
+                </div>
+              )}
+            </div>
+            <div className="mt-8 flex justify-center gap-4">
+              {String(payworldStatus.state || '').toUpperCase() === 'IN_PROGRESS' ? (
+                <button
+                  type="button"
+                  className="min-w-[220px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                  onClick={handleAbortPayworld}
+                >
+                  {tr('orderPanel.cancelPayworld', 'Cancel Payment')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="min-w-[220px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                  onClick={() => setShowPayworldStatusModal(false)}
+                >
+                  {tr('orderPanel.closePayworldModal', 'Close')}
+                </button>
+              )}
             </div>
           </div>
         </div>

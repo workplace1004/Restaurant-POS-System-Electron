@@ -280,33 +280,33 @@ const FUNCTION_BUTTON_ITEM_BY_ID = Object.fromEntries(
 );
 
 const OPTION_BUTTON_ITEMS = [
-  { id: 'extra-bc-bedrag', labelKey: 'control.optionButton.extraBcAmount', fallbackLabel: 'Extra BC Bedrag' },
+  { id: 'extra-bc-bedrag', labelKey: 'control.optionButton.extraBcAmount', fallbackLabel: 'Extra BC amount' },
   { id: 'bc-refund', labelKey: 'control.optionButton.bcRefund', fallbackLabel: 'BC Refund' },
-  { id: 'stock-retour', labelKey: 'control.optionButton.stockRetour', fallbackLabel: 'Stock Retour' },
+  { id: 'stock-retour', labelKey: 'control.optionButton.stockRetour', fallbackLabel: 'Stock return' },
   { id: 'product-labels', labelKey: 'control.optionButton.productLabels', fallbackLabel: 'Product Labels' },
-  { id: 'ticket-afdrukken', labelKey: 'control.optionButton.printTicket', fallbackLabel: 'Ticket afdrukken' },
-  { id: 'tegoed', labelKey: 'control.optionButton.credit', fallbackLabel: 'Tegoed' },
-  { id: 'tickets-optellen', labelKey: 'control.optionButton.sumTickets', fallbackLabel: 'Tickets Optellen' },
-  { id: 'product-info', labelKey: 'control.optionButton.productInfo', fallbackLabel: 'Product Info' },
-  { id: 'personeel-ticket', labelKey: 'control.optionButton.staffTicket', fallbackLabel: 'Personeel Ticket' },
-  { id: 'productie-bericht', labelKey: 'control.optionButton.productionMessage', fallbackLabel: 'Productie Bericht' },
-  { id: 'prijs-groep', labelKey: 'control.optionButton.priceGroup', fallbackLabel: 'Prijs Groep' },
+  { id: 'ticket-afdrukken', labelKey: 'control.optionButton.printTicket', fallbackLabel: 'Add ticket' },
+  { id: 'tegoed', labelKey: 'control.optionButton.credit', fallbackLabel: 'Credit' },
+  { id: 'tickets-optellen', labelKey: 'control.optionButton.sumTickets', fallbackLabel: 'Ticket To' },
+  { id: 'product-info', labelKey: 'control.optionButton.productInfo', fallbackLabel: 'Product info' },
+  { id: 'personeel-ticket', labelKey: 'control.optionButton.staffTicket', fallbackLabel: 'Staff consumables' },
+  { id: 'productie-bericht', labelKey: 'control.optionButton.productionMessage', fallbackLabel: 'Production message' },
+  { id: 'prijs-groep', labelKey: 'control.optionButton.priceGroup', fallbackLabel: 'Price group' },
   { id: 'discount', labelKey: 'control.optionButton.discount', fallbackLabel: 'Discount' },
-  { id: 'kadobon', labelKey: 'control.optionButton.giftVoucher', fallbackLabel: 'Kadobon' },
-  { id: 'various', labelKey: 'control.optionButton.various', fallbackLabel: 'Various' },
+  { id: 'kadobon', labelKey: 'control.optionButton.giftVoucher', fallbackLabel: 'Gift voucher' },
+  { id: 'various', labelKey: 'control.optionButton.various', fallbackLabel: 'Miscellaneous' },
   { id: 'plu', labelKey: 'control.optionButton.plu', fallbackLabel: 'PLU' },
-  { id: 'product-zoeken', labelKey: 'control.optionButton.searchProduct', fallbackLabel: 'Product Zoeken' },
-  { id: 'lade', labelKey: 'control.optionButton.drawer', fallbackLabel: 'Lade' },
-  { id: 'klanten', labelKey: 'control.optionButton.customers', fallbackLabel: 'Klanten' },
-  { id: 'historiek', labelKey: 'control.optionButton.history', fallbackLabel: 'Historiek' },
+  { id: 'product-zoeken', labelKey: 'control.optionButton.searchProduct', fallbackLabel: 'Search Product' },
+  { id: 'lade', labelKey: 'control.optionButton.drawer', fallbackLabel: 'Drawer' },
+  { id: 'klanten', labelKey: 'control.optionButton.customers', fallbackLabel: 'Customers' },
+  { id: 'historiek', labelKey: 'control.optionButton.history', fallbackLabel: 'History' },
   { id: 'subtotaal', labelKey: 'control.optionButton.subtotal', fallbackLabel: 'Subtotaal' },
-  { id: 'terugname', labelKey: 'control.optionButton.return', fallbackLabel: 'Terugname' },
+  { id: 'terugname', labelKey: 'control.optionButton.return', fallbackLabel: 'Return name' },
   { id: 'meer', labelKey: 'control.optionButton.more', fallbackLabel: 'Meer...' },
-  { id: 'eat-in-take-out', labelKey: 'control.optionButton.eatInTakeOut', fallbackLabel: 'Eat In Take Out' },
-  { id: 'externe-apps', labelKey: 'control.optionButton.externalApps', fallbackLabel: 'Externe Apps' },
-  { id: 'voor-verpakken', labelKey: 'control.optionButton.forPacking', fallbackLabel: 'Voor Verpakken' },
-  { id: 'leeggoed-terugnemen', labelKey: 'control.optionButton.depositReturn', fallbackLabel: 'Leeggoed Terugnemen' },
-  { id: 'webshop-tijdsloten', labelKey: 'control.optionButton.webshopTimeslots', fallbackLabel: 'Webshop tijdsloten' }
+  { id: 'eat-in-take-out', labelKey: 'control.optionButton.eatInTakeOut', fallbackLabel: 'Take Out' },
+  { id: 'externe-apps', labelKey: 'control.optionButton.externalApps', fallbackLabel: 'External Apps' },
+  { id: 'voor-verpakken', labelKey: 'control.optionButton.forPacking', fallbackLabel: 'Pre-packaging' },
+  { id: 'leeggoed-terugnemen', labelKey: 'control.optionButton.depositReturn', fallbackLabel: 'Return empty containers' },
+  { id: 'webshop-tijdsloten', labelKey: 'control.optionButton.webshopTimeslots', fallbackLabel: 'Webshop time slots' }
 ];
 const OPTION_BUTTON_SLOT_COUNT = 28;
 const OPTION_BUTTON_LOCKED_ID = 'meer';
@@ -6296,9 +6296,9 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                 </div>
               )}
               {deviceSettingsTab === 'Option buttons' && (
-                <div className="px-8 py-2">
+                <div className="px-4 py-2">
                   <div className="mx-auto max-w-[1320px] flex gap-8">
-                    <div className="flex-1 border border-[#aeb3bf] bg-[#d7d8de] px-6 py-5">
+                    <div className="flex-1 border border-[#aeb3bf] bg-[#d7d8de] px-3 py-5">
                       <div className="grid grid-cols-7 gap-3">
                         {Array.from({ length: OPTION_BUTTON_SLOT_COUNT }).map((_, slotIndex) => {
                           const assignedId = optionButtonSlots[slotIndex];
@@ -6313,7 +6313,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                               onClick={() => setSelectedOptionButtonSlotIndex(slotIndex)}
                               onDragOver={(event) => event.preventDefault()}
                               onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
-                              className={`h-[74px] border px-2 text-center text-[18px] leading-[1.2] whitespace-pre-line transition-colors ${
+                              className={`h-[74px] max-w-[120px] min-w-[120px] border px-2 text-center text-[18px] leading-[1.2] whitespace-pre-line transition-colors ${
                                 assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
                               } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} hover:brightness-95`}
                             >
