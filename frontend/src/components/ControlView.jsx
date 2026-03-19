@@ -6557,7 +6557,7 @@ export function ControlView({ currentUser, onLogout, onBack }) {
                       { key: 'x', label: 'x' },
                       { key: 'y', label: 'y' },
                       { key: 'width', label: tr('control.tables.width', 'Width') },
-                      { key: 'height', label: tr('control.tables.height', 'Height') }
+                      ...(!selectedSetTable?.round ? [{ key: 'height', label: tr('control.tables.height', 'Height') }] : [])
                     ].map((field) => (
                       <div key={field.key} className="flex items-center gap-3">
                         <span className="w-[120px] shrink-0">{field.label}</span>
