@@ -551,6 +551,7 @@ app.delete('/api/discounts/:id', async (req, res) => {
 
 // REST: app settings (e.g. language)
 const SETTING_KEY_LANGUAGE = 'language';
+const SETTING_KEY_CREDIT_CARD_TYPE = 'pos_credit_card_type';
 const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
 const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
 const SETTING_KEY_TABLE_SAVED_ORDER_IDS = 'table_saved_order_ids';
@@ -627,6 +628,34 @@ app.put('/api/settings/language', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/language', err);
     res.status(500).json({ error: err.message || 'Failed to save language' });
+  }
+});
+
+app.get('/api/settings/credit-card-type', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_CREDIT_CARD_TYPE } });
+    const value = row?.value ?? 'disabled';
+    res.json({ value });
+  } catch (err) {
+    console.error('GET /api/settings/credit-card-type', err);
+    res.status(500).json({ error: err.message || 'Failed to get credit card type' });
+  }
+});
+
+app.put('/api/settings/credit-card-type', async (req, res) => {
+  try {
+    const raw = req.body?.value != null ? String(req.body.value) : 'disabled';
+    const allowed = ['disabled', 'payworld', 'viva_wallet'];
+    const value = allowed.includes(raw) ? raw : 'disabled';
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_CREDIT_CARD_TYPE },
+      create: { key: SETTING_KEY_CREDIT_CARD_TYPE, value },
+      update: { value }
+    });
+    res.json({ value });
+  } catch (err) {
+    console.error('PUT /api/settings/credit-card-type', err);
+    res.status(500).json({ error: err.message || 'Failed to save credit card type' });
   }
 });
 
