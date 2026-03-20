@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Dropdown } from './Dropdown';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { KeyboardWithNumpad } from './KeyboardWithNumpad';
+import { SmallKeyboardWithNumpad } from './SmallKeyboardWithNumpad';
 import { CalendarModal } from './CalendarModal';
 import { PaginationArrows } from './PaginationArrows';
 import { PrinterModal } from './PrinterModal';
@@ -57,7 +58,12 @@ const EXTERNAL_DEVICES_SUB_NAV_ITEMS = [
   'Payworld'
 ];
 
-const PRINTER_TABS = ['General', 'Final tickets', 'Production Tickets', 'Labels'];
+const PRINTER_TAB_DEFS = [
+  { id: 'General', labelKey: 'control.printerTabs.general', fallback: 'General' },
+  { id: 'Final tickets', labelKey: 'control.printerTabs.finalTickets', fallback: 'Final tickets' },
+  { id: 'Production Tickets', labelKey: 'control.printerTabs.productionTickets', fallback: 'Production Tickets' },
+  { id: 'Labels', labelKey: 'control.printerTabs.labels', fallback: 'Labels' },
+];
 
 const PRINTING_ORDER_OPTIONS = [
   { value: 'as-registered', label: 'As Registered' },
@@ -106,10 +112,6 @@ const SCHEDULED_ORDERS_INVOICE_LAYOUT_OPTIONS = [
 const SCHEDULED_ORDERS_CHECKOUT_AT_OPTIONS = [
   { value: 'delivery-note', label: 'Delivery note' },
   { value: 'order-date', label: 'Order date' }
-];
-
-const LABELS_TYPE_OPTIONS = [
-  { value: 'production-labels', label: 'Production labels' }
 ];
 
 const PRICE_DISPLAY_TYPE_OPTIONS = [
@@ -1066,7 +1068,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [printersPage, setPrintersPage] = useState(0);
   const PRINTERS_PAGE_SIZE = 7;
 
-  const [finalTicketsCompanyData1, setFinalTicketsCompanyData1] = useState('BE.0.0.0');
+  const [finalTicketsCompanyData1, setFinalTicketsCompanyData1] = useState('');
   const [finalTicketsCompanyData2, setFinalTicketsCompanyData2] = useState('');
   const [finalTicketsCompanyData3, setFinalTicketsCompanyData3] = useState('');
   const [finalTicketsCompanyData4, setFinalTicketsCompanyData4] = useState('');
@@ -4027,6 +4029,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   const labelsPrinterOptions = printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }));
 
+  const labelsTypeOptions = useMemo(
+    () => [{ value: 'production-labels', label: tr('control.labels.type.productionLabels', 'Production labels') }],
+    [tr]
+  );
+
   useEffect(() => {
     if (printerTab !== 'Labels') return;
     try {
@@ -5981,18 +5988,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </p>
             </div>
           ) : topNavId === 'external-devices' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 py-2">
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 py-2 min-h-[650px] max-h-[550px]">
               {subNavId === 'Printer' && (
                 <div className="flex flex-col">
                   <div className="flex justify-around mb-6 shrink-0">
-                    {PRINTER_TABS.map((tab) => (
+                    {PRINTER_TAB_DEFS.map(({ id, labelKey, fallback }) => (
                       <button
-                        key={tab}
+                        key={id}
                         type="button"
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${printerTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
-                        onClick={() => setPrinterTab(tab)}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${printerTab === id ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                        onClick={() => setPrinterTab(id)}
                       >
-                        {tab}
+                        {tr(labelKey, fallback)}
                       </button>
                     ))}
                   </div>
@@ -6004,7 +6011,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                           onClick={openNewPrinterModal}
                         >
-                          Add printer
+                          {tr('control.printer.addPrinter', 'Add printer')}
                         </button>
                       </div>
                       {(() => {
@@ -6018,7 +6025,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         const canNext = page < totalPages - 1;
                         return sorted.length === 0 ? (
                           <ul className="w-full flex flex-col">
-                            <li className="text-pos-muted text-xl font-medium text-center py-4">No printers yet.</li>
+                            <li className="text-pos-muted text-xl font-medium text-center py-4">{tr('control.printer.empty', 'No printers yet.')}</li>
                           </ul>
                         ) : (
                           <>
@@ -6034,7 +6041,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                         type="button"
                                         className="p-2 flex justify-center rounded text-pos-text hover:bg-pos-panel shrink-0"
                                         onClick={() => setDefaultPrinter(p.id)}
-                                        aria-label={p.isDefault ? 'Default printer' : 'Set as default'}
+                                        aria-label={p.isDefault ? tr('control.printer.defaultPrinter', 'Default printer') : tr('control.printer.setAsDefault', 'Set as default')}
                                       >
                                         {p.isDefault ? (
                                           <span className="w-4 h-4 inline-flex justify-center items-center text-green-500 text-sm">{'\u2713'}</span>
@@ -6049,7 +6056,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                         type="button"
                                         className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
                                         onClick={() => openEditPrinterModal(p)}
-                                        aria-label="Edit"
+                                        aria-label={tr('control.edit', 'Edit')}
                                       >
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                       </button>
@@ -6057,7 +6064,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                         type="button"
                                         className="p-2 rounded text-pos-text hover:bg-pos-panel"
                                         onClick={() => setDeleteConfirmPrinterId(p.id)}
-                                        aria-label="Delete"
+                                        aria-label={tr('delete', 'Delete')}
                                       >
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                       </button>
@@ -6078,123 +6085,123 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   )}
                   {printerTab === 'Final tickets' && (
-                    <div className="flex flex-col min-h-[580px] max-h-[580px] items-center justify-between">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 mb-6">
+                    <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                      <div className="grid grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4 mb-6">
                         <div className="flex flex-col gap-4">
                           <div className='flex items-start gap-2'>
-                            <label className="block text-pos-text text-xl font-medium mb-1 min-w-[180px] max-w-[180px]">Company data:</label>
+                            <label className="block text-pos-text font-medium min-w-[130px] max-w-[130px]">Company data:</label>
                             <div className='grid grid-cols-2 items-start gap-4'>
-                              <input type="text" readOnly value={finalTicketsCompanyData1} className="px-4 flex py-3 bg-pos-panel border border-pos-border rounded-lg justify-start items-start text-pos-text text-xl" onClick={() => setFinalTicketsActiveField('companyData1')} />
+                              <input type="text" value={finalTicketsCompanyData1} onChange={(e) => setFinalTicketsCompanyData1(e.target.value)} onFocus={() => setFinalTicketsActiveField('companyData1')} className="px-4 min-w-[100px] max-w-[100px] flex py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg justify-start items-start text-gray-200" />
                               {[2, 3, 4, 5].map((i) => (
                                 <div key={i}>
-                                  <input type="text" readOnly value={i === 2 ? finalTicketsCompanyData2 : i === 3 ? finalTicketsCompanyData3 : i === 4 ? finalTicketsCompanyData4 : finalTicketsCompanyData5} className="px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl" onClick={() => setFinalTicketsActiveField('companyData' + i)} placeholder="" />
+                                  <input type="text" value={i === 2 ? finalTicketsCompanyData2 : i === 3 ? finalTicketsCompanyData3 : i === 4 ? finalTicketsCompanyData4 : finalTicketsCompanyData5} onChange={(e) => { if (i === 2) setFinalTicketsCompanyData2(e.target.value); else if (i === 3) setFinalTicketsCompanyData3(e.target.value); else if (i === 4) setFinalTicketsCompanyData4(e.target.value); else setFinalTicketsCompanyData5(e.target.value); }} onFocus={() => setFinalTicketsActiveField('companyData' + i)} className="px-4 min-w-[100px] max-w-[100px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200" placeholder="" />
                                 </div>
                               ))}
                             </div>
                           </div>
                           <div className='flex items-center gap-2'>
-                            <label className="block text-pos-text text-xl font-medium mb-1 min-w-[180px] max-w-[180px]">Thank text:</label>
-                            <input type="text" readOnly value={finalTicketsThankText} className="px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl" onClick={() => setFinalTicketsActiveField('thankText')} />
+                            <label className="block text-pos-text font-medium min-w-[130px] max-w-[130px]">Thank text:</label>
+                            <input type="text" value={finalTicketsThankText} onChange={(e) => setFinalTicketsThankText(e.target.value)} onFocus={() => setFinalTicketsActiveField('thankText')} className="px-4 min-w-[200px] max-w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200" />
                           </div>
                         </div>
                         <div className="flex flex-col gap-4">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[250px] max-w-[250px]">Proforma ticket:</span>
-                            <input type="checkbox" checked={finalTicketsProforma} onChange={(e) => setFinalTicketsProforma(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[250px] max-w-[250px]">Print payment type:</span>
-                            <input type="checkbox" checked={finalTicketsPrintPaymentType} onChange={(e) => setFinalTicketsPrintPaymentType(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[250px] max-w-[250px]">Ticket tearable:</span>
-                            <input type="checkbox" checked={finalTicketsTicketTearable} onChange={(e) => setFinalTicketsTicketTearable(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[250px] max-w-[250px]">Print logo:</span>
-                            <input type="checkbox" checked={finalTicketsPrintLogo} onChange={(e) => setFinalTicketsPrintLogo(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
+                          <div className="flex gap-2 items-center">
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Proforma ticket:</label>
+                            <input type="checkbox" checked={finalTicketsProforma} onChange={(e) => setFinalTicketsProforma(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Print payment type:</label>
+                            <input type="checkbox" checked={finalTicketsPrintPaymentType} onChange={(e) => setFinalTicketsPrintPaymentType(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Ticket tearable:</label>
+                            <input type="checkbox" checked={finalTicketsTicketTearable} onChange={(e) => setFinalTicketsTicketTearable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Print logo:</label>
+                            <input type="checkbox" checked={finalTicketsPrintLogo} onChange={(e) => setFinalTicketsPrintLogo(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl min-w-[250px] max-w-[250px] shrink-0">Printing order of ticket:</span>
-                            <Dropdown options={PRINTING_ORDER_OPTIONS} value={finalTicketsPrintingOrder} onChange={setFinalTicketsPrintingOrder} placeholder="Select" className="text-xl min-w-[200px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Printing order of ticket:</label>
+                            <Dropdown options={PRINTING_ORDER_OPTIONS} value={finalTicketsPrintingOrder} onChange={setFinalTicketsPrintingOrder} placeholder="Select" className="min-w-[150px]" />
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-center">
-                        <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingFinalTickets} onClick={handleSaveFinalTickets}>
-                          <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                          Save
+                      <div className="flex justify-center pt-5 pb-5">
+                        <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingFinalTickets} onClick={handleSaveFinalTickets}>
+                          <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                          {tr('control.save', 'Save')}
                         </button>
                       </div>
-                      <div className="shrink-0 pt-4">
-                        <KeyboardWithNumpad value={finalTicketsKeyboardValue} onChange={finalTicketsKeyboardOnChange} />
+                      <div className="shrink-0">
+                        <SmallKeyboardWithNumpad value={finalTicketsKeyboardValue} onChange={finalTicketsKeyboardOnChange} />
                       </div>
                     </div>
                   )}
                   {printerTab === 'Production Tickets' && (
-                    <div className="flex flex-col min-h-[750px] max-h-[750px]">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 mb-6">
-                        <div className="flex flex-col gap-6">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[360px] max-w-[360px]">Display categories on production ticket:</span>
-                            <input type="checkbox" checked={prodTicketsDisplayCategories} onChange={(e) => setProdTicketsDisplayCategories(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[360px] max-w-[360px]">Space above ticket:</span>
-                            <input type="checkbox" checked={prodTicketsSpaceAbove} onChange={(e) => setProdTicketsSpaceAbove(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[360px] max-w-[360px]">Ticket tearable:</span>
-                            <input type="checkbox" checked={prodTicketsTicketTearable} onChange={(e) => setProdTicketsTicketTearable(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[360px] max-w-[360px]">Keukenprinter buzzer:</span>
-                            <input type="checkbox" checked={prodTicketsKeukenprinterBuzzer} onChange={(e) => setProdTicketsKeukenprinterBuzzer(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[360px] max-w-[360px]">Producten individueel afdrukken:</span>
-                            <input type="checkbox" checked={prodTicketsProductenIndividueel} onChange={(e) => setProdTicketsProductenIndividueel(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <span className="text-pos-text text-xl min-w-[360px] max-w-[360px]">Eat in / Take out onderaan afdrukken:</span>
-                            <input type="checkbox" checked={prodTicketsEatInTakeOutOnderaan} onChange={(e) => setProdTicketsEatInTakeOutOnderaan(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
-                          </label>
+                    <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 mb-6 text-sm">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex gap-10 items-center">
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Display categories on production ticket:</label>
+                            <input type="checkbox" checked={prodTicketsDisplayCategories} onChange={(e) => setProdTicketsDisplayCategories(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-10 items-center">
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Space above ticket:</label>
+                            <input type="checkbox" checked={prodTicketsSpaceAbove} onChange={(e) => setProdTicketsSpaceAbove(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-10 items-center">
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Ticket tearable:</label>
+                            <input type="checkbox" checked={prodTicketsTicketTearable} onChange={(e) => setProdTicketsTicketTearable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-10 items-center">
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Keukenprinter buzzer:</label>
+                            <input type="checkbox" checked={prodTicketsKeukenprinterBuzzer} onChange={(e) => setProdTicketsKeukenprinterBuzzer(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-10 items-center">
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Producten individueel afdrukken:</label>
+                            <input type="checkbox" checked={prodTicketsProductenIndividueel} onChange={(e) => setProdTicketsProductenIndividueel(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <div className="flex gap-10 items-center">
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Eat in / Take out onderaan afdrukken:</label>
+                            <input type="checkbox" checked={prodTicketsEatInTakeOutOnderaan} onChange={(e) => setProdTicketsEatInTakeOutOnderaan(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Next course printer 1:</span>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter1} onChange={setProdTicketsNextCoursePrinter1} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 1:</label>
+                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter1} onChange={setProdTicketsNextCoursePrinter1} placeholder="Disabled" className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Next course printer 2:</span>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter2} onChange={setProdTicketsNextCoursePrinter2} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 2:</label>
+                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter2} onChange={setProdTicketsNextCoursePrinter2} placeholder="Disabled" className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Next course printer 3:</span>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter3} onChange={setProdTicketsNextCoursePrinter3} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 3:</label>
+                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter3} onChange={setProdTicketsNextCoursePrinter3} placeholder="Disabled" className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Next course printer 4:</span>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter4} onChange={setProdTicketsNextCoursePrinter4} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 4:</label>
+                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter4} onChange={setProdTicketsNextCoursePrinter4} placeholder="Disabled" className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Printing order of production ticket:</span>
-                            <Dropdown options={PRINTING_ORDER_OPTIONS} value={prodTicketsPrintingOrder} onChange={setProdTicketsPrintingOrder} placeholder="Select" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Printing order of production ticket:</label>
+                            <Dropdown options={PRINTING_ORDER_OPTIONS} value={prodTicketsPrintingOrder} onChange={setProdTicketsPrintingOrder} placeholder="Select" className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Grouping receipt:</span>
-                            <Dropdown options={GROUPING_RECEIPT_OPTIONS} value={prodTicketsGroupingReceipt} onChange={setProdTicketsGroupingReceipt} placeholder="Select" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Grouping receipt:</label>
+                            <Dropdown options={GROUPING_RECEIPT_OPTIONS} value={prodTicketsGroupingReceipt} onChange={setProdTicketsGroupingReceipt} placeholder="Select" className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-pos-text text-xl shrink-0 min-w-[360px] max-w-[360px]">Transfer printer:</span>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsPrinterOverboeken} onChange={setProdTicketsPrinterOverboeken} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Transfer printer:</label>
+                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsPrinterOverboeken} onChange={setProdTicketsPrinterOverboeken} placeholder="Disabled" className="min-w-[150px]" />
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-center mt-[180px]">
-                        <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProdTickets} onClick={handleSaveProductionTickets}>
-                          <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                          Save
+                      <div className="flex justify-center pt-5 pb-5 text-md">
+                        <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProdTickets} onClick={handleSaveProductionTickets}>
+                          <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                          {tr('control.save', 'Save')}
                         </button>
                       </div>
                     </div>
@@ -6210,15 +6217,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     return (
                       <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
                         <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-2">
-                          <Dropdown options={LABELS_TYPE_OPTIONS} value={labelsType} onChange={(v) => saveLabelsSettings({ type: v })} placeholder="Select" className="text-sm min-w-[200px]" />
-                          <Dropdown options={labelsPrinterOptions} value={labelsPrinter} onChange={(v) => saveLabelsSettings({ printer: v })} placeholder="Select printer" className="text-sm min-w-[200px]" />
+                          <Dropdown options={labelsTypeOptions} value={labelsType} onChange={(v) => saveLabelsSettings({ type: v })} placeholder={tr('control.labels.selectPlaceholder', 'Select')} className="text-sm min-w-[200px]" />
+                          <Dropdown options={labelsPrinterOptions} value={labelsPrinter} onChange={(v) => saveLabelsSettings({ printer: v })} placeholder={tr('control.labels.selectPrinter', 'Select printer')} className="text-sm min-w-[200px]" />
                           <button type="button" className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50" onClick={openNewLabelModal}>
-                            New label
+                            {tr('control.labels.new', 'New label')}
                           </button>
                         </div>
                         {sortedLabels.length === 0 ? (
                           <ul className="w-full flex flex-col">
-                            <li className="text-pos-muted text-xl font-medium text-center py-4">No labels yet.</li>
+                            <li className="text-pos-muted text-xl font-medium text-center py-4">{tr('control.labels.empty', 'No labels yet.')}</li>
                           </ul>
                         ) : (
                           <>
@@ -6235,7 +6242,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                         type="button"
                                         className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
                                         onClick={() => openEditLabelModal(item)}
-                                        aria-label="Edit"
+                                        aria-label={tr('control.edit', 'Edit')}
                                       >
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                       </button>
@@ -6243,7 +6250,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                         type="button"
                                         className="p-2 rounded text-pos-text hover:bg-pos-panel"
                                         onClick={() => setDeleteConfirmLabelId(item.id)}
-                                        aria-label="Delete"
+                                        aria-label={tr('delete', 'Delete')}
                                       >
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                       </button>
@@ -6264,26 +6271,23 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     );
                   })()}
                   {printerTab !== 'General' && printerTab !== 'Final tickets' && printerTab !== 'Production Tickets' && printerTab !== 'Labels' && (
-                    <p className="text-pos-muted text-xl py-4">Settings for &quot;{printerTab}&quot; will be available here.</p>
+                    <p className="text-pos-muted text-xl py-4">{tr('control.printerTabPlaceholder', 'Settings for "{tab}" will be available here.').replace('{tab}', printerTab)}</p>
                   )}
                 </div>
               )}
               {subNavId === 'Price Display' && (
-                <div className="flex flex-col min-h-[820px] justify-between items-center">
-                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
+                <div className="flex flex-col min-h-[650px] max-h-[550px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 pt-[150px]">
                     <div className="flex items-center gap-10">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
-                      <Dropdown options={PRICE_DISPLAY_TYPE_OPTIONS} value={priceDisplayType} onChange={setPriceDisplayType} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                      <label className="block text-pos-text text-sm font-medium shrink-0">Type:</label>
+                      <Dropdown options={PRICE_DISPLAY_TYPE_OPTIONS} value={priceDisplayType} onChange={setPriceDisplayType} placeholder="Disabled" className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center mt-[100px]">
-                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                    <div className="flex justify-center mt-[100px] text-md">
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
+                        <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         Save
                       </button>
                     </div>
-                  </div>
-                  <div className="shrink-0 pt-4">
-                    <KeyboardWithNumpad value={priceDisplayKeyboardValue} onChange={setPriceDisplayKeyboardValue} />
                   </div>
                 </div>
               )}
@@ -8354,11 +8358,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <div className="flex gap-2 items-center gap-[100px]">
                 <input
                   type="text"
-                  readOnly
                   value={productionMessageInput}
+                  onChange={(e) => setProductionMessageInput(e.target.value)}
                   placeholder="New message"
                   className="px-4 py-3 bg-pos-panel border border-pos-border rounded-lg min-w-[400px] text-pos-text text-xl"
-                  onClick={() => { }}
                 />
                 <button
                   type="button"
