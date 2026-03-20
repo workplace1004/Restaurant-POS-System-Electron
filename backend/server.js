@@ -552,6 +552,8 @@ app.delete('/api/discounts/:id', async (req, res) => {
 // REST: app settings (e.g. language)
 const SETTING_KEY_LANGUAGE = 'language';
 const SETTING_KEY_CREDIT_CARD = 'pos_credit_card';
+const SETTING_KEY_BARCODE_SCANNER = 'pos_barcode_scanner';
+const SETTING_KEY_RFID_READER = 'pos_rfid_reader';
 const SETTING_KEY_PRODUCT_POSITIONING_LAYOUT = 'product_positioning_layout';
 const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
 const SETTING_KEY_TABLE_SAVED_ORDER_IDS = 'table_saved_order_ids';
@@ -826,6 +828,80 @@ app.put('/api/settings/credit-card', async (req, res) => {
   } catch (err) {
     console.error('PUT /api/settings/credit-card', err);
     res.status(500).json({ error: err.message || 'Failed to save credit card setting' });
+  }
+});
+
+app.get('/api/settings/barcode-scanner', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_BARCODE_SCANNER } });
+    let data = { type: 'disabled' };
+    if (row?.value) {
+      try {
+        const parsed = JSON.parse(row.value);
+        if (parsed && typeof parsed === 'object' && parsed.type) {
+          data = { type: String(parsed.type) };
+        }
+      } catch (_) { }
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('GET /api/settings/barcode-scanner', err);
+    res.status(500).json({ error: err.message || 'Failed to get barcode scanner setting' });
+  }
+});
+
+app.put('/api/settings/barcode-scanner', async (req, res) => {
+  try {
+    const type = req.body?.type != null ? String(req.body.type) : 'disabled';
+    const allowed = ['disabled', 'serial', 'keyboard-input', 'tcp-ip'];
+    const safeType = allowed.includes(type) ? type : 'disabled';
+    const value = JSON.stringify({ type: safeType });
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_BARCODE_SCANNER },
+      create: { key: SETTING_KEY_BARCODE_SCANNER, value },
+      update: { value }
+    });
+    res.json({ type: safeType });
+  } catch (err) {
+    console.error('PUT /api/settings/barcode-scanner', err);
+    res.status(500).json({ error: err.message || 'Failed to save barcode scanner setting' });
+  }
+});
+
+app.get('/api/settings/rfid-reader', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_RFID_READER } });
+    let data = { type: 'disabled' };
+    if (row?.value) {
+      try {
+        const parsed = JSON.parse(row.value);
+        if (parsed && typeof parsed === 'object' && parsed.type) {
+          data = { type: String(parsed.type) };
+        }
+      } catch (_) { }
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('GET /api/settings/rfid-reader', err);
+    res.status(500).json({ error: err.message || 'Failed to get RFID reader setting' });
+  }
+});
+
+app.put('/api/settings/rfid-reader', async (req, res) => {
+  try {
+    const type = req.body?.type != null ? String(req.body.type) : 'disabled';
+    const allowed = ['disabled', 'serial', 'usb-nfc'];
+    const safeType = allowed.includes(type) ? type : 'disabled';
+    const value = JSON.stringify({ type: safeType });
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_RFID_READER },
+      create: { key: SETTING_KEY_RFID_READER, value },
+      update: { value }
+    });
+    res.json({ type: safeType });
+  } catch (err) {
+    console.error('PUT /api/settings/rfid-reader', err);
+    res.status(500).json({ error: err.message || 'Failed to save RFID reader setting' });
   }
 });
 
