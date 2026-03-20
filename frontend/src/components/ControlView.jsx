@@ -119,7 +119,9 @@ const PRICE_DISPLAY_TYPE_OPTIONS = [
 ];
 
 const RFID_READER_TYPE_OPTIONS = [
-  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' },
+  { value: 'serial', labelKey: 'control.external.serial', fallback: 'Serial' },
+  { value: 'usb-nfc', labelKey: 'control.external.rfidReaderType.usbNfc', fallback: 'USB NFC' }
 ];
 
 const BARCODE_SCANNER_TYPE_OPTIONS = [
@@ -127,13 +129,6 @@ const BARCODE_SCANNER_TYPE_OPTIONS = [
   { value: 'serial', labelKey: 'control.external.serial', fallback: 'Serial' },
   { value: 'keyboard-input', labelKey: 'control.external.barcodeScannerType.keyboardInput', fallback: 'Keyboard input' },
   { value: 'tcp-ip', labelKey: 'control.external.barcodeScannerType.tcpIp', fallback: 'TCP / IP' }
-];
-
-const BARCODE_SCANNER_PORT_OPTIONS = [
-  { value: 'COM 1', label: 'COM 1' },
-  { value: 'COM 2', label: 'COM 2' },
-  { value: 'COM 3', label: 'COM 3' },
-  { value: 'COM 4', label: 'COM 4' }
 ];
 
 const CREDIT_CARD_TYPE_OPTIONS = [
@@ -418,10 +413,10 @@ const BARCODE_TYPE_OPTIONS = [
 ];
 
 const TABLE_LOCATION_BACKGROUND_OPTIONS = [
-  { value: '', label: 'Default' },
-  { value: 'white', label: 'White' },
-  { value: 'gray', label: 'Gray' },
-  { value: 'blue', label: 'Blue' }
+  { value: '', labelKey: 'control.tables.backgroundDefault', fallback: 'Default' },
+  { value: 'white', labelKey: 'control.tables.backgroundWhite', fallback: 'White' },
+  { value: 'gray', labelKey: 'control.tables.backgroundGray', fallback: 'Gray' },
+  { value: 'blue', labelKey: 'control.tables.backgroundBlue', fallback: 'Blue' }
 ];
 
 const TABLE_TEMPLATE_OPTIONS = [
@@ -4264,25 +4259,52 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   useEffect(() => {
     if (topNavId !== 'external-devices' || subNavId !== 'RFID Reader') return;
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_rfid_reader');
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s.type != null) setRfidReaderType(s.type);
-      }
-    } catch (_) { }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API}/settings/rfid-reader`);
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok && data.type != null) {
+          setRfidReaderType(data.type);
+          return;
+        }
+      } catch (_) { }
+      try {
+        const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_rfid_reader');
+        if (raw && !cancelled) {
+          const s = JSON.parse(raw);
+          if (s.type != null) setRfidReaderType(s.type);
+        }
+      } catch (_) { }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [topNavId, subNavId]);
 
   useEffect(() => {
     if (topNavId !== 'external-devices' || subNavId !== 'Barcode Scanner') return;
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_barcode_scanner');
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s.type != null) setBarcodeScannerType(s.type);
-        if (s.port != null) setBarcodeScannerPort(s.port);
-      }
-    } catch (_) { }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API}/settings/barcode-scanner`);
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok && data.type != null) {
+          setBarcodeScannerType(data.type);
+          return;
+        }
+      } catch (_) { }
+      try {
+        const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_barcode_scanner');
+        if (raw && !cancelled) {
+          const s = JSON.parse(raw);
+          if (s.type != null) setBarcodeScannerType(s.type);
+        }
+      } catch (_) { }
+    };
+    load();
+    return () => { cancelled = true; };
   }, [topNavId, subNavId]);
 
   useEffect(() => {
@@ -4429,19 +4451,39 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     }
   };
 
-  const handleSaveRfidReader = () => {
+  const handleSaveRfidReader = async () => {
     setSavingRfidReader(true);
     try {
+      const res = await fetch(`${API}/settings/rfid-reader`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: rfidReaderType }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to save');
       if (typeof localStorage !== 'undefined') localStorage.setItem('pos_rfid_reader', JSON.stringify({ type: rfidReaderType }));
+      showToast('success', tr('control.saved', 'Saved.'));
+    } catch (e) {
+      showToast('error', e?.message || tr('control.saveFailed', 'Save failed.'));
     } finally {
       setSavingRfidReader(false);
     }
   };
 
-  const handleSaveBarcodeScanner = () => {
+  const handleSaveBarcodeScanner = async () => {
     setSavingBarcodeScanner(true);
     try {
-      if (typeof localStorage !== 'undefined') localStorage.setItem('pos_barcode_scanner', JSON.stringify({ type: barcodeScannerType, port: barcodeScannerPort }));
+      const res = await fetch(`${API}/settings/barcode-scanner`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: barcodeScannerType }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to save');
+      if (typeof localStorage !== 'undefined') localStorage.setItem('pos_barcode_scanner', JSON.stringify({ type: barcodeScannerType }));
+      showToast('success', tr('control.saved', 'Saved.'));
+    } catch (e) {
+      showToast('error', e?.message || tr('control.saveFailed', 'Save failed.'));
     } finally {
       setSavingBarcodeScanner(false);
     }
@@ -6458,10 +6500,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.type', 'Type:')}</label>
                       <Dropdown options={mapTranslatedOptions(BARCODE_SCANNER_TYPE_OPTIONS)} value={barcodeScannerType} onChange={setBarcodeScannerType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex items-center gap-10">
-                      <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.port', 'Port:')}</label>
-                      <Dropdown options={BARCODE_SCANNER_PORT_OPTIONS} value={barcodeScannerPort} onChange={setBarcodeScannerPort} placeholder="COM 1" className="text-sm min-w-[220px]" />
-                    </div>
                     <div className="flex justify-center mt-[100px] text-md">
                       <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
@@ -7157,7 +7195,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
               <div className="w-full flex flex-col justify-center items-center gap-10">
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Table Name :</label>
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.tables.tableName', 'Table Name :')}</label>
                   <input
                     type="text"
                     ref={tableLocationNameInputRef}
@@ -7175,30 +7213,30 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       setTableLocationSelectionStart(e.target.selectionStart ?? 0);
                       setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
                     }}
-                    placeholder="e.g. room 1"
+                    placeholder={tr('control.tables.tableNamePlaceholder', 'e.g. room 1')}
                     className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200 caret-white focus:outline-none focus:border-green-500"
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Background :</label>
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.tables.background', 'Background :')}</label>
                   <Dropdown
-                    options={TABLE_LOCATION_BACKGROUND_OPTIONS}
+                    options={mapTranslatedOptions(TABLE_LOCATION_BACKGROUND_OPTIONS)}
                     value={tableLocationBackground}
                     onChange={setTableLocationBackground}
-                    placeholder="Default"
+                    placeholder={tr('control.tables.backgroundDefault', 'Default')}
                     className="text-md min-w-[200px]"
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Text color :</label>
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.tables.textColor', 'Text color :')}</label>
                   <div className="w-[200px] flex gap-6 items-center justify-start">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'light'} onChange={() => setTableLocationTextColor('light')} className="w-5 h-5 rounded border-gray-300" />
-                      <span className="text-gray-200 text-md">light</span>
+                      <span className="text-gray-200 text-md">{tr('control.tables.textColorLight', 'light')}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'dark'} onChange={() => setTableLocationTextColor('dark')} className="w-5 h-5 rounded border-gray-300" />
-                      <span className="text-gray-200 text-md">dark</span>
+                      <span className="text-gray-200 text-md">{tr('control.tables.textColorDark', 'dark')}</span>
                     </label>
                   </div>
                 </div>
@@ -8624,21 +8662,21 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeCategoryModal} aria-label="Close">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
-              <div className="w-full flex flex-col justify-center items-center gap-10">
+            <div className="p-6 flex flex-col space-y-6 w-full justify-center text-sm items-center pt-20">
+              <div className="w-full flex flex-col justify-center items-center gap-5">
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
+                  <label className="block min-w-[150px] max-w-[150px] font-medium text-gray-200">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
-                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200"
                     onFocus={() => setCategoryActiveField('name')}
                     onClick={() => setCategoryActiveField('name')}
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.inWebshop', 'In webshop')} : </label>
+                  <label className="block min-w-[150px] max-w-[150px] font-medium text-gray-200">{tr('control.inWebshop', 'In webshop')} : </label>
                   <div className="w-[200px] flex items-center justify-start">
                     <input
                       type="checkbox"
@@ -8649,7 +8687,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block max-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.displayOnThisCashRegister', 'Display on this cash register')} : </label>
+                  <label className="block  min-w-[150px] max-w-[150px] font-medium text-gray-200">{tr('control.displayOnThisCashRegister', 'Display on this cash register')} : </label>
                   <div className="w-[200px] flex items-center justify-start">
                     <input
                       type="checkbox"
@@ -8660,12 +8698,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('nextCourse', 'Next course')} : </label>
+                  <label className="block min-w-[150px] max-w-[150px] font-medium text-gray-200">{tr('nextCourse', 'Next course')} : </label>
                   <input
                     type="text"
                     value={categoryNextCourse}
                     onChange={(e) => setCategoryNextCourse(e.target.value)}
-                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200"
                     onFocus={() => setCategoryActiveField('nextCourse')}
                     onClick={() => setCategoryActiveField('nextCourse')}
                   />
@@ -8675,11 +8713,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center pt-5 pb-5">
               <button
                 type="button"
-                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                 disabled={savingCategory}
                 onClick={handleSaveCategory}
               >
-                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
+                <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
                   <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                 </svg>
                 {tr('control.save', 'Save')}
