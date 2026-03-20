@@ -5063,9 +5063,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <p className="font-medium text-gray-900 mb-2">In this new management system we work with 24:00 instead of 00:00 as the end point as in the web panel.</p>
                       <p className="mb-2">Example,</p>
                       <p className="mb-2">all turnover of 27-02-2026</p>
-                      <p className="font-medium mt-3 mb-1">Earlier:</p>
+                      <p className="font-medium mt-3">Earlier:</p>
                       <p className="mb-2">00:00 27-02-2026 to 00:00 28-02-2026</p>
-                      <p className="font-medium mt-3 mb-1">Not:</p>
+                      <p className="font-medium mt-3">Not:</p>
                       <p>00:00 27-02-2026 tot 24:00 27-02-2026</p>
                     </div>
                   </div>
@@ -5523,12 +5523,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <input
                     type="text"
-                    readOnly
                     value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
                     placeholder={tr('control.products.searchPlaceholder', 'Search products')}
                     onClick={() => setShowProductSearchKeyboard(true)}
                     onFocus={() => setShowProductSearchKeyboard(true)}
-                    className="px-4 py-3 rounded-lg bg-pos-bg border border-pos-border text-pos-text text-sm min-w-[200px] placeholder:text-pos-muted cursor-pointer"
+                    className="px-4 py-3 rounded-lg bg-pos-bg border border-pos-border z-[20] text-pos-text text-sm min-w-[200px] placeholder:text-pos-muted cursor-pointer"
                   />
                 </div>
                 {/* Category tabs: horizontal, scrollable, selected with underline */}
@@ -8238,14 +8238,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </div>
               </div>
             </div>
-            <div className="flex justify-center pt-20 pb-5">
+            <div className="flex justify-center">
               <button
                 type="button"
-                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                 disabled={savingPriceGroup}
                 onClick={handleSavePriceGroup}
               >
-                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
+                <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
                   <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                 </svg>
                 {tr('control.save', 'Save')}
@@ -8269,8 +8269,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
-                    readOnly
                     value={categoryName}
+                    onChange={(e) => setCategoryName(e.target.value)}
                     className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     onFocus={() => setCategoryActiveField('name')}
                     onClick={() => setCategoryActiveField('name')}
@@ -8302,8 +8302,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('nextCourse', 'Next course')} : </label>
                   <input
                     type="text"
-                    readOnly
                     value={categoryNextCourse}
+                    onChange={(e) => setCategoryNextCourse(e.target.value)}
                     className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     onFocus={() => setCategoryActiveField('nextCourse')}
                     onClick={() => setCategoryActiveField('nextCourse')}
@@ -8335,11 +8335,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* New / Edit product modal */}
       {showProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductModal} aria-label="Close">
-              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductModal} aria-label="Close">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex gap-1 w-full justify-around px-4 py-2 shrink-0 pr-14">
+            <div className="flex gap-1 w-full justify-around px-10 pt-5 shrink-0 pr-14">
               {[
                 { id: 'general', label: tr('control.productModal.tab.general', 'General') },
                 { id: 'advanced', label: tr('control.productModal.tab.advanced', 'Advanced') },
@@ -8354,7 +8354,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     key={tab.id}
                     type="button"
                     disabled={isLocked}
-                    className={`px-4 py-2 rounded-lg text-md font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
                     onClick={() => !isLocked && setProductTab(tab.id)}
                   >
                     {tab.label}
@@ -8363,38 +8363,38 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               })}
             </div>
             {/* Single scrollable area for all tabs so keyboard stays fixed at bottom */}
-            <div className="flex-1 min-h-0 overflow-auto">
+            <div className="flex-1 min-h-0 w-full overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {productTab === 'general' && (
                 <div className="p-6 pb-0">
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="flex text-md flex-col gap-4">
-                      <div className="flex items-center gap-1">
-                        <label className="text-md font-medium text-gray-200 w-[300px]">{tr('name', 'Name')}:</label>
-                        <input type="text" readOnly value={productName} className={`w-full px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="flex text-md flex-col gap-3">
+                      <div className="flex w-full items-center gap-1">
+                        <label className="text-md min-w-[125px] font-medium text-gray-200">{tr('name', 'Name')}:</label>
+                        <input type="text" value={productName} onChange={(e) => setProductName(e.target.value)} className={`h-[40px] min-w-[150px] max-w-[150px] px-4 py-3 border rounded-lg text-pos-text text-md caret-white ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[300px] font-medium text-gray-200 text-md">{tr('control.productModal.testName', 'Test name')}:</label>
-                        <input type="text" readOnly value={productKeyName} className={`w-full px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
+                        <label className="min-w-[125px] font-medium text-gray-200 text-md">{tr('control.productModal.testName', 'Test name')}:</label>
+                        <input type="text" value={productKeyName} onChange={(e) => setProductKeyName(e.target.value)} className={`min-w-[150px] max-w-[150px] px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[300px] font-medium text-gray-200 text-md">{tr('control.productModal.productionName', 'Production name')}:</label>
-                        <input type="text" readOnly value={productProductionName} className={`w-full px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
+                        <label className="min-w-[125px] font-medium text-gray-200 text-md">{tr('control.productModal.productionName', 'Production name')}:</label>
+                        <input type="text" value={productProductionName} onChange={(e) => setProductProductionName(e.target.value)} className={`min-w-[150px] max-w-[150px] px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[170px] font-medium text-gray-200 text-md">{tr('control.productModal.price', 'Price')}:</label>
-                        <input type="text" readOnly value={productPrice} className="w-full px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
+                        <label className="min-w-[125px] font-medium text-gray-200 text-md">{tr('control.productModal.price', 'Price')}:</label>
+                        <input type="text" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} className="min-w-[150px] max-w-[150px] px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="min-w-[170px] font-medium text-gray-200 text-md">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatTakeOut} onChange={(v) => { setProductVatTakeOut(v); setProductFieldErrors((e) => ({ ...e, vatTakeOut: false })); }} placeholder="--" className={`text-md min-w-[200px] ${productFieldErrors.vatTakeOut ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
+                        <label className="min-w-[125px] font-medium text-gray-200 text-md">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatTakeOut} onChange={(v) => { setProductVatTakeOut(v); setProductFieldErrors((e) => ({ ...e, vatTakeOut: false })); }} placeholder="--" className={`text-md min-w-[150px] ${productFieldErrors.vatTakeOut ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="min-w-[170px] font-medium text-gray-200 text-md">{tr('control.productModal.vatEatIn', 'VAT Eat in')}:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatEatIn} onChange={(v) => { setProductVatEatIn(v); setProductFieldErrors((e) => ({ ...e, vatEatIn: false })); }} placeholder="--" className={`text-md min-w-[200px] ${productFieldErrors.vatEatIn ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
+                        <label className="min-w-[125px] font-medium text-gray-200 text-md">{tr('control.productModal.vatEatIn', 'VAT Eat in')}:</label>
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatEatIn} onChange={(v) => { setProductVatEatIn(v); setProductFieldErrors((e) => ({ ...e, vatEatIn: false })); }} placeholder="--" className={`text-md min-w-[150px] ${productFieldErrors.vatEatIn ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
                       </div>
                       {productTabsUnlocked ? (
                         <div className="flex items-center gap-1 h-[40px]">
-                          <label className="min-w-[170px] font-medium text-gray-200 text-md">Id:</label>
+                          <label className="min-w-[125px] font-medium text-gray-200 text-md">{tr('control.productModal.id', 'Id')}:</label>
                           <span className="text-pos-text text-md">{productDisplayNumber != null ? productDisplayNumber : '—'}</span>
                         </div>
                       )
@@ -8404,7 +8404,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         )
                       }
                     </div>
-                    <div className='flex flex-col gap-4'>
+                    <div className='flex flex-col w-full gap-4 max-h-[340px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'>
                       {(() => {
                         const ids = [...productCategoryIds];
                         let numVisible = 1;
@@ -8445,8 +8445,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                   });
                                 }}
                                 placeholder="--"
-                                inline
-                                className="text-md w-full min-w-[200px]"
+                                className="text-md w-full min-w-[150px]"
                               />
                             </div>
                           );
@@ -8455,49 +8454,49 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <div className="flex flex-col gap-4">
                       <div className="flex gap-1 items-center w-full">
-                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.addition', 'Addition')}:</label>
-                        <Dropdown options={[{ value: 'Subproducts', label: tr('control.productModal.subproducts', 'Subproducts') }]} value={productAddition} onChange={setProductAddition} placeholder="--" className="text-md w-full min-w-[200px]" />
+                        <label className="min-w-[80px] font-medium text-md text-gray-200">{tr('control.productModal.addition', 'Addition')}:</label>
+                        <Dropdown options={[{ value: 'Subproducts', label: tr('control.productModal.subproducts', 'Subproducts') }]} value={productAddition} onChange={setProductAddition} placeholder="--" className="text-md w-full min-w-[150px]" />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="min-w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
+                        <label className="min-w-[80px] font-medium text-md text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
                         <div className="flex gap-2 items-center w-full">
-                          <input type="text" readOnly value={productBarcode} className="flex-1 px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md" onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
+                          <input type="text" value={productBarcode} onChange={(e) => setProductBarcode(e.target.value)} className="min-w-[150px] max-w-[150px] px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md" onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
                           <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
                             <svg className={`w-5 h-5 ${barcodeButtonSpinning ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           </button>
                         </div>
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.printer1', 'Printer 1')}:</label>
+                        <label className="min-w-[80px] font-medium text-md text-gray-200">{tr('control.productModal.printer1', 'Printer 1')}:</label>
                         <Dropdown
                           options={getUniqueProductPrinterOptions(productPrinter1, [productPrinter2, productPrinter3])}
                           value={productPrinter1}
                           onChange={setProductPrinter1}
-                          className="text-md w-full min-w-[200px]"
+                          className="text-md w-full min-w-[150px]"
                         />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.printer2', 'Printer 2')}:</label>
+                        <label className="min-w-[80px] font-medium text-md text-gray-200">{tr('control.productModal.printer2', 'Printer 2')}:</label>
                         <Dropdown
                           options={getUniqueProductPrinterOptions(productPrinter2, [productPrinter1, productPrinter3])}
                           value={productPrinter2}
                           onChange={setProductPrinter2}
-                          className="text-md w-full min-w-[200px]"
+                          className="text-md w-full min-w-[150px]"
                         />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.printer3', 'Printer 3')}:</label>
+                        <label className="min-w-[80px] font-medium text-md text-gray-200">{tr('control.productModal.printer3', 'Printer 3')}:</label>
                         <Dropdown
                           options={getUniqueProductPrinterOptions(productPrinter3, [productPrinter1, productPrinter2])}
                           value={productPrinter3}
                           onChange={setProductPrinter3}
-                          className="text-md w-full min-w-[200px]"
+                          className="text-md w-full min-w-[150px]"
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="flex w-full justify-center gap-4 pt-20 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg" onClick={async () => {
+                  <div className="flex w-full justify-center gap-4">
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg" onClick={async () => {
                       if (!validateProductRequired()) return;
                       setProductTabsUnlocked(true);
                       if (!editingProductId) {
@@ -8511,7 +8510,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       {tr('control.productModal.completeFurther', 'Complete further')}
                     </button>
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProduct} onClick={handleSaveProduct}>
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProduct} onClick={handleSaveProduct}>
                       <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.productModal.addAndClose', 'Add and close')}
                     </button>
@@ -8519,51 +8518,51 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </div>
               )}
               {productTab === 'advanced' && (
-                <div className="p-6 pb-0 flex flex-col gap-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="flex flex-col gap-4">
-                      <label className="flex items-center text-md gap-2 text-pos-text">
-                        Open price:
-                        <input type="checkbox" checked={advancedOpenPrice} onChange={(e) => setAdvancedOpenPrice(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[120px]" />
-                      </label>
-                      <label className="flex items-center text-md gap-2 text-pos-text">
-                        Libra:
-                        <input type="checkbox" checked={advancedWeegschaal} onChange={(e) => setAdvancedWeegschaal(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[170px]" />
-                      </label>
-                      <label className="flex items-center text-md gap-2 text-pos-text">
-                        Subproduct requires :
-                        <input type="checkbox" checked={advancedSubproductRequires} onChange={(e) => setAdvancedSubproductRequires(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 ml-[37px]" />
-                      </label>
+                <div className="p-6 pb-0 flex w-full flex-col px-10 text-sm">
+                  <div className="flex w-full gap-10">
+                    <div className="flex flex-col gap-3">
+                      <div className='flex items-center'>
+                        <label className="flex items-center gap-2 min-w-[170px] text-pos-text">{tr('control.productModal.advanced.openPrice', 'Open price')}:</label>
+                        <input type="checkbox" checked={advancedOpenPrice} onChange={(e) => setAdvancedOpenPrice(e.target.checked)} className="rounded border-pos-border w-5 h-5" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="flex items-center min-w-[170px] gap-2 text-pos-text">{tr('control.productModal.advanced.libra', 'Libra')}:</label>
+                        <input type="checkbox" checked={advancedWeegschaal} onChange={(e) => setAdvancedWeegschaal(e.target.checked)} className="rounded border-pos-border w-5 h-5" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="flex items-center min-w-[170px] gap-2 text-pos-text">{tr('control.productModal.advanced.subproductRequires', 'Subproduct requires')} :</label>
+                        <input type="checkbox" checked={advancedSubproductRequires} onChange={(e) => setAdvancedSubproductRequires(e.target.checked)} className="rounded border-pos-border w-5 h-5" />
+                      </div>
                       <div className="flex items-center gap-1">
-                        <label className="block text-pos-text mb-1 text-md min-w-[220px]">Empty price:</label>
-                        <input type="text" value={advancedLeeggoedPrijs} onChange={(e) => setAdvancedLeeggoedPrijs(e.target.value)} onFocus={() => setProductActiveField('leeggoedPrijs')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md max-w-[200px]" />
+                        <label className="block text-pos-text mb-1 min-w-[170px] text-md">{tr('control.productModal.advanced.emptyPrice', 'Empty price')}:</label>
+                        <input type="text" value={advancedLeeggoedPrijs} onChange={(e) => setAdvancedLeeggoedPrijs(e.target.value)} onFocus={() => setProductActiveField('leeggoedPrijs')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text max-w-[100px]" />
                       </div>
                     </div>
                     <div className="flex flex-col gap-4">
-                      <label className="flex items-center text-md gap-2 text-pos-text">
-                        Pager required:
-                        <input type="checkbox" checked={advancedPagerVerplicht} onChange={(e) => setAdvancedPagerVerplicht(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[120px]" />
-                      </label>
-                      <label className="flex items-center text-md gap-2 text-pos-text">
-                        Bold print:
-                        <input type="checkbox" checked={advancedBoldPrint} onChange={(e) => setAdvancedBoldPrint(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[160px]" />
-                      </label>
-                      <label className="flex items-center text-md gap-2 text-pos-text">
-                        Grouping receipt:
-                        <input type="checkbox" checked={advancedGroupingReceipt} onChange={(e) => setAdvancedGroupingReceipt(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[100px]" />
-                      </label>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                      <div className="flex text-md items-center gap-1">
-                        <label className="block min-w-[170px] mr-3 text-pos-text mb-1">Label extra info:</label>
-                        <input type="text" value={advancedLabelExtraInfo} onChange={(e) => setAdvancedLabelExtraInfo(e.target.value)} onFocus={() => setProductActiveField('labelExtraInfo')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md max-w-[320px]" />
+                      <div className='flex items-center'>
+                        <label className="flex min-w-[140px] items-center gap-2 text-pos-text">{tr('control.productModal.advanced.pagerRequired', 'Pager required')}:</label>
+                        <input type="checkbox" checked={advancedPagerVerplicht} onChange={(e) => setAdvancedPagerVerplicht(e.target.checked)} className="rounded border-pos-border w-5 h-5" />
                       </div>
-                      <div className="flex text-md items-center gap-3">
-                        <label className="block min-w-[170px] mr-1.5 text-pos-text mb-1">Cash register photo:</label>
+                      <div className='flex items-center'>
+                        <label className="flex min-w-[140px] items-center gap-2 text-pos-text">{tr('control.productModal.advanced.boldPrint', 'Bold print')}:</label>
+                        <input type="checkbox" checked={advancedBoldPrint} onChange={(e) => setAdvancedBoldPrint(e.target.checked)} className="rounded border-pos-border w-5 h-5" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="flex min-w-[140px] items-center gap-2 text-pos-text">{tr('control.productModal.advanced.groupingReceipt', 'Grouping receipt')}:</label>
+                        <input type="checkbox" checked={advancedGroupingReceipt} onChange={(e) => setAdvancedGroupingReceipt(e.target.checked)} className="rounded border-pos-border w-5 h-5" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3 ml-10">
+                      <div className="flex items-center">
+                        <label className="block min-w-[150px] text-pos-text mb-1">{tr('control.productModal.advanced.labelExtraInfo', 'Label extra info')}:</label>
+                        <input type="text" value={advancedLabelExtraInfo} onChange={(e) => setAdvancedLabelExtraInfo(e.target.value)} onFocus={() => setProductActiveField('labelExtraInfo')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text max-w-[160px]" />
+                      </div>
+                      <div className="flex items-center">
+                        <label className="block min-w-[150px] text-pos-text mb-1">{tr('control.productModal.advanced.cashRegisterPhoto', 'Cash register photo')}:</label>
                         <div className="flex items-center gap-3">
                           {!advancedKassaPhotoPreview ? (
                             <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
-                              Select
+                              {tr('control.productModal.chooseFileSimple', 'Select')}
                               <input
                                 type="file"
                                 className="hidden"
@@ -8588,7 +8587,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               <img src={advancedKassaPhotoPreview} alt="Cash register" className="w-16 h-16 object-cover rounded-lg border border-pos-border shrink-0" />
                               <button
                                 type="button"
-                                className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 text-md shrink-0"
+                                className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 shrink-0"
                                 onClick={() => {
                                   setAdvancedKassaPhotoPreview(null);
                                 }}
@@ -8599,69 +8598,71 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           )}
                         </div>
                       </div>
-                      <div className="flex text-md items-center gap-1">
-                        <label className="block min-w-[180px] text-pos-text mb-1">Pre-pack expiry type:</label>
-                        <Dropdown options={VERVALTYPE_OPTIONS} value={advancedVoorverpakVervaltype} onChange={setAdvancedVoorverpakVervaltype} placeholder="Select…" className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md min-w-[200px]" />
+                      <div className="flex items-center">
+                        <label className="block min-w-[150px] text-pos-text">{tr('control.productModal.advanced.prepackExpiryType', 'Pre-pack expiry type')}:</label>
+                        <Dropdown options={VERVALTYPE_OPTIONS} value={advancedVoorverpakVervaltype} onChange={setAdvancedVoorverpakVervaltype} placeholder={tr('control.productModal.select', 'Select…')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text min-w-[160px]" />
                       </div>
-                      <div className="flex text-md items-center gap-1">
-                        <label className="block min-w-[180px] text-pos-text mb-1">Shelf life:</label>
-                        <input type="text" value={advancedHoudbareDagen} onChange={(e) => setAdvancedHoudbareDagen(e.target.value)} onFocus={() => setProductActiveField('houdbareDagen')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className="flex items-center">
+                        <label className="block min-w-[150px] text-pos-text">{tr('control.productModal.advanced.shelfLife', 'Shelf life')}:</label>
+                        <input type="text" value={advancedHoudbareDagen} onChange={(e) => setAdvancedHoudbareDagen(e.target.value)} onFocus={() => setProductActiveField('houdbareDagen')} className="w-full h-[40px] border border-pos-border max-w-[160px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <div className="flex text-md gap-1">
-                        <label className="block min-w-[180px] text-pos-text mb-1">Storage, use:</label>
-                        <textarea value={advancedBewarenGebruik} onChange={(e) => setAdvancedBewarenGebruik(e.target.value)} onFocus={() => setProductActiveField('bewarenGebruik')} rows={4} className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md resize-none" />
+                      <div className="flex text-md">
+                        <label className="block min-w-[150px] text-pos-text">{tr('control.productModal.advanced.storageUse', 'Storage, use')}:</label>
+                        <textarea value={advancedBewarenGebruik} onChange={(e) => setAdvancedBewarenGebruik(e.target.value)} onFocus={() => setProductActiveField('bewarenGebruik')} rows={4} className="w-full border border-pos-border max-w-[160px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text resize-none" />
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center pt-20 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center">
+                    <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
               {productTab === 'extra_prices' && (
-                <div className="p-6 flex flex-col gap-5">
-                  <div className="overflow-x-auto">
-                    <div className="flex gap-4 text-md w-full justify-around mb-5 text-pos-text">
-                      <div className="font-medium">Pricegroup</div>
-                      <div className="font-medium">Other name</div>
-                      <div className="font-medium">Other printer</div>
-                      <div className="font-medium">Other price</div>
-                    </div>
-                    <table className="w-full h-[300px] border-collapse border border-pos-border rounded-lg text-pos-text text-md">
+                <div className="p-6 flex flex-col gap-3 pb-0">
+                  <div className="flex gap-4 w-full justify-around text-sm text-pos-text">
+                    <div className="font-medium">{tr('control.productModal.extraPrices.pricegroup', 'Pricegroup')}</div>
+                    <div className="font-medium">{tr('control.productModal.extraPrices.otherName', 'Other name')}</div>
+                    <div className="font-medium">{tr('control.productModal.extraPrices.otherPrinter', 'Other printer')}</div>
+                    <div className="font-medium">{tr('control.productModal.extraPrices.otherPrice', 'Other price')}</div>
+                  </div>
+                  <div className="overflow-x-auto text-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <table className="w-full h-[260px] border-collapse border border-pos-border rounded-lg text-pos-text">
                       <tbody className='h-[50px] flex flex-col w-full'>
                         {extraPricesRows.map((row, idx) => (
                           <tr key={idx} className="bg-pos-bg">
-                            <td className="w-[323px] px-4 py-2">
-                              <span className="px-3 py-2 block flex justify-center rounded-lg text-pos-text text-md">{row.priceGroupLabel}</span>
+                            <td className="min-w-[200px] px-4 py-2">
+                              <span className="px-3 max-w-[200px] py-2 block flex justify-center rounded-lg text-pos-text">{row.priceGroupLabel}</span>
                             </td>
-                            <td className="w-[330px] px-4 py-2">
-                              <input
-                                type="text"
-                                value={row.otherName}
-                                onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherName: e.target.value } : r))}
-                                onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherName'); }}
-                                className="w-full max-w-[150px] ml-[80px] rounded-lg px-3 py-2 border border-pos-border flex justify-center bg-pos-panel text-pos-text text-md"
-                              />
+                            <td className=" min-w-[250px] px-4 py-2">
+                              <div className='w-full flex justify-center items-center'>
+                                <input
+                                  type="text"
+                                  value={row.otherName}
+                                  onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherName: e.target.value } : r))}
+                                  onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherName'); }}
+                                  className="w-full max-w-[150px] rounded-lg px-3 py-2 border border-pos-border flex justify-center bg-pos-panel text-pos-text"
+                                />
+                              </div>
                             </td>
-                            <td className="w-[350px] px-4 py-2">
+                            <td className="min-w-[200px] px-4 py-2">
                               <Dropdown
                                 options={EXTRA_PRICE_PRINTER_OPTIONS}
                                 value={row.otherPrinter}
                                 onChange={(v) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrinter: v } : r))}
                                 placeholder="--"
-                                className="w-full rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md"
+                                className="w-full rounded-lg px-3 py-2 bg-pos-bg text-pos-text"
                               />
                             </td>
-                            <td className="w-[320px] px-4 py-2">
+                            <td className="min-w-[200px] px-4 py-2">
                               <input
                                 type="text"
                                 value={row.otherPrice}
                                 onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrice: e.target.value } : r))}
                                 onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherPrice'); }}
-                                className="w-full rounded-lg ml-[100px] max-w-[120px] px-3 py-2 border border-pos-border bg-pos-panel text-pos-text text-md"
+                                className="w-full rounded-lg ml-[50px] max-w-[120px] px-3 py-2 border border-pos-border bg-pos-panel text-pos-text"
                               />
                             </td>
                           </tr>
@@ -8669,89 +8670,91 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex items-center justify-around px-[400px]">
-                    <button type="button" className="p-2 rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
-                    <button type="button" className="p-2 rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
+                  <div className="flex items-center justify-around px-[200px]">
+                    <button type="button" className="p-2 px-4 bg-pos-panel rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
+                    <button type="button" className="p-2 px-4 rounded-lg bg-pos-panel text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
                   </div>
-                  <div className="flex justify-center pt-20 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center text-md">
+                    <button type="button" className="flex text-md items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
               {productTab === 'purchase_stock' && (
-                <div className="p-6 flex flex-col gap-6 text-md">
+                <div className="p-6 flex flex-col gap-6 text-sm">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="flex flex-col gap-6">
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[65px] text-md">Purchase VAT:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={purchaseVat} onChange={setPurchaseVat} placeholder="--" className="border min-w-[200px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                    <div className="flex flex-col gap-3">
+                      <div className='flex items-center'>
+                        <label className="block min-w-[150px] text-pos-text text-md">{tr('control.productModal.purchase.purchaseVat', 'Purchase VAT')}:</label>
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={purchaseVat} onChange={setPurchaseVat} placeholder="--" className="border min-w-[120px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[20px] text-md">Purchase price excl:</label>
-                        <input type="text" value={purchasePriceExcl} onChange={(e) => setPurchasePriceExcl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceExcl')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px] text-md">{tr('control.productModal.purchase.purchasePriceExcl', 'Purchase price excl')}:</label>
+                        <input type="text" value={purchasePriceExcl} onChange={(e) => setPurchasePriceExcl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceExcl')} className="border max-w-[120px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[20px] text-md">Purchase price incl.:</label>
-                        <input type="text" value={purchasePriceIncl} onChange={(e) => setPurchasePriceIncl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceIncl')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px] text-md">{tr('control.productModal.purchase.purchasePriceIncl', 'Purchase price incl.')}:</label>
+                        <input type="text" value={purchasePriceIncl} onChange={(e) => setPurchasePriceIncl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceIncl')} className="border max-w-[120px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[35px] text-md">Profit percentage:</label>
-                        <input type="text" value={profitPct} onChange={(e) => setProfitPct(e.target.value)} onFocus={() => setProductActiveField('profitPct')} className="border border-pos-border rounded-lg px-3 max-w-[220px] h-[40px] py-2 bg-pos-bg text-pos-text text-md" />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-6">
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[75px] text-md">Unit:</label>
-                        <Dropdown options={PURCHASE_UNIT_OPTIONS} value={purchaseUnit} onChange={setPurchaseUnit} placeholder="--" className="border border-pos-border min-w-[200px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
-                      </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[10px] text-md">Unit content:</label>
-                        <input type="text" value={unitContent} onChange={(e) => setUnitContent(e.target.value)} onFocus={() => setProductActiveField('unitContent')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
-                      </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[70px] text-md">Stock:</label>
-                        <input type="text" value={stock} onChange={(e) => setStock(e.target.value)} onFocus={() => setProductActiveField('stock')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px] text-md">{tr('control.productModal.purchase.profitPercentage', 'Profit percentage')}:</label>
+                        <input type="text" value={profitPct} onChange={(e) => setProfitPct(e.target.value)} onFocus={() => setProductActiveField('profitPct')} className="border border-pos-border rounded-lg px-3 max-w-[120px] h-[40px] py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                     </div>
-                    <div className="flex flex-col gap-6">
-                      <div className='flex items-center gap-28'>
-                        <label className="block text-pos-text pr-3 mb-1 text-md">Supplier:</label>
-                        <Dropdown options={PURCHASE_SUPPLIER_OPTIONS} value={purchaseSupplier} onChange={setPurchaseSupplier} placeholder="--" className="border min-w-[200px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                    <div className="flex flex-col gap-3">
+                      <div className='flex items-center'>
+                        <label className="block min-w-[110px] text-pos-text text-md">{tr('control.productModal.purchase.unit', 'Unit')}:</label>
+                        <Dropdown options={PURCHASE_UNIT_OPTIONS} value={purchaseUnit} onChange={setPurchaseUnit} placeholder="--" className="border border-pos-border min-w-[150px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <div className='flex items-center gap-16'>
-                        <label className="block text-pos-text pr-3 mb-1 text-md">Supplier code:</label>
-                        <input type="text" value={supplierCode} onChange={(e) => setSupplierCode(e.target.value)} onFocus={() => setProductActiveField('supplierCode')} className="border max-w-[200px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block min-w-[110px] text-pos-text text-md">{tr('control.productModal.purchase.unitContent', 'Unit content')}:</label>
+                        <input type="text" value={unitContent} onChange={(e) => setUnitContent(e.target.value)} onFocus={() => setProductActiveField('unitContent')} className="border min-w-[150px] max-w-[150px] border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <label className="flex items-center gap-12 text-pos-text text-md">
-                        Stock notification
+                      <div className='flex items-center'>
+                        <label className="block min-w-[110px] text-pos-text text-md">{tr('control.productModal.purchase.stock', 'Stock')}:</label>
+                        <input type="text" value={stock} onChange={(e) => setStock(e.target.value)} onFocus={() => setProductActiveField('stock')} className="border border-pos-border rounded-lg min-w-[150px] max-w-[150px] px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[105px]">{tr('control.productModal.purchase.supplier', 'Supplier')}:</label>
+                        <Dropdown options={PURCHASE_SUPPLIER_OPTIONS} value={purchaseSupplier} onChange={setPurchaseSupplier} placeholder="--" className="border min-w-[150px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[105px]">{tr('control.productModal.purchase.supplierCode', 'Supplier code')}:</label>
+                        <input type="text" value={supplierCode} onChange={(e) => setSupplierCode(e.target.value)} onFocus={() => setProductActiveField('supplierCode')} className="border max-w-[150px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="flex min-w-[105px] items-centertext-pos-text">
+                          {tr('control.productModal.purchase.stockNotification', 'Stock notification')}
+                        </label>
                         <input type="checkbox" checked={stockNotification} onChange={(e) => setStockNotification(e.target.checked)} className="rounded w-5 h-5 border-pos-border" />
-                      </label>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 pr-[55px] text-md">Expiration date:</label>
-                        <input type="text" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} onFocus={() => setProductActiveField('expirationDate')} className="border border-pos-border max-w-[200px] h-[40px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" placeholder="" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text pr-[10px] mb-1 text-md">Declaration of expiry:</label>
+                      <div className='flex items-center'>
+                        <label className="blockflex min-w-[105px] text-pos-text">{tr('control.productModal.purchase.expirationDate', 'Expiration date')}:</label>
+                        <input type="text" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} onFocus={() => setProductActiveField('expirationDate')} className="border border-pos-border max-w-[150px] h-[40px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text" placeholder="" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="blockflex min-w-[105px] max-w-[105px] text-pos-text">{tr('control.productModal.purchase.declarationOfExpiry', 'Declaration of expiry')}:</label>
                         <div className="flex items-center gap-2">
-                          <input type="text" value={declarationExpiryDays} onChange={(e) => setDeclarationExpiryDays(e.target.value)} onFocus={() => setProductActiveField('declarationExpiryDays')} className="border max-w-[120px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
-                          <span className="text-pos-text text-md">days in advance</span>
+                          <input type="text" value={declarationExpiryDays} onChange={(e) => setDeclarationExpiryDays(e.target.value)} onFocus={() => setProductActiveField('declarationExpiryDays')} className="border max-w-[50px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                          <span className="text-pos-text">{tr('control.productModal.purchase.daysInAdvance', 'days in advance')}</span>
                         </div>
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 pr-[10px] text-md">Notification sold out:</label>
+                      <div className='flex items-center'>
+                        <label className="blockflex min-w-[105px] max-w-[105px] text-pos-text">{tr('control.productModal.purchase.notificationSoldOut', 'Notification sold out')}:</label>
                         <div className="flex items-center gap-2">
-                          <input type="text" value={notificationSoldOutPieces} onChange={(e) => setNotificationSoldOutPieces(e.target.value)} onFocus={() => setProductActiveField('notificationSoldOutPieces')} className="border max-w-[120px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
-                          <span className="text-pos-text text-md">pieces in advance</span>
+                          <input type="text" value={notificationSoldOutPieces} onChange={(e) => setNotificationSoldOutPieces(e.target.value)} onFocus={() => setProductActiveField('notificationSoldOutPieces')} className="border max-w-[50px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                          <span className="text-pos-text">{tr('control.productModal.purchase.piecesInAdvance', 'pieces in advance')}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center pt-20 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center">
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -8759,45 +8762,45 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
               {productTab === 'webshop' && (
                 <div className="p-6 flex flex-col gap-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex text-md flex-col gap-4">
-                      <label className="flex items-center gap-2 text-pos-text text-md">
-                        In webshop:
-                        <input type="checkbox" checked={productInWebshop} onChange={(e) => setProductInWebshop(e.target.checked)} className="w-5 h-5 ml-[100px] rounded border-pos-border" />
-                      </label>
-                      <label className="flex items-center gap-2 text-pos-text text-md">
-                        Online orderable:
-                        <input type="checkbox" checked={webshopOnlineOrderable} onChange={(e) => setWebshopOnlineOrderable(e.target.checked)} className="w-5 h-5 ml-[57px] rounded border-pos-border" />
-                      </label>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[65px] text-md">Website remark:</label>
-                        <input type="text" value={websiteRemark} onChange={(e) => setWebsiteRemark(e.target.value)} onFocus={() => setProductActiveField('websiteRemark')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                  <div className="grid text-sm grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-3">
+                      <div className='flex items-center'>
+                        <label className="flex min-w-[150px] items-center text-pos-text">{tr('control.productModal.webshop.inWebshop', 'In webshop')}:</label>
+                        <input type="checkbox" checked={productInWebshop} onChange={(e) => setProductInWebshop(e.target.checked)} className="w-5 h-5 rounded border-pos-border" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[75px] text-md">Website order:</label>
-                        <input type="text" value={websiteOrder} onChange={(e) => setWebsiteOrder(e.target.value)} onFocus={() => setProductActiveField('websiteOrder')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="flex items-center min-w-[150px] text-pos-text">{tr('control.productModal.webshop.onlineOrderable', 'Online orderable')}:</label>
+                        <input type="checkbox" checked={webshopOnlineOrderable} onChange={(e) => setWebshopOnlineOrderable(e.target.checked)} className="w-5 h-5 rounded border-pos-border" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px]">{tr('control.productModal.webshop.websiteRemark', 'Website remark')}:</label>
+                        <input type="text" value={websiteRemark} onChange={(e) => setWebsiteRemark(e.target.value)} onFocus={() => setProductActiveField('websiteRemark')} className="border max-w-[150px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px]">{tr('control.productModal.webshop.websiteOrder', 'Website order')}:</label>
+                        <input type="text" value={websiteOrder} onChange={(e) => setWebsiteOrder(e.target.value)} onFocus={() => setProductActiveField('websiteOrder')} className="border max-w-[150px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
                       </div>
                     </div>
-                    <div className="flex text-md flex-col gap-4">
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[70px] text-md">Short web text:</label>
-                        <input type="text" value={shortWebText} onChange={(e) => setShortWebText(e.target.value)} onFocus={() => setProductActiveField('shortWebText')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                    <div className="flex flex-col gap-4">
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px]">{tr('control.productModal.webshop.shortWebText', 'Short web text')}:</label>
+                        <input type="text" value={shortWebText} onChange={(e) => setShortWebText(e.target.value)} onFocus={() => setProductActiveField('shortWebText')} className="border max-w-[150px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[70px] text-md">Website photo:</label>
-                        <div className="flex items-center gap-2">
-                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
-                            Choose File
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text min-w-[150px]">{tr('control.productModal.webshop.websitePhoto', 'Website photo')}:</label>
+                        <div className="flex gap-3 items-center">
+                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0">
+                            {tr('control.productModal.chooseFile', 'Choose File')}
                             <input type="file" className="hidden" accept="image/*" onChange={(e) => setWebsitePhotoFileName(e.target.files?.[0]?.name ?? '')} />
                           </label>
-                          <span className="text-pos-muted text-md">{websitePhotoFileName || 'No file chosen'}</span>
+                          <span className="text-pos-muted">{websitePhotoFileName || tr('control.productModal.noFileChosen', 'No file chosen')}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center pt-20 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center pt-20">
+                    <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -8805,50 +8808,52 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
               {productTab === 'kiosk' && (
                 <div className="p-6 flex flex-col gap-6">
-                  <div className="grid grid-cols-2 gap-4 text-md">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className='flex flex-col gap-5'>
-                      <div className='flex items-center gap-2'>
-                        <label className="block w-[150px] text-pos-text mb-1 text-md">Kiosk info:</label>
-                        <input type="text" value={kioskInfo} onChange={(e) => setKioskInfo(e.target.value)} onFocus={() => setProductActiveField('kioskInfo')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block w-[150px] text-pos-text">{tr('control.productModal.kiosk.kioskInfo', 'Kiosk info')}:</label>
+                        <input type="text" value={kioskInfo} onChange={(e) => setKioskInfo(e.target.value)} onFocus={() => setProductActiveField('kioskInfo')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text" />
                       </div>
-                      <label className="flex items-center gap-2 text-pos-text text-md">
-                        Kiosk take away:
-                        <input type="checkbox" checked={kioskTakeAway} onChange={(e) => setKioskTakeAway(e.target.checked)} className="w-5 h-5 ml-4 rounded border-pos-border" />
-                      </label>
-                      <div className='flex items-center gap-2'>
-                        <label className="block w-[150px] text-pos-text mb-1 text-md">Kiosk eat in:</label>
-                        <input type="text" value={kioskEatIn} onChange={(e) => setKioskEatIn(e.target.value)} onFocus={() => setProductActiveField('kioskEatIn')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md max-w-md" />
+                      <div className='flex items-center'>
+                        <label className="flex min-w-[150px] items-center text-pos-text">
+                          {tr('control.productModal.kiosk.kioskTakeAway', 'Kiosk take away')}:
+                        </label>
+                        <input type="checkbox" checked={kioskTakeAway} onChange={(e) => setKioskTakeAway(e.target.checked)} className="w-5 h-5 rounded border-pos-border" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block w-[150px] text-pos-text mb-1 text-md">Kiosk subtitle:</label>
-                        <input type="text" value={kioskSubtitle} onChange={(e) => setKioskSubtitle(e.target.value)} onFocus={() => setProductActiveField('kioskSubtitle')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block w-[150px] text-pos-text">{tr('control.productModal.kiosk.kioskEatIn', 'Kiosk eat in')}:</label>
+                        <input type="text" value={kioskEatIn} onChange={(e) => setKioskEatIn(e.target.value)} onFocus={() => setProductActiveField('kioskEatIn')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text max-w-md" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text w-[150px] mb-1 text-md">Kiosk min. subs:</label>
-                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMinSubs} onChange={setKioskMinSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block w-[150px] text-pos-text">{tr('control.productModal.kiosk.kioskSubtitle', 'Kiosk subtitle')}:</label>
+                        <input type="text" value={kioskSubtitle} onChange={(e) => setKioskSubtitle(e.target.value)} onFocus={() => setProductActiveField('kioskSubtitle')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text" />
                       </div>
-                      <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text w-[150px] mb-1 text-md">Kiosk max. subs:</label>
-                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMaxSubs} onChange={setKioskMaxSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text w-[150px]">{tr('control.productModal.kiosk.kioskMinSubs', 'Kiosk min. subs')}:</label>
+                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMinSubs} onChange={setKioskMinSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                      </div>
+                      <div className='flex items-center'>
+                        <label className="block text-pos-text w-[150px]">{tr('control.productModal.kiosk.kioskMaxSubs', 'Kiosk max. subs')}:</label>
+                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMaxSubs} onChange={setKioskMaxSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
                       </div>
                     </div>
                     <div className='flex items-start gap-2'>
                       <div className='flex items-center'>
-                        <label className="block text-pos-text mb-1 pr-10 text-md">Kiosk picture:</label>
+                        <label className="block text-pos-text pr-10">{tr('control.productModal.kiosk.kioskPicture', 'Kiosk picture')}:</label>
                         <div className="flex items-center gap-2">
-                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
-                            Choose File
+                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0">
+                            {tr('control.productModal.chooseFile', 'Choose File')}
                             <input type="file" className="hidden" accept="image/*" onChange={(e) => setKioskPictureFileName(e.target.files?.[0]?.name ?? '')} />
                           </label>
-                          <span className="text-pos-muted text-md pl-5">{kioskPictureFileName || 'No file chosen'}</span>
+                          <span className="text-pos-muted pl-5">{kioskPictureFileName || tr('control.productModal.noFileChosen', 'No file chosen')}</span>
                         </div>
 
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center pt-20 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center">
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -9176,7 +9181,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* Product search keyboard modal */}
       {showProductSearchKeyboard && subNavId === 'Products' && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-10 flex items-end justify-center">
           <div className="relative bg-pos-bg rounded-t-xl shadow-2xl w-[90%] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-1 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -9403,7 +9408,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                 </div>
                 <div className="flex flex-col w-1/3 items-center gap-3">
-                  <label className="block text-md font-medium text-gray-200 mb-1">Attach To</label>
+                  <label className="block text-md font-medium text-gray-200">Attach To</label>
                   <div ref={subproductAttachToListRef} className="border border-gray-300 rounded-lg bg-pos-panel/30 w-full h-[220px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <ul className="p-2">
                       {categories.length === 0 ? (

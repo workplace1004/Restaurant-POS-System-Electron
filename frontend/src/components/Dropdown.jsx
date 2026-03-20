@@ -17,7 +17,7 @@ import { createPortal } from 'react-dom';
  */
 export function Dropdown({ options = [], value, onChange, placeholder = 'Selectâ€¦', disabled = false, inline = false, className = '', labelClassName = '' }) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0, maxHeight: 240 });
   const ref = useRef(null);
   const listRef = useRef(null);
 
@@ -26,7 +26,16 @@ export function Dropdown({ options = [], value, onChange, placeholder = 'Selectâ
     const updatePosition = () => {
       if (ref.current) {
         const rect = ref.current.getBoundingClientRect();
-        setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+        const gap = 6;
+        const viewportPadding = 8;
+        const desiredHeight = 240;
+        const minHeight = 120;
+        const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding);
+        const spaceAbove = Math.max(0, rect.top - viewportPadding);
+        const openUp = spaceBelow < minHeight && spaceAbove > spaceBelow;
+        const maxHeight = Math.max(minHeight, Math.min(desiredHeight, openUp ? spaceAbove : spaceBelow));
+        const top = openUp ? Math.max(viewportPadding, rect.top - maxHeight - gap) : rect.bottom + gap;
+        setPosition({ top, left: rect.left, width: rect.width, maxHeight });
       }
     };
     updatePosition();
@@ -49,14 +58,14 @@ export function Dropdown({ options = [], value, onChange, placeholder = 'Selectâ
   const selected = options.find((opt) => opt.value === value);
   const displayLabel = selected ? selected.label : placeholder;
 
-  const listCommonClasses = `w-full py-1 bg-pos-bg border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto z-[10000] ${labelClassName}`;
+  const listCommonClasses = `w-full py-1 bg-pos-bg border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto z-[10000] [scrollbar-width:thin] [scrollbar-color:#9ca3af_#34495e] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-pos-panel [&::-webkit-scrollbar-thumb]:bg-gray-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-pos-panel hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 ${labelClassName}`;
 
   const listContent = open ? (
     <ul
       ref={listRef}
       className={inline ? `absolute top-full left-0 mt-1 ${listCommonClasses}` : `fixed ${listCommonClasses}`}
       role="listbox"
-      style={inline ? undefined : { top: position.top, left: position.left, width: position.width }}
+      style={inline ? undefined : { top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
     >
       {options.map((opt) => (
         <li
