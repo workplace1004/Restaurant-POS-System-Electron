@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dropdown } from './Dropdown';
 import { KeyboardWithNumpad } from './KeyboardWithNumpad';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -83,6 +83,26 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
     const translated = t(key);
     return translated === key ? fallback : translated;
   };
+  const typeOptions = useMemo(() => [
+    { value: 'COM', label: tr('printerModal.typeCom', 'COM') },
+    { value: 'USB', label: tr('printerModal.typeUsb', 'USB') },
+    { value: 'Network', label: tr('printerModal.typeNetwork', 'Network') }
+  ], [t]);
+  const ticketSizeOptions = useMemo(() => [
+    { value: 'normal', label: tr('printerModal.sizeNormal', 'Normal') },
+    { value: 'large', label: tr('printerModal.sizeLarge', 'Large') },
+    { value: 'small', label: tr('printerModal.sizeSmall', 'Small') }
+  ], [t]);
+  const spaceOptions = useMemo(() => [
+    { value: 'none', label: tr('printerModal.spaceNone', 'None') },
+    { value: 'small', label: tr('printerModal.spaceSmall', 'Small') },
+    { value: 'medium', label: tr('printerModal.spaceMedium', 'Medium') },
+    { value: 'large', label: tr('printerModal.spaceLarge', 'Large') }
+  ], [t]);
+  const logoOptions = useMemo(() => [
+    { value: 'disable', label: tr('printerModal.logoDisable', 'Disable') },
+    { value: 'enable', label: tr('printerModal.logoEnable', 'Enable') }
+  ], [t]);
   const [name, setName] = useState('');
   const [printerName, setPrinterName] = useState('');
   const [activeField, setActiveField] = useState('name');
@@ -293,7 +313,7 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.type', 'Type')} :</label>
-                  <Dropdown options={PRINTER_FORM_TYPE_OPTIONS} value={type} onChange={setType} placeholder="COM" className="text-md min-w-[150px]" />
+                  <Dropdown options={typeOptions} value={type} onChange={setType} placeholder="COM" className="text-md min-w-[150px]" />
                 </div>
                 {type === 'USB' ? (
                   <div className="flex items-center gap-3">
@@ -374,19 +394,19 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[130px] max-w-[130px] font-medium text-gray-200">{tr('printerModal.textSizeProduction', 'Text size Production ticket')} :</label>
-                  <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={productionTicketSize} onChange={setProductionTicketSize} placeholder="Normal" className="text-md min-w-[120px]" />
+                  <Dropdown options={ticketSizeOptions} value={productionTicketSize} onChange={setProductionTicketSize} placeholder={tr('printerModal.sizeNormal', 'Normal')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[130px] max-w-[130px] font-medium text-gray-200">{tr('printerModal.vatTicketSize', 'Total amount of VAT ticket size')} :</label>
-                  <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={vatTicketSize} onChange={setVatTicketSize} placeholder="Normal" className="text-md min-w-[120px]" />
+                  <Dropdown options={ticketSizeOptions} value={vatTicketSize} onChange={setVatTicketSize} placeholder={tr('printerModal.sizeNormal', 'Normal')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[130px] max-w-[130px] font-medium text-gray-200">{tr('printerModal.spaceBetweenProducts', 'Space between products')} :</label>
-                  <Dropdown options={PRINTER_FORM_SPACE_OPTIONS} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder="None" className="text-md min-w-[120px]" />
+                  <Dropdown options={spaceOptions} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder={tr('printerModal.spaceNone', 'None')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[130px] max-w-[130px] font-medium text-gray-200">{tr('printerModal.logo', 'Logo')} :</label>
-                  <Dropdown options={PRINTER_FORM_LOGO_OPTIONS} value={logo} onChange={setLogo} placeholder="Disable" className="text-md min-w-[120px]" />
+                  <Dropdown options={logoOptions} value={logo} onChange={setLogo} placeholder={tr('printerModal.logoDisable', 'Disable')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[130px] max-w-[130px] font-medium text-gray-200">{tr('printerModal.printerType', 'Printer type')} :</label>
@@ -416,21 +436,21 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[140px] max-w-[140px] font-medium text-gray-200">{tr('printerModal.textSizeProduction', 'Text size Production ticket')} :</label>
-                  <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={productionTicketSize} onChange={setProductionTicketSize} placeholder="Normal" className="text-md min-w-[120px]" />
+                  <Dropdown options={ticketSizeOptions} value={productionTicketSize} onChange={setProductionTicketSize} placeholder={tr('printerModal.sizeNormal', 'Normal')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[140px] max-w-[140px] font-medium text-gray-200">{tr('printerModal.vatTicketSize', 'Total amount of VAT ticket size')} :</label>
-                  <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={vatTicketSize} onChange={setVatTicketSize} placeholder="Normal" className="text-md min-w-[120px]" />
+                  <Dropdown options={ticketSizeOptions} value={vatTicketSize} onChange={setVatTicketSize} placeholder={tr('printerModal.sizeNormal', 'Normal')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[140px] max-w-[140px] font-medium text-gray-200">{tr('printerModal.spaceBetweenProducts', 'Space between products')} :</label>
-                  <Dropdown options={PRINTER_FORM_SPACE_OPTIONS} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder="None" className="text-md min-w-[120px]" />
+                  <Dropdown options={spaceOptions} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder={tr('printerModal.spaceNone', 'None')} className="text-md min-w-[120px]" />
                 </div>
               </div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.logo', 'Logo')} :</label>
-                  <Dropdown options={PRINTER_FORM_LOGO_OPTIONS} value={logo} onChange={setLogo} placeholder="Disable" className="text-md min-w-[120px]" />
+                  <Dropdown options={logoOptions} value={logo} onChange={setLogo} placeholder={tr('printerModal.logoDisable', 'Disable')} className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.printerType', 'Printer type')} :</label>

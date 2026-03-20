@@ -14,6 +14,12 @@ const formatPaymentAmount = (n) => `€${roundCurrency(n).toFixed(2)}`;
 const TABLE_SAVED_ORDERS_API = '/api/settings/table-saved-orders';
 const TABLE_LAST_PAID_AT_STORAGE_KEY = 'pos.tables.lastPaidAtById';
 
+function sumAmountsByIntegration(methods, amounts, integration) {
+  return methods
+    .filter((m) => m.integration === integration)
+    .reduce((sum, m) => sum + (Number(amounts[m.id]) || 0), 0);
+}
+
 export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '' }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
@@ -24,7 +30,9 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
-  const [paymentAmounts, setPaymentAmounts] = useState({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+  const [paymentAmounts, setPaymentAmounts] = useState({});
+  const [activePaymentMethods, setActivePaymentMethods] = useState([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showPayworldStatusModal, setShowPayworldStatusModal] = useState(false);
   const [payworldStatus, setPayworldStatus] = useState({ state: 'IDLE', message: '', details: null });
@@ -218,6 +226,31 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     };
   }, []);
 
+  useEffect(() => {
+    if (!showPayDifferentlyModal) return;
+    let cancelled = false;
+    (async () => {
+      setPaymentMethodsLoading(true);
+      try {
+        const res = await fetch('/api/payment-methods?active=1');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        const list = Array.isArray(data?.data) ? data.data : [];
+        const sorted = [...list].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        if (cancelled) return;
+        setActivePaymentMethods(sorted);
+        setPaymentAmounts(Object.fromEntries(sorted.map((m) => [m.id, 0])));
+      } catch {
+        if (!cancelled) setActivePaymentMethods([]);
+      } finally {
+        if (!cancelled) setPaymentMethodsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showPayDifferentlyModal]);
+
   const handleKeypad = (key) => {
     if (key === 'C') {
       setCustomAmount('');
@@ -229,14 +262,18 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const openPayDifferentlyModal = (overrideTotal = null) => {
     const targetTotal = roundCurrency(overrideTotal ?? payableTotalForPaymentModal);
     if (targetTotal <= 0) return;
+    setActivePaymentMethods([]);
+    setPaymentAmounts({});
     setShowPayDifferentlyModal(true);
-    setPaymentAmounts({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setSelectedPayment(null);
     setPayModalTargetTotal(targetTotal);
     setPayModalKeypadInput(targetTotal.toFixed(2));
   };
 
-  const payModalTotalAssigned = (paymentAmounts.manualCash || 0) + paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa + paymentAmounts.payworld;
+  const payModalTotalAssigned = activePaymentMethods.reduce(
+    (sum, m) => sum + (Number(paymentAmounts[m.id]) || 0),
+    0,
+  );
   const payModalRemaining = Math.max(0, payModalTargetTotal - payModalTotalAssigned);
   const payModalKeypadValue = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
   /** Block assigning if keypad value would push assigned total over order total. */
@@ -259,34 +296,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     });
   };
 
-  const handleCashManualClick = () => {
-    if (payModalSplitComplete || payModalWouldExceedTotal) return;
+  const handlePaymentMethodClick = (method) => {
+    if (!method?.id || payModalSplitComplete || payModalWouldExceedTotal) return;
     const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
     if (value > 0) {
-      setPaymentAmounts((prev) => ({ ...prev, manualCash: (prev.manualCash || 0) + value }));
+      setPaymentAmounts((prev) => ({
+        ...prev,
+        [method.id]: (Number(prev[method.id]) || 0) + value,
+      }));
       setPayModalKeypadInput('');
     } else {
-      setSelectedPayment('manualCash');
-    }
-  };
-  const handleCashmaticImageClick = () => {
-    if (payModalSplitComplete || payModalWouldExceedTotal) return;
-    const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
-    if (value > 0) {
-      setPaymentAmounts((prev) => ({ ...prev, cash: prev.cash + value }));
-      setPayModalKeypadInput('');
-    } else {
-      setSelectedPayment('cashmatic');
-    }
-  };
-  const handlePayworldImageClick = () => {
-    if (payModalSplitComplete || payModalWouldExceedTotal) return;
-    const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
-    if (value > 0) {
-      setPaymentAmounts((prev) => ({ ...prev, payworld: prev.payworld + value }));
-      setPayModalKeypadInput('');
-    } else {
-      setSelectedPayment('payworld');
+      setSelectedPayment(method.id);
     }
   };
 
@@ -301,7 +321,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setPayModalKeypadInput(remaining.toFixed(2));
   };
   const handlePayReset = () => {
-    setPaymentAmounts({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+    setPaymentAmounts(Object.fromEntries(activePaymentMethods.map((m) => [m.id, 0])));
     setPayModalKeypadInput(payModalTargetTotal.toFixed(2));
     setSelectedPayment(null);
   };
@@ -612,7 +632,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   const resetAfterSuccessfulPayment = () => {
     setShowPayDifferentlyModal(false);
-    setPaymentAmounts({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+    setPaymentAmounts({});
+    setActivePaymentMethods([]);
     setSelectedPayment(null);
     setPayModalTargetTotal(0);
     setPayModalKeypadInput('');
@@ -643,14 +664,22 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       setPaymentErrorMessage(`Assigned amount (€${assignedTotal.toFixed(2)}) must match total (€${orderTotal.toFixed(2)}).`);
       return;
     }
+    if (paymentMethodsLoading || activePaymentMethods.length === 0) {
+      setPaymentErrorMessage(
+        tr('orderPanel.noPaymentMethods', 'No active payment methods. Add them under Control → Payment types.'),
+      );
+      return;
+    }
 
     try {
       setPayConfirmLoading(true);
-      if (paymentAmounts.cash > 0) {
-        await runCashmaticPayment(paymentAmounts.cash);
+      const cashmaticTotal = sumAmountsByIntegration(activePaymentMethods, paymentAmounts, 'cashmatic');
+      if (cashmaticTotal > 0) {
+        await runCashmaticPayment(cashmaticTotal);
       }
-      if (paymentAmounts.payworld > 0) {
-        await runPayworldPayment(paymentAmounts.payworld);
+      const payworldTotal = sumAmountsByIntegration(activePaymentMethods, paymentAmounts, 'payworld');
+      if (payworldTotal > 0) {
+        await runPayworldPayment(payworldTotal);
       }
       if (pendingSplitCheckout?.type === 'splitBill') {
         const paidOrderIds = await settleSplitBillSelection(pendingSplitCheckout.lineIds || []);
@@ -706,13 +735,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       let printResult = null;
       try {
         if (targetOrderIds.length === 1) {
-          const breakdown = {
-            cash: (paymentAmounts.manualCash || 0) + paymentAmounts.cash,
-            bancontact: paymentAmounts.bancontact,
-            visa: paymentAmounts.visa,
-            payworld: paymentAmounts.payworld,
-          };
-          printResult = await printTicketAutomatically(targetOrderIds[0], breakdown);
+          const amounts = {};
+          for (const m of activePaymentMethods) {
+            const v = Number(paymentAmounts[m.id]) || 0;
+            if (v > 0.0001) amounts[m.id] = v;
+          }
+          printResult = await printTicketAutomatically(targetOrderIds[0], { amounts });
         } else {
           for (const targetId of targetOrderIds) {
             // Print each settled order ticket separately; backend computes each order total.
@@ -724,13 +752,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         setPaymentErrorMessage(printErr?.message || 'Automatic ticket print failed.');
       }
       if (printedSuccessfully) {
-        const methodLines = [
-          (paymentAmounts.manualCash || 0) > 0 ? `Cash: ${formatPaymentAmount(paymentAmounts.manualCash)}` : null,
-          paymentAmounts.cash > 0 ? `Cashmatic: ${formatPaymentAmount(paymentAmounts.cash)}` : null,
-          paymentAmounts.bancontact > 0 ? `Bancontact: ${formatPaymentAmount(paymentAmounts.bancontact)}` : null,
-          paymentAmounts.visa > 0 ? `Visa: ${formatPaymentAmount(paymentAmounts.visa)}` : null,
-          paymentAmounts.payworld > 0 ? `Payworld: ${formatPaymentAmount(paymentAmounts.payworld)}` : null,
-        ].filter(Boolean);
+        const methodLines = activePaymentMethods
+          .map((m) => {
+            const v = Number(paymentAmounts[m.id]) || 0;
+            return v > 0.0001 ? `${m.name}: ${formatPaymentAmount(v)}` : null;
+          })
+          .filter(Boolean);
         setPaymentSuccessMessage([
           `Payment successful (${formatPaymentAmount(orderTotal)}).`,
           methodLines.length ? methodLines.join(' | ') : '',
@@ -1057,52 +1084,53 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex items-center justify-center">
               <div className="p-10 min-w-[46%] w-full h-full flex flex-col">
                 <div className="text-3xl font-semibold mb-4 flex w-full justify-center items-center">{t('total')}: €{payModalTargetTotal.toFixed(2)}</div>
-                <div className="flex gap-6 w-full mb-6 h-full items-start justify-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={payModalSplitComplete || payModalWouldExceedTotal}
-                      onClick={handleCashManualClick}
-                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'manualCash' || (paymentAmounts.manualCash || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
-                        }`}
-                      aria-label={t('cash')}
-                    >
-                      <span className="flex items-center justify-center w-[180px] h-[200px] text-8xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
-                    </button>
-                    <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
-                      {formatPaymentAmount(paymentAmounts.manualCash || 0)}
+                <div className="flex flex-wrap gap-6 w-full mb-6 h-full items-start justify-center">
+                  {paymentMethodsLoading ? (
+                    <div className="text-2xl text-gray-600 py-8">
+                      {tr('orderPanel.loadingPaymentMethods', 'Loading payment methods...')}
                     </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={payModalSplitComplete || payModalWouldExceedTotal}
-                      onClick={handleCashmaticImageClick}
-                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'cashmatic' || (paymentAmounts.cash || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
-                        }`}
-                      aria-label={t('cashmatic')}
-                    >
-                      <img src="/cash.png" alt={t('cashmatic')} className="max-h-[280px] w-auto object-contain" />
-                    </button>
-                    <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
-                      {formatPaymentAmount(paymentAmounts.cash || 0)}
+                  ) : activePaymentMethods.length === 0 ? (
+                    <div className="text-2xl text-amber-900 py-8 text-center max-w-lg px-4">
+                      {tr(
+                        'orderPanel.noPaymentMethods',
+                        'No active payment methods. Configure them under Control → Payment types.',
+                      )}
                     </div>
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={payModalSplitComplete || payModalWouldExceedTotal}
-                      onClick={handlePayworldImageClick}
-                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'payworld' || (paymentAmounts.payworld || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
-                        }`}
-                      aria-label={t('payworld')}
-                    >
-                      <img src="/payworld.png" alt={t('payworld')} className="max-h-[280px] w-auto object-contain" />
-                    </button>
-                    <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
-                      {formatPaymentAmount(paymentAmounts.payworld || 0)}
-                    </div>
-                  </div>
+                  ) : (
+                    activePaymentMethods.map((m) => {
+                      const amt = Number(paymentAmounts[m.id]) || 0;
+                      const isHighlighted = selectedPayment === m.id || amt > 0;
+                      const integ = m.integration || 'generic';
+                      return (
+                        <div key={m.id} className="flex flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={payModalSplitComplete || payModalWouldExceedTotal}
+                            onClick={() => handlePaymentMethodClick(m)}
+                            className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isHighlighted ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
+                              }`}
+                            aria-label={m.name}
+                          >
+                            {integ === 'manual_cash' ? (
+                              <span className="flex items-center justify-center w-[180px] h-[200px] text-8xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
+                            ) : integ === 'cashmatic' ? (
+                              <img src="/cash.png" alt={m.name} className="max-h-[280px] w-auto object-contain" />
+                            ) : integ === 'payworld' ? (
+                              <img src="/payworld.png" alt={m.name} className="max-h-[280px] w-auto object-contain" />
+                            ) : (
+                              <span className="flex items-center justify-center w-[180px] min-h-[120px] px-3 py-4 text-2xl font-semibold text-center text-blue-900 bg-blue-50/80 rounded leading-tight">
+                                {m.name}
+                              </span>
+                            )}
+                          </button>
+                          <div className="text-2xl font-semibold tabular-nums text-center max-w-[200px]" aria-live="polite">
+                            <span className="block text-sm font-normal text-gray-600 mb-0.5 truncate">{m.name}</span>
+                            {formatPaymentAmount(amt)}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
               {/* Right: Assigned + input + keypad + actions + To confirm */}
@@ -1177,8 +1205,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               </button>
               <button
                 type="button"
-                disabled={Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading}
-                className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading
+                disabled={
+                  Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 ||
+                  payConfirmLoading ||
+                  paymentMethodsLoading ||
+                  activePaymentMethods.length === 0
+                }
+                className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading || paymentMethodsLoading || activePaymentMethods.length === 0
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
                   }`}

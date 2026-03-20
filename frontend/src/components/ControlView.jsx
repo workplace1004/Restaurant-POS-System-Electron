@@ -66,12 +66,12 @@ const PRINTER_TAB_DEFS = [
 ];
 
 const PRINTING_ORDER_OPTIONS = [
-  { value: 'as-registered', label: 'As Registered' },
-  { value: 'reverse', label: 'Reverse' }
+  { value: 'as-registered', labelKey: 'control.external.asRegistered', fallback: 'As Registered' },
+  { value: 'reverse', labelKey: 'control.external.reverse', fallback: 'Reverse' }
 ];
 
 const PRINTER_DISABLED_OPTIONS = [
-  { value: 'disabled', label: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' }
 ];
 
 const SUBPRODUCT_VAT_OPTIONS = [
@@ -83,8 +83,8 @@ const SUBPRODUCT_VAT_OPTIONS = [
 ];
 
 const GROUPING_RECEIPT_OPTIONS = [
-  { value: 'enable', label: 'Enable' },
-  { value: 'disable', label: 'Disable' }
+  { value: 'enable', labelKey: 'control.external.enable', fallback: 'Enable' },
+  { value: 'disable', labelKey: 'control.external.disable', fallback: 'Disable' }
 ];
 
 const SCHEDULED_ORDERS_PRODUCTION_FLOW_OPTIONS = [
@@ -115,16 +115,16 @@ const SCHEDULED_ORDERS_CHECKOUT_AT_OPTIONS = [
 ];
 
 const PRICE_DISPLAY_TYPE_OPTIONS = [
-  { value: 'disabled', label: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' }
 ];
 
 const RFID_READER_TYPE_OPTIONS = [
-  { value: 'disabled', label: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' }
 ];
 
 const BARCODE_SCANNER_TYPE_OPTIONS = [
-  { value: 'disabled', label: 'Disabled' },
-  { value: 'serial', label: 'Serial' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' },
+  { value: 'serial', labelKey: 'control.external.serial', fallback: 'Serial' }
 ];
 
 const BARCODE_SCANNER_PORT_OPTIONS = [
@@ -135,11 +135,21 @@ const BARCODE_SCANNER_PORT_OPTIONS = [
 ];
 
 const CREDIT_CARD_TYPE_OPTIONS = [
-  { value: 'disabled', label: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' }
 ];
 
 const SCALE_TYPE_OPTIONS = [
-  { value: 'disabled', label: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' },
+  { value: 'toshiba-sl4700', labelKey: 'control.external.scaleType.toshibaSl4700', fallback: 'Toshiba SL4700' },
+  { value: 'marques-b0', labelKey: 'control.external.scaleType.marquesB0', fallback: 'Marques B0' },
+  { value: 'cas-protocol', labelKey: 'control.external.scaleType.casProtocol', fallback: 'CAS Protocol' },
+  { value: 'aurora', labelKey: 'control.external.scaleType.aurora', fallback: 'Aurora' },
+  { value: 'longfly', labelKey: 'control.external.scaleType.longfly', fallback: 'Longfly' },
+  { value: 'dollar', labelKey: 'control.external.scaleType.dollar', fallback: 'Dollar' },
+  { value: 'elzab', labelKey: 'control.external.scaleType.elzab', fallback: 'Elzab' },
+  { value: 'marques-mobba-mode-a', labelKey: 'control.external.scaleType.marquesMobbaModeA', fallback: 'Marques Mobba Mode A' },
+  { value: 'adam-azextra', labelKey: 'control.external.scaleType.adamAzextra', fallback: 'Adam AZextra' },
+  { value: 'dialog-06', labelKey: 'control.external.scaleType.dialog06', fallback: 'Dialog 06' }
 ];
 
 const SCALE_PORT_OPTIONS = [
@@ -530,21 +540,12 @@ const normalizeLayoutEditorDraft = (raw, locationName = 'Restaurant') => {
   };
 };
 
-const DEFAULT_PAYMENT_TYPES = [
-  { id: '1', name: 'Cash', active: true, sortOrder: 0 },
-  { id: '2', name: 'Bancontact', active: true, sortOrder: 1 },
-  { id: '3', name: 'Transfer', active: false, sortOrder: 2 },
-  { id: '4', name: 'Visa', active: true, sortOrder: 3 },
-  { id: '5', name: 'Meal vouchers', active: false, sortOrder: 4 },
-  { id: '6', name: 'Gift voucher', active: false, sortOrder: 5 },
-  { id: '7', name: 'Charging card', active: false, sortOrder: 6 },
-  { id: '8', name: 'American Express', active: false, sortOrder: 7 },
-  { id: '9', name: 'Mastercard', active: false, sortOrder: 8 },
-  { id: '10', name: 'Seqr', active: false, sortOrder: 9 },
-  { id: '11', name: 'RES', active: false, sortOrder: 10 },
-  { id: '12', name: 'Payconiq', active: false, sortOrder: 11 },
-  { id: '13', name: 'Too Good To Go', active: false, sortOrder: 12 }
-];
+const PAYMENT_INTEGRATION_LABELS = {
+  manual_cash: 'Manual cash',
+  cashmatic: 'Cashmatic',
+  payworld: 'Payworld',
+  generic: 'manual card',
+};
 
 const VAT_PERCENT_OPTIONS = [
   { value: '', label: '--' },
@@ -1023,24 +1024,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [sysTicketScheduledCustomerSort, setSysTicketScheduledCustomerSort] = useState('as-registered');
   const [sysBarcodeType, setSysBarcodeType] = useState('Code39');
 
-  const [paymentTypes, setPaymentTypes] = useState(() => {
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_payment_types');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
-      }
-    } catch (_) { }
-    return DEFAULT_PAYMENT_TYPES.map((p, i) => ({ ...p, sortOrder: i }));
-  });
+  const [paymentTypes, setPaymentTypes] = useState([]);
+  const [paymentTypesLoading, setPaymentTypesLoading] = useState(false);
+  const paymentTypesListRef = useRef(null);
+  const [canPaymentTypesScrollUp, setCanPaymentTypesScrollUp] = useState(false);
+  const [canPaymentTypesScrollDown, setCanPaymentTypesScrollDown] = useState(false);
   const [showPaymentTypeModal, setShowPaymentTypeModal] = useState(false);
   const [editingPaymentTypeId, setEditingPaymentTypeId] = useState(null);
   const [paymentTypeName, setPaymentTypeName] = useState('');
   const [paymentTypeActive, setPaymentTypeActive] = useState(true);
+  const [paymentTypeIntegration, setPaymentTypeIntegration] = useState('generic');
   const [savingPaymentType, setSavingPaymentType] = useState(false);
-  const [paymentTypesPage, setPaymentTypesPage] = useState(0);
-  const PAYMENT_TYPES_PAGE_SIZE = 5;
-  const PAYMENT_TYPES_PAGE_SIZE1 = 8;
+  const [deleteConfirmPaymentTypeId, setDeleteConfirmPaymentTypeId] = useState(null);
 
   const [showProductionMessagesModal, setShowProductionMessagesModal] = useState(false);
   const [productionMessages, setProductionMessages] = useState([]);
@@ -1202,6 +1197,24 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const showToast = useCallback((type, text) => {
     setToast({ id: Date.now(), type, text });
   }, []);
+
+  const fetchPaymentTypes = useCallback(async () => {
+    setPaymentTypesLoading(true);
+    try {
+      const res = await fetch(`${API}/payment-methods`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(data?.data)) setPaymentTypes(data.data);
+      else throw new Error(data?.error || 'Failed to load payment methods');
+    } catch (e) {
+      showToast('error', e?.message || 'Failed to load payment methods');
+    } finally {
+      setPaymentTypesLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchPaymentTypes();
+  }, [fetchPaymentTypes]);
 
   const updateManageGroupsPaginationState = useCallback(() => {
     const el = manageGroupsListRef.current;
@@ -1371,6 +1384,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updatePaymentTypesScrollState = useCallback(() => {
+    const el = paymentTypesListRef.current;
+    if (!el) {
+      setCanPaymentTypesScrollUp(false);
+      setCanPaymentTypesScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanPaymentTypesScrollUp(el.scrollTop > 0);
+    setCanPaymentTypesScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollPaymentTypesByPage = useCallback((direction) => {
+    const el = paymentTypesListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
   const formatDateForCurrentLanguage = useCallback((isoDate) => {
     if (!isoDate) return '';
     const d = new Date(isoDate);
@@ -1416,6 +1449,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (topNavId !== 'categories-products' || subNavId !== 'Price Groups') return;
     updatePriceGroupsScrollState();
   }, [topNavId, subNavId, priceGroups, updatePriceGroupsScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'cash-register' || subNavId !== 'Payment types') return;
+    updatePaymentTypesScrollState();
+  }, [topNavId, subNavId, paymentTypes, updatePaymentTypesScrollState]);
 
   useEffect(() => {
     if (topNavId !== 'tables') return;
@@ -1956,6 +1994,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     const translated = t(key);
     return translated === key ? fallback : translated;
   }, [t]);
+  const mapTranslatedOptions = useCallback((opts) =>
+    opts.map((o) => ({ value: o.value, label: o.labelKey ? tr(o.labelKey, o.fallback) : o.label }))
+  , [tr]);
   const getFunctionButtonLabel = useCallback((id) => {
     const item = FUNCTION_BUTTON_ITEM_BY_ID[id];
     if (!item) return '';
@@ -3463,17 +3504,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     }
   };
 
-  const persistPaymentTypes = (next) => {
-    setPaymentTypes(next);
-    try {
-      if (typeof localStorage !== 'undefined') localStorage.setItem('pos_payment_types', JSON.stringify(next));
-    } catch (_) { }
-  };
-
   const openNewPaymentTypeModal = () => {
     setEditingPaymentTypeId(null);
     setPaymentTypeName('');
     setPaymentTypeActive(true);
+    setPaymentTypeIntegration('generic');
     setShowPaymentTypeModal(true);
   };
 
@@ -3481,6 +3516,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setEditingPaymentTypeId(pt.id);
     setPaymentTypeName(pt.name || '');
     setPaymentTypeActive(pt.active !== false);
+    setPaymentTypeIntegration(pt.integration || 'generic');
     setShowPaymentTypeModal(true);
   };
 
@@ -3489,42 +3525,98 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setEditingPaymentTypeId(null);
     setPaymentTypeName('');
     setPaymentTypeActive(true);
+    setPaymentTypeIntegration('generic');
   };
 
-  const handleSavePaymentType = () => {
+  const handleSavePaymentType = async () => {
     const name = (paymentTypeName || '').trim();
     if (!name) return;
     setSavingPaymentType(true);
     try {
-      const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const body = { name, active: paymentTypeActive, integration: paymentTypeIntegration };
       if (editingPaymentTypeId) {
-        const next = sorted.map((p) => (p.id === editingPaymentTypeId ? { ...p, name, active: paymentTypeActive } : p));
-        persistPaymentTypes(next);
+        const res = await fetch(`${API}/payment-methods/${editingPaymentTypeId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || 'Failed to save payment method');
       } else {
-        const newId = 'pt-' + Date.now();
-        const next = [...sorted, { id: newId, name, active: paymentTypeActive, sortOrder: sorted.length }];
-        persistPaymentTypes(next);
+        const res = await fetch(`${API}/payment-methods`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || 'Failed to create payment method');
       }
+      await fetchPaymentTypes();
       closePaymentTypeModal();
+    } catch (e) {
+      showToast('error', e?.message || 'Save failed');
     } finally {
       setSavingPaymentType(false);
     }
   };
 
-  const togglePaymentTypeActive = (id) => {
-    const next = paymentTypes.map((p) => (p.id === id ? { ...p, active: !p.active } : p));
-    persistPaymentTypes(next);
+  const togglePaymentTypeActive = async (id) => {
+    const pt = paymentTypes.find((p) => p.id === id);
+    if (!pt) return;
+    try {
+      const res = await fetch(`${API}/payment-methods/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !pt.active }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to update');
+      await fetchPaymentTypes();
+    } catch (e) {
+      showToast('error', e?.message || 'Update failed');
+    }
   };
 
-  const movePaymentType = (id, direction) => {
+  const handleDeletePaymentType = async (id) => {
+    try {
+      const res = await fetch(`${API}/payment-methods/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Failed to delete');
+      }
+      await fetchPaymentTypes();
+      if (editingPaymentTypeId === id) {
+        setShowPaymentTypeModal(false);
+        setEditingPaymentTypeId(null);
+      }
+      showToast('success', tr('control.paymentTypes.deleted', 'Payment method deleted.'));
+    } catch (e) {
+      showToast('error', e?.message || 'Delete failed');
+    } finally {
+      setDeleteConfirmPaymentTypeId(null);
+    }
+  };
+
+  const movePaymentType = async (id, direction) => {
     const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     const idx = sorted.findIndex((p) => p.id === id);
     if (idx < 0) return;
     const swap = direction === 'up' ? idx - 1 : idx + 1;
     if (swap < 0 || swap >= sorted.length) return;
     [sorted[idx], sorted[swap]] = [sorted[swap], sorted[idx]];
-    const withOrder = sorted.map((p, i) => ({ ...p, sortOrder: i }));
-    persistPaymentTypes(withOrder);
+    const orderedIds = sorted.map((p) => p.id);
+    try {
+      const res = await fetch(`${API}/payment-methods/reorder`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to reorder');
+      await fetchPaymentTypes();
+    } catch (e) {
+      showToast('error', e?.message || 'Reorder failed');
+    }
   };
 
   const persistProductionMessages = (next) => {
@@ -4960,7 +5052,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <button
                 key={label}
                 type="button"
-                className={`px-4 py-2 rounded-lg text-xl transition-colors ${subNavId === label
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${subNavId === label
                   ? 'bg-pos-panel text-pos-text font-medium'
                   : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50'
                   }`}
@@ -5349,14 +5441,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <p className="text-pos-muted text-lg mt-8 text-center">{tr('control.currentLanguage', 'Current language')}: {tr(`control.languageOption.${appLanguage}`, LANGUAGE_OPTIONS.find((o) => o.value === appLanguage)?.label ?? 'English')}</p>
             </div>
           ) : topNavId === 'cash-register' ? (
-            <div className="rounded-xl p-8 pb-0 min-h-[300px]">
+            <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
               {subNavId === 'Template Settings' && (
-                <div className="flex flex-col items-center justify-center min-h-[600px] gap-20">
-                  <div className="flex gap-20">
+                <div className="flex flex-col items-center justify-center min-h-[580px] gap-4">
+                  <div className="flex gap-4">
                     <button
                       type="button"
                       onClick={() => setTemplateTheme('light')}
-                      className={`px-12 py-12 rounded-xl text-xl font-medium transition-colors min-w-[180px] ${templateTheme === 'light'
+                      className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors min-w-[150px] ${templateTheme === 'light'
                         ? 'bg-pos-panel border-2 border-green-500 text-green-400'
                         : 'bg-pos-bg border border-pos-border text-pos-muted hover:text-pos-text hover:border-pos-border'
                         }`}
@@ -5366,7 +5458,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <button
                       type="button"
                       onClick={() => setTemplateTheme('dark')}
-                      className={`px-12 py-6 rounded-xl text-xl font-medium transition-colors min-w-[180px] ${templateTheme === 'dark'
+                      className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors min-w-[150px] ${templateTheme === 'dark'
                         ? 'bg-gray-900 border-2 border-green-500 text-green-400'
                         : 'bg-[#1a1a1a] border border-pos-border text-pos-muted hover:text-pos-text'
                         }`}
@@ -5374,86 +5466,111 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       Dark
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    disabled={savingTemplateSettings}
-                    onClick={() => {
-                      setSavingTemplateSettings(true);
-                      try {
-                        if (typeof localStorage !== 'undefined') localStorage.setItem('pos-template-theme', templateTheme);
-                      } finally {
-                        setSavingTemplateSettings(false);
-                      }
-                    }}
-                    className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
-                  >
-                    <svg fill="#ffffff" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <div className="flex justify-center pt-5 pb-5">
+                    <button
+                      type="button"
+                      disabled={savingTemplateSettings}
+                      onClick={() => {
+                        setSavingTemplateSettings(true);
+                        try {
+                          if (typeof localStorage !== 'undefined') localStorage.setItem('pos-template-theme', templateTheme);
+                        } finally {
+                          setSavingTemplateSettings(false);
+                        }
+                      }}
+                      className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                    >
+                    <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
                       <path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                     </svg>
                     Save
                   </button>
+                  </div>
                 </div>
               )}
               {subNavId === 'Payment types' && (
-                <div className="relative flex flex-col min-h-[300px] pb-24">
-                  <div className="flex items-center justify-center mb-6">
+                <div className="relative flex flex-col min-h-[610px] pb-[60px]">
+                  <div className="flex items-center justify-center mb-2">
                     <button
                       type="button"
-                      className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                      className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                      disabled={paymentTypesLoading}
                       onClick={openNewPaymentTypeModal}
                     >
                       New Payment Method
                     </button>
                   </div>
                   {(() => {
+                    if (paymentTypesLoading) {
+                      return (
+                        <ul className="w-full flex flex-col">
+                          <li className="text-pos-muted text-xl py-4">{tr('control.paymentTypes.loading', 'Loading payment methods...')}</li>
+                        </ul>
+                      );
+                    }
                     const sorted = [...paymentTypes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-                    const total = sorted.length;
-                    const totalPages = Math.max(1, Math.ceil(total / PAYMENT_TYPES_PAGE_SIZE1));
-                    const page = Math.min(paymentTypesPage, totalPages - 1);
-                    const start = page * PAYMENT_TYPES_PAGE_SIZE1;
-                    const paginated = sorted.slice(start, start + PAYMENT_TYPES_PAGE_SIZE1);
-                    const canPrev = page > 0;
-                    const canNext = page < totalPages - 1;
+                    if (sorted.length === 0) {
+                      return (
+                        <ul className="w-full flex flex-col">
+                          <li className="text-pos-muted text-xl font-medium text-center py-4">{tr('control.paymentTypes.empty', 'No payment methods yet.')}</li>
+                        </ul>
+                      );
+                    }
                     return (
                       <>
-                        <ul className="w-full flex relative flex-col border border-pos-border rounded-xl max-h-[680px] overflow-auto bg-pos-bg/50">
-                          {paginated.map((pt) => (
-                            <li
-                              key={pt.id}
-                              className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors"
-                            >
-                              <span className="flex-1 text-pos-text text-xl font-medium">{pt.name}</span>
-                              <button
-                                type="button"
-                                className="p-2 rounded text-pos-text hover:bg-pos-bg hover:rounded-full"
-                                aria-label={pt.active ? 'Deactivate' : 'Activate'}
-                                onClick={() => togglePaymentTypeActive(pt.id)}
+                        <div
+                          ref={paymentTypesListRef}
+                          className="max-h-[510px] overflow-y-auto rounded-lg border border-pos-border [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                          onScroll={updatePaymentTypesScrollState}
+                        >
+                          <ul className="w-full flex flex-col">
+                            {sorted.map((pt) => (
+                              <li
+                                key={pt.id}
+                                className="flex items-center w-full px-4 py-1 border-b border-pos-border last:border-b-0 bg-pos-bg hover:bg-pos-panel/50 transition-colors"
                               >
-                                {pt.active ? (
-                                  <span className={'w-8 h-8 inline-flex justify-center items-center text-green-500 text-2xl'}>{'\u2713'}</span>
-                                ) : (
-                                  <span className={'w-8 h-8 inline-block rounded-full border-2 border-pos-muted'} />
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                className="p-2 rounded text-pos-text pl-20 hover:bg-pos-bg ml-2"
-                                onClick={() => openEditPaymentTypeModal(pt)}
-                                aria-label="Edit"
-                              >
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="fixed ml-[700px] mt-[850px]">
-                          <PaginationArrows
-                            canPrev={canPrev}
-                            canNext={canNext}
-                            onPrev={() => setPaymentTypesPage((p) => Math.max(0, p - 1))}
-                            onNext={() => setPaymentTypesPage((p) => Math.min(totalPages - 1, p + 1))}
-                          />
+                                <span className="flex-1 text-pos-text text-sm font-medium">{pt.name}</span>
+                                <span className="w-[160px] shrink-0 text-pos-muted text-xs mr-2">
+                                  {PAYMENT_INTEGRATION_LABELS[pt.integration] || pt.integration || '—'}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="p-2 rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                  aria-label={pt.active ? 'Deactivate' : 'Activate'}
+                                  onClick={() => togglePaymentTypeActive(pt.id)}
+                                >
+                                  {pt.active ? (
+                                    <span className="w-4 h-4 inline-flex justify-center items-center text-green-500 text-sm">{'\u2713'}</span>
+                                  ) : (
+                                    <span className="w-4 h-4 inline-block rounded-full border-2 border-pos-muted" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="p-2 rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                  onClick={() => openEditPaymentTypeModal(pt)}
+                                  aria-label="Edit"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                  onClick={() => setDeleteConfirmPaymentTypeId(pt.id)}
+                                  aria-label={tr('delete', 'Delete')}
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
+                        <PaginationArrows
+                          canPrev={canPaymentTypesScrollUp}
+                          canNext={canPaymentTypesScrollDown}
+                          onPrev={() => scrollPaymentTypesByPage('up')}
+                          onNext={() => scrollPaymentTypesByPage('down')}
+                        />
                       </>
                     );
                   })()}
@@ -6089,7 +6206,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="grid grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4 mb-6">
                         <div className="flex flex-col gap-4">
                           <div className='flex items-start gap-2'>
-                            <label className="block text-pos-text font-medium min-w-[130px] max-w-[130px]">Company data:</label>
+                            <label className="block text-pos-text font-medium min-w-[130px] max-w-[130px]">{tr('control.finalTickets.companyData', 'Company data:')}</label>
                             <div className='grid grid-cols-2 items-start gap-4'>
                               <input type="text" value={finalTicketsCompanyData1} onChange={(e) => setFinalTicketsCompanyData1(e.target.value)} onFocus={() => setFinalTicketsActiveField('companyData1')} className="px-4 min-w-[100px] max-w-[100px] flex py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg justify-start items-start text-gray-200" />
                               {[2, 3, 4, 5].map((i) => (
@@ -6100,30 +6217,30 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             </div>
                           </div>
                           <div className='flex items-center gap-2'>
-                            <label className="block text-pos-text font-medium min-w-[130px] max-w-[130px]">Thank text:</label>
+                            <label className="block text-pos-text font-medium min-w-[130px] max-w-[130px]">{tr('control.finalTickets.thankText', 'Thank text:')}</label>
                             <input type="text" value={finalTicketsThankText} onChange={(e) => setFinalTicketsThankText(e.target.value)} onFocus={() => setFinalTicketsActiveField('thankText')} className="px-4 min-w-[200px] max-w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200" />
                           </div>
                         </div>
                         <div className="flex flex-col gap-4">
                           <div className="flex gap-2 items-center">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Proforma ticket:</label>
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">{tr('control.finalTickets.proformaTicket', 'Proforma ticket:')}</label>
                             <input type="checkbox" checked={finalTicketsProforma} onChange={(e) => setFinalTicketsProforma(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-2 items-center">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Print payment type:</label>
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">{tr('control.finalTickets.printPaymentType', 'Print payment type:')}</label>
                             <input type="checkbox" checked={finalTicketsPrintPaymentType} onChange={(e) => setFinalTicketsPrintPaymentType(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-2 items-center">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Ticket tearable:</label>
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">{tr('control.finalTickets.ticketTearable', 'Ticket tearable:')}</label>
                             <input type="checkbox" checked={finalTicketsTicketTearable} onChange={(e) => setFinalTicketsTicketTearable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-2 items-center">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">Print logo:</label>
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px]">{tr('control.finalTickets.printLogo', 'Print logo:')}</label>
                             <input type="checkbox" checked={finalTicketsPrintLogo} onChange={(e) => setFinalTicketsPrintLogo(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Printing order of ticket:</label>
-                            <Dropdown options={PRINTING_ORDER_OPTIONS} value={finalTicketsPrintingOrder} onChange={setFinalTicketsPrintingOrder} placeholder="Select" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.finalTickets.printingOrder', 'Printing order of ticket:')}</label>
+                            <Dropdown options={mapTranslatedOptions(PRINTING_ORDER_OPTIONS)} value={finalTicketsPrintingOrder} onChange={setFinalTicketsPrintingOrder} placeholder={tr('control.external.select', 'Select')} className="min-w-[150px]" />
                           </div>
                         </div>
                       </div>
@@ -6143,58 +6260,58 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 mb-6 text-sm">
                         <div className="flex flex-col gap-4">
                           <div className="flex gap-10 items-center">
-                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Display categories on production ticket:</label>
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">{tr('control.prodTickets.displayCategories', 'Display categories on production ticket:')}</label>
                             <input type="checkbox" checked={prodTicketsDisplayCategories} onChange={(e) => setProdTicketsDisplayCategories(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-10 items-center">
-                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Space above ticket:</label>
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">{tr('control.prodTickets.spaceAbove', 'Space above ticket:')}</label>
                             <input type="checkbox" checked={prodTicketsSpaceAbove} onChange={(e) => setProdTicketsSpaceAbove(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-10 items-center">
-                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Ticket tearable:</label>
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">{tr('control.finalTickets.ticketTearable', 'Ticket tearable:')}</label>
                             <input type="checkbox" checked={prodTicketsTicketTearable} onChange={(e) => setProdTicketsTicketTearable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-10 items-center">
-                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Keukenprinter buzzer:</label>
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">{tr('control.prodTickets.keukenprinterBuzzer', 'Kitchen printer buzzer:')}</label>
                             <input type="checkbox" checked={prodTicketsKeukenprinterBuzzer} onChange={(e) => setProdTicketsKeukenprinterBuzzer(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-10 items-center">
-                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Producten individueel afdrukken:</label>
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">{tr('control.prodTickets.productsIndividually', 'Print products individually:')}</label>
                             <input type="checkbox" checked={prodTicketsProductenIndividueel} onChange={(e) => setProdTicketsProductenIndividueel(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                           <div className="flex gap-10 items-center">
-                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">Eat in / Take out onderaan afdrukken:</label>
+                            <label className="block text-pos-text font-medium min-w-[200px] max-w-[200px]">{tr('control.prodTickets.eatInTakeOutBottom', 'Print Eat in / Take out at bottom:')}</label>
                             <input type="checkbox" checked={prodTicketsEatInTakeOutOnderaan} onChange={(e) => setProdTicketsEatInTakeOutOnderaan(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                           </div>
                         </div>
                         <div className="flex flex-col gap-4">
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 1:</label>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter1} onChange={setProdTicketsNextCoursePrinter1} placeholder="Disabled" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.nextCoursePrinter', 'Next course printer {n}:').replace('{n}', '1')}</label>
+                            <Dropdown options={mapTranslatedOptions(productionTicketsPrinterOptions)} value={prodTicketsNextCoursePrinter1} onChange={setProdTicketsNextCoursePrinter1} placeholder={tr('control.external.disabled', 'Disabled')} className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 2:</label>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter2} onChange={setProdTicketsNextCoursePrinter2} placeholder="Disabled" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.nextCoursePrinter', 'Next course printer {n}:').replace('{n}', '2')}</label>
+                            <Dropdown options={mapTranslatedOptions(productionTicketsPrinterOptions)} value={prodTicketsNextCoursePrinter2} onChange={setProdTicketsNextCoursePrinter2} placeholder={tr('control.external.disabled', 'Disabled')} className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 3:</label>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter3} onChange={setProdTicketsNextCoursePrinter3} placeholder="Disabled" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.nextCoursePrinter', 'Next course printer {n}:').replace('{n}', '3')}</label>
+                            <Dropdown options={mapTranslatedOptions(productionTicketsPrinterOptions)} value={prodTicketsNextCoursePrinter3} onChange={setProdTicketsNextCoursePrinter3} placeholder={tr('control.external.disabled', 'Disabled')} className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Next course printer 4:</label>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsNextCoursePrinter4} onChange={setProdTicketsNextCoursePrinter4} placeholder="Disabled" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.nextCoursePrinter', 'Next course printer {n}:').replace('{n}', '4')}</label>
+                            <Dropdown options={mapTranslatedOptions(productionTicketsPrinterOptions)} value={prodTicketsNextCoursePrinter4} onChange={setProdTicketsNextCoursePrinter4} placeholder={tr('control.external.disabled', 'Disabled')} className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Printing order of production ticket:</label>
-                            <Dropdown options={PRINTING_ORDER_OPTIONS} value={prodTicketsPrintingOrder} onChange={setProdTicketsPrintingOrder} placeholder="Select" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.printingOrder', 'Printing order of production ticket:')}</label>
+                            <Dropdown options={mapTranslatedOptions(PRINTING_ORDER_OPTIONS)} value={prodTicketsPrintingOrder} onChange={setProdTicketsPrintingOrder} placeholder={tr('control.external.select', 'Select')} className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Grouping receipt:</label>
-                            <Dropdown options={GROUPING_RECEIPT_OPTIONS} value={prodTicketsGroupingReceipt} onChange={setProdTicketsGroupingReceipt} placeholder="Select" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.groupingReceipt', 'Grouping receipt:')}</label>
+                            <Dropdown options={mapTranslatedOptions(GROUPING_RECEIPT_OPTIONS)} value={prodTicketsGroupingReceipt} onChange={setProdTicketsGroupingReceipt} placeholder={tr('control.external.select', 'Select')} className="min-w-[150px]" />
                           </div>
                           <div className="flex items-center gap-3">
-                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">Transfer printer:</label>
-                            <Dropdown options={productionTicketsPrinterOptions} value={prodTicketsPrinterOverboeken} onChange={setProdTicketsPrinterOverboeken} placeholder="Disabled" className="min-w-[150px]" />
+                            <label className="block text-pos-text font-medium min-w-[180px] max-w-[180px] shrink-0">{tr('control.prodTickets.transferPrinter', 'Transfer printer:')}</label>
+                            <Dropdown options={mapTranslatedOptions(productionTicketsPrinterOptions)} value={prodTicketsPrinterOverboeken} onChange={setProdTicketsPrinterOverboeken} placeholder={tr('control.external.disabled', 'Disabled')} className="min-w-[150px]" />
                           </div>
                         </div>
                       </div>
@@ -6279,263 +6396,249 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex flex-col min-h-[650px] max-h-[550px] justify-between items-center">
                   <div className="flex flex-col gap-6 mb-6 pt-[150px]">
                     <div className="flex items-center gap-10">
-                      <label className="block text-pos-text text-sm font-medium shrink-0">Type:</label>
-                      <Dropdown options={PRICE_DISPLAY_TYPE_OPTIONS} value={priceDisplayType} onChange={setPriceDisplayType} placeholder="Disabled" className="text-sm min-w-[220px]" />
+                      <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.type', 'Type:')}</label>
+                      <Dropdown options={mapTranslatedOptions(PRICE_DISPLAY_TYPE_OPTIONS)} value={priceDisplayType} onChange={setPriceDisplayType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
                     <div className="flex justify-center mt-[100px] text-md">
                       <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
+                        {tr('control.save', 'Save')}
                       </button>
                     </div>
                   </div>
                 </div>
               )}
               {subNavId === 'RFID Reader' && (
-                <div className="flex flex-col min-h-[820px] justify-between items-center">
-                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
+                <div className="flex flex-col min-h-[650px] max-h-[550px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 pt-[150px]">
                     <div className="flex items-center gap-10">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
-                      <Dropdown options={RFID_READER_TYPE_OPTIONS} value={rfidReaderType} onChange={setRfidReaderType} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                      <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.type', 'Type:')}</label>
+                      <Dropdown options={mapTranslatedOptions(RFID_READER_TYPE_OPTIONS)} value={rfidReaderType} onChange={setRfidReaderType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center mt-[100px]">
-                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingRfidReader} onClick={handleSaveRfidReader}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
+                    <div className="flex justify-center mt-[100px] text-md">
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingRfidReader} onClick={handleSaveRfidReader}>
+                        <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                        {tr('control.save', 'Save')}
                       </button>
                     </div>
-                  </div>
-                  <div className="shrink-0 pt-4">
-                    <KeyboardWithNumpad value={rfidReaderKeyboardValue} onChange={setRfidReaderKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Barcode Scanner' && (
-                <div className="flex flex-col min-h-[820px] justify-between items-center">
-                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
-                    <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl min-w-[100px] max-w-[100px] font-medium shrink-0">Type:</label>
-                      <Dropdown options={BARCODE_SCANNER_TYPE_OPTIONS} value={barcodeScannerType} onChange={setBarcodeScannerType} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                <div className="flex flex-col min-h-[650px] max-h-[550px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 pt-[150px]">
+                    <div className="flex items-center gap-10">
+                      <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.type', 'Type:')}</label>
+                      <Dropdown options={mapTranslatedOptions(BARCODE_SCANNER_TYPE_OPTIONS)} value={barcodeScannerType} onChange={setBarcodeScannerType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 min-w-[100px] max-w-[100px]">Port:</label>
-                      <Dropdown options={BARCODE_SCANNER_PORT_OPTIONS} value={barcodeScannerPort} onChange={setBarcodeScannerPort} placeholder="COM 1" className="text-xl min-w-[220px]" />
+                    <div className="flex items-center gap-10">
+                      <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.port', 'Port:')}</label>
+                      <Dropdown options={BARCODE_SCANNER_PORT_OPTIONS} value={barcodeScannerPort} onChange={setBarcodeScannerPort} placeholder="COM 1" className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center mt-[50px]">
-                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
+                    <div className="flex justify-center mt-[100px] text-md">
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
+                        <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                        {tr('control.save', 'Save')}
                       </button>
                     </div>
-                  </div>
-                  <div className="shrink-0 pt-4">
-                    <KeyboardWithNumpad value={barcodeScannerKeyboardValue} onChange={setBarcodeScannerKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Credit Card' && (
-                <div className="flex flex-col min-h-[820px] justify-between items-center">
-                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
+                <div className="flex flex-col min-h-[650px] max-h-[550px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 pt-[150px]">
                     <div className="flex items-center gap-10">
-                      <label className="block text-pos-text text-xl font-medium shrink-0">Type:</label>
-                      <Dropdown options={CREDIT_CARD_TYPE_OPTIONS} value={creditCardType} onChange={setCreditCardType} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                      <label className="block text-pos-text text-sm font-medium shrink-0">{tr('control.external.type', 'Type:')}</label>
+                      <Dropdown options={mapTranslatedOptions(CREDIT_CARD_TYPE_OPTIONS)} value={creditCardType} onChange={setCreditCardType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center mt-[100px]">
-                      <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingCreditCard} onClick={handleSaveCreditCard}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
+                    <div className="flex justify-center mt-[100px] text-md">
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCreditCard} onClick={handleSaveCreditCard}>
+                        <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                        {tr('control.save', 'Save')}
                       </button>
                     </div>
-                  </div>
-                  <div className="shrink-0 pt-4">
-                    <KeyboardWithNumpad value={creditCardKeyboardValue} onChange={setCreditCardKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Libra' && (
-                <div className="flex flex-col min-h-[820px] justify-between items-center">
-                  <div className="flex flex-col gap-6 mb-6 mt-[50px]">
-                    <div className="flex items-center gap-3">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 min-w-[200px] max-w-[200px]">Protocol / Type:</label>
-                      <Dropdown options={SCALE_TYPE_OPTIONS} value={scaleType} onChange={setScaleType} placeholder="Disabled" className="text-xl min-w-[220px]" />
+                <div className="flex flex-col min-h-[550px] max-h-[550px] justify-between items-center">
+                  <div className="flex flex-col gap-6 mb-6 pt-[150px]">
+                    <div className="flex items-center">
+                      <label className="block text-pos-text min-w-[200px] text-sm font-medium shrink-0">{tr('control.external.protocolType', 'Protocol / Type:')}</label>
+                      <Dropdown options={mapTranslatedOptions(SCALE_TYPE_OPTIONS)} value={scaleType} onChange={setScaleType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <label className="block text-pos-text min-w-[200px] max-w-[200px] text-xl font-medium shrink-0">Port:</label>
-                      <Dropdown options={SCALE_PORT_OPTIONS} value={scalePort} onChange={setScalePort} placeholder="Select port" className="text-xl min-w-[220px]" />
+                    <div className="flex items-center">
+                      <label className="block text-pos-text min-w-[200px] text-sm font-medium shrink-0">{tr('control.external.port', 'Port:')}</label>
+                      <Dropdown options={SCALE_PORT_OPTIONS} value={scalePort} onChange={setScalePort} placeholder={tr('control.external.selectPort', 'Select port')} className="text-sm min-w-[220px]" />
                     </div>
-                    <div className="flex justify-center mt-[50px]">
-                      <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingScale} onClick={handleSaveScale}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
+                    <div className="flex justify-center mt-[100px] text-md">
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingScale} onClick={handleSaveScale}>
+                        <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                        {tr('control.save', 'Save')}
                       </button>
                     </div>
-                  </div>
-                  <div className="shrink-0 pt-4">
-                    <KeyboardWithNumpad value={scaleKeyboardValue} onChange={setScaleKeyboardValue} />
                   </div>
                 </div>
               )}
               {subNavId === 'Cashmatic' && (
-                <div className="flex flex-col min-h-[820px] justify-between relative">
-                  <div className="flex flex-col gap-6 mb-6 mt-[30px] px-[200px]">
-                    <div className="flex items-center gap-8">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Name *</label>
+                <div className="relative min-h-[630px] rounded-xl border border-pos-border bg-pos-panel/30 p-4">
+                  <div className="grid grid-cols-1 mt-10 text-sm md:grid-cols-2 gap-x-10 gap-y-4 mb-6">
+                    <div className="flex items-center gap-2">
+                      <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.name', 'Name *')}</label>
                       <input
                         type="text"
                         value={cashmaticName}
                         onChange={(e) => setCashmaticName(e.target.value)}
                         onFocus={() => setCashmaticActiveField('name')}
                         onClick={() => setCashmaticActiveField('name')}
-                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
                       />
                     </div>
-                    <div className="flex items-center gap-8">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Connection type *</label>
-                      <div className="flex gap-3">
+                    <div></div>
+                    <div className="flex items-center gap-2">
+                      <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.connectionType', 'Connection type *')}</label>
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          className={`px-8 py-3 text-2xl font-medium ${cashmaticConnectionType === 'tcp' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text'}`}
+                          className={`px-6 py-2 text-sm font-medium rounded-lg ${cashmaticConnectionType === 'tcp' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text border border-gray-300'}`}
                           onClick={() => setCashmaticConnectionType('tcp')}
                         >
-                          TCP/IP
+                          {tr('control.cashmatic.tcpIp', 'TCP/IP')}
                         </button>
                         <button
                           type="button"
-                          className={`px-8 py-3 text-2xl font-medium ${cashmaticConnectionType === 'api' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text'}`}
+                          className={`px-6 py-2 text-sm font-medium rounded-lg ${cashmaticConnectionType === 'api' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text border border-gray-300'}`}
                           onClick={() => setCashmaticConnectionType('api')}
                         >
-                          API
+                          {tr('control.cashmatic.api', 'API')}
                         </button>
                       </div>
                     </div>
+                    <div></div>
                     {cashmaticConnectionType === 'tcp' ? (
                       <>
-                        <div className="flex-col flex gap-8">
-                          <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-8">
-                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">IP address *</label>
-                              <input
-                                type="text"
-                                value={cashmaticIpAddress}
-                                onChange={(e) => setCashmaticIpAddress(e.target.value)}
-                                onFocus={() => setCashmaticActiveField('ip')}
-                                onClick={() => setCashmaticActiveField('ip')}
-                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                              />
-                            </div>
-                            <div className="flex items-center gap-8">
-                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Port *</label>
-                              <input
-                                type="text"
-                                value={cashmaticPort}
-                                onChange={(e) => setCashmaticPort(e.target.value)}
-                                onFocus={() => setCashmaticActiveField('port')}
-                                onClick={() => setCashmaticActiveField('port')}
-                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-8">
-                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Username</label>
-                              <input
-                                type="text"
-                                value={cashmaticUsername}
-                                onChange={(e) => setCashmaticUsername(e.target.value)}
-                                onFocus={() => setCashmaticActiveField('username')}
-                                onClick={() => setCashmaticActiveField('username')}
-                                placeholder="Optional"
-                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                              />
-                            </div>
-                            <div className="flex items-center gap-8">
-                              <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Password</label>
-                              <input
-                                type="text"
-                                value={cashmaticPassword}
-                                onChange={(e) => setCashmaticPassword(e.target.value)}
-                                onFocus={() => setCashmaticActiveField('password')}
-                                onClick={() => setCashmaticActiveField('password')}
-                                placeholder="Optional"
-                                className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                              />
-                            </div>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.ipAddress', 'IP address *')}</label>
+                          <input
+                            type="text"
+                            value={cashmaticIpAddress}
+                            onChange={(e) => setCashmaticIpAddress(e.target.value)}
+                            onFocus={() => setCashmaticActiveField('ip')}
+                            onClick={() => setCashmaticActiveField('ip')}
+                            className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 focus:outline-none focus:border-green-500"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.port', 'Port *')}</label>
+                          <input
+                            type="text"
+                            value={cashmaticPort}
+                            onChange={(e) => setCashmaticPort(e.target.value)}
+                            onFocus={() => setCashmaticActiveField('port')}
+                            onClick={() => setCashmaticActiveField('port')}
+                            className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 focus:outline-none focus:border-green-500"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.username', 'Username')}</label>
+                          <input
+                            type="text"
+                            value={cashmaticUsername}
+                            onChange={(e) => setCashmaticUsername(e.target.value)}
+                            onFocus={() => setCashmaticActiveField('username')}
+                            onClick={() => setCashmaticActiveField('username')}
+                            placeholder={tr('control.cashmatic.optional', 'Optional')}
+                            className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.password', 'Password')}</label>
+                          <input
+                            type="text"
+                            value={cashmaticPassword}
+                            onChange={(e) => setCashmaticPassword(e.target.value)}
+                            onFocus={() => setCashmaticActiveField('password')}
+                            onClick={() => setCashmaticActiveField('password')}
+                            placeholder={tr('control.cashmatic.optional', 'Optional')}
+                            className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
+                          />
                         </div>
                       </>
                     ) : (
-                      <div className="flex items-center gap-8">
-                        <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">URL *</label>
+                      <div className="flex items-center gap-2">
+                        <label className="block text-pos-text font-medium min-w-[120px] max-w-[120px] shrink-0">{tr('control.cashmatic.url', 'URL *')}</label>
                         <input
                           type="text"
                           value={cashmaticUrl}
                           onChange={(e) => setCashmaticUrl(e.target.value)}
                           onFocus={() => setCashmaticActiveField('url')}
                           onClick={() => setCashmaticActiveField('url')}
-                          placeholder="https://api.example.com"
-                          className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
+                          placeholder={tr('control.cashmatic.urlPlaceholder', 'https://api.example.com')}
+                          className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
                         />
                       </div>
                     )}
-                    <div className="flex justify-center mt-[10px]">
-                      <button type="button" className="flex items-center text-2xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
-                      </button>
-                    </div>
                   </div>
-                  <div className="shrink-0 w-full justify-center flex absolute bottom-0 left-0 right-0 -mb-10">
-                    <KeyboardWithNumpad value={cashmaticKeyboardValue} onChange={cashmaticKeyboardOnChange} />
+                  <div className="flex justify-center pt-5 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                      {tr('control.save', 'Save')}
+                    </button>
+                  </div>
+                  <div className="absolute shrink-0">
+                    <SmallKeyboardWithNumpad value={cashmaticKeyboardValue} onChange={cashmaticKeyboardOnChange} />
                   </div>
                 </div>
               )}
               {subNavId === 'Payworld' && (
-                <div className="flex flex-col min-h-[820px] justify-between relative">
-                  <div className="flex flex-col gap-6 mb-6 mt-[30px] w-full justify-center items-center">
-                    <div className="flex items-center gap-8">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Name *</label>
-                      <input
-                        type="text"
-                        value={payworldName}
-                        onChange={(e) => setPayworldName(e.target.value)}
-                        onFocus={() => setPayworldActiveField('name')}
-                        onClick={() => setPayworldActiveField('name')}
-                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-8">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">IP address *</label>
-                      <input
-                        type="text"
-                        value={payworldIpAddress}
-                        onChange={(e) => setPayworldIpAddress(e.target.value)}
-                        onFocus={() => setPayworldActiveField('ip')}
-                        onClick={() => setPayworldActiveField('ip')}
-                        placeholder="e.g. 192.168.1.60"
-                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                      />
-                    </div>
-                    <div className="flex items-center gap-8">
-                      <label className="block text-pos-text text-xl font-medium shrink-0 w-[160px]">Port *</label>
-                      <input
-                        type="text"
-                        value={payworldPort}
-                        onChange={(e) => setPayworldPort(e.target.value)}
-                        onFocus={() => setPayworldActiveField('port')}
-                        onClick={() => setPayworldActiveField('port')}
-                        placeholder="5015"
-                        className="min-w-[280px] px-4 py-3 text-xl rounded bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500"
-                      />
-                    </div>
-                    <div className="flex justify-center mt-[10px]">
-                      <button type="button" className="flex items-center text-2xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPayworld} onClick={handleSavePayworld}>
-                        <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                        Save
-                      </button>
+                <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4">
+                  <div className="flex text-sm  gap-x-10 gap-y-4 mb-6">
+                    <div className="flex flex-col gap-4 pt-[100px] w-full justify-center items-center">
+                      <div className="flex items-center gap-2">
+                        <label className="block text-pos-text font-medium min-w-[100px] max-w-[100px] shrink-0">{tr('control.payworld.name', 'Name *')}</label>
+                        <input
+                          type="text"
+                          value={payworldName}
+                          onChange={(e) => setPayworldName(e.target.value)}
+                          onFocus={() => setPayworldActiveField('name')}
+                          onClick={() => setPayworldActiveField('name')}
+                          className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="block text-pos-text font-medium min-w-[100px] max-w-[100px] shrink-0">{tr('control.payworld.ipAddress', 'IP address *')}</label>
+                        <input
+                          type="text"
+                          value={payworldIpAddress}
+                          onChange={(e) => setPayworldIpAddress(e.target.value)}
+                          onFocus={() => setPayworldActiveField('ip')}
+                          onClick={() => setPayworldActiveField('ip')}
+                          placeholder={tr('control.payworld.ipPlaceholder', 'e.g. 192.168.1.60')}
+                          className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="block text-pos-text font-medium min-w-[100px] max-w-[100px] shrink-0">{tr('control.payworld.port', 'Port *')}</label>
+                        <input
+                          type="text"
+                          value={payworldPort}
+                          onChange={(e) => setPayworldPort(e.target.value)}
+                          onFocus={() => setPayworldActiveField('port')}
+                          onClick={() => setPayworldActiveField('port')}
+                          placeholder={tr('control.payworld.portPlaceholder', '5015')}
+                          className="px-4 w-[200px] py-3 bg-pos-panel h-[40px] border border-gray-300 rounded-lg text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="shrink-0 w-full justify-center flex absolute bottom-0 left-0 right-0 -mb-10">
-                    <KeyboardWithNumpad value={payworldKeyboardValue} onChange={payworldKeyboardOnChange} />
+                  <div className="flex justify-center pt-5 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPayworld} onClick={handleSavePayworld}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                      {tr('control.save', 'Save')}
+                    </button>
+                  </div>
+                  <div className="shrink-0 absolute bottom-0">
+                    <SmallKeyboardWithNumpad value={payworldKeyboardValue} onChange={payworldKeyboardOnChange} />
                   </div>
                 </div>
               )}
@@ -6669,6 +6772,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         onClose={() => setDeleteConfirmProductionMessageId(null)}
         onConfirm={() => handleDeleteProductionMessage(deleteConfirmProductionMessageId)}
         message={tr('control.confirm.deleteProductionMessage', 'Are you sure you want to delete this production message?')}
+      />
+      <DeleteConfirmModal
+        open={deleteConfirmPaymentTypeId !== null}
+        onClose={() => setDeleteConfirmPaymentTypeId(null)}
+        onConfirm={() => handleDeletePaymentType(deleteConfirmPaymentTypeId)}
+        message={tr('control.confirm.deletePaymentType', 'Are you sure you want to delete this payment method?')}
       />
       <DeleteConfirmModal
         open={deleteConfirmPrinterId !== null}
@@ -7592,116 +7701,116 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Device Settings modal */}
       {showDeviceSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative text-2xl bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] h-[1000px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowDeviceSettingsModal(false)} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative text-sm bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] h-[1000px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowDeviceSettingsModal(false)} aria-label="Close">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex mt-[70px] mb-14 px-28 w-full justify-around text-2xl shrink-0 overflow-x-auto">
+            <div className="flex mt-6 mb-4 px-6 w-full justify-around text-sm shrink-0 overflow-x-auto">
               {DEVICE_SETTINGS_TABS.map((tab) => (
                 <button
                   key={tab}
                   type="button"
-                  className={`px-4 py-3 font-medium whitespace-nowrap border-b-2 transition-colors ${deviceSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                  className={`px-4 py-2 font-medium whitespace-nowrap border-b-2 transition-colors ${deviceSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
                   onClick={() => setDeviceSettingsTab(tab)}
                 >
                   {tr(DEVICE_SETTINGS_TAB_LABEL_KEYS[tab], tab)}
                 </button>
               ))}
             </div>
-            <div className="p-6 overflow-auto flex-1">
+            <div className="p-4 overflow-auto flex-1">
               {deviceSettingsTab === 'General' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  <div className="flex flex-col gap-8">
+                <div className="grid grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4">
+                  <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Use of subproducts:</span>
-                      <input type="checkbox" checked={deviceUseSubproducts} onChange={(e) => setDeviceUseSubproducts(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceUseSubproducts} onChange={(e) => setDeviceUseSubproducts(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Automatically log out after transaction:</span>
-                      <input type="checkbox" checked={deviceAutoLogoutAfterTransaction} onChange={(e) => setDeviceAutoLogoutAfterTransaction(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceAutoLogoutAfterTransaction} onChange={(e) => setDeviceAutoLogoutAfterTransaction(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Automatically return to table plan:</span>
-                      <input type="checkbox" checked={deviceAutoReturnToTablePlan} onChange={(e) => setDeviceAutoReturnToTablePlan(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceAutoReturnToTablePlan} onChange={(e) => setDeviceAutoReturnToTablePlan(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Disable cash button in payment popup:</span>
-                      <input type="checkbox" checked={deviceDisableCashButtonInPayment} onChange={(e) => setDeviceDisableCashButtonInPayment(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceDisableCashButtonInPayment} onChange={(e) => setDeviceDisableCashButtonInPayment(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Open price without popup and without comma:</span>
-                      <input type="checkbox" checked={deviceOpenPriceWithoutPopup} onChange={(e) => setDeviceOpenPriceWithoutPopup(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceOpenPriceWithoutPopup} onChange={(e) => setDeviceOpenPriceWithoutPopup(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Open cash drawer after order:</span>
-                      <input type="checkbox" checked={deviceOpenCashDrawerAfterOrder} onChange={(e) => setDeviceOpenCashDrawerAfterOrder(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <span className="text-pos-text w-[400px] shrink-0">Open cash drawer after order:</span>
+                      <input type="checkbox" checked={deviceOpenCashDrawerAfterOrder} onChange={(e) => setDeviceOpenCashDrawerAfterOrder(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Automatically return to counter sale:</span>
-                      <input type="checkbox" checked={deviceAutoReturnToCounterSale} onChange={(e) => setDeviceAutoReturnToCounterSale(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceAutoReturnToCounterSale} onChange={(e) => setDeviceAutoReturnToCounterSale(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Ask to send to the kitchen screen:</span>
-                      <input type="checkbox" checked={deviceAskSendToKitchen} onChange={(e) => setDeviceAskSendToKitchen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceAskSendToKitchen} onChange={(e) => setDeviceAskSendToKitchen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Toogverkoop btw:</span>
-                      <Dropdown options={VAT_OPTIONS} value={deviceCounterSaleVat} onChange={setDeviceCounterSaleVat} placeholder="Select" className="text-xl min-w-[180px]" />
+                      <Dropdown options={VAT_OPTIONS} value={deviceCounterSaleVat} onChange={setDeviceCounterSaleVat} placeholder="Select" className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Tafelverkoop btw:</span>
-                      <Dropdown options={VAT_OPTIONS} value={deviceTableSaleVat} onChange={setDeviceTableSaleVat} placeholder="Select" className="text-xl min-w-[180px]" />
+                      <Dropdown options={VAT_OPTIONS} value={deviceTableSaleVat} onChange={setDeviceTableSaleVat} placeholder="Select" className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Timeout log out:</span>
                       <div className="flex items-center gap-2">
-                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setDeviceTimeoutLogout((n) => Math.max(0, n - 1))}>−</button>
-                        <input type="number" min={0} value={deviceTimeoutLogout} onChange={(e) => setDeviceTimeoutLogout(Number(e.target.value) || 0)} className="w-20 px-3 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
-                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setDeviceTimeoutLogout((n) => n + 1)}>+</button>
+                        <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => Math.max(0, n - 1))}>−</button>
+                        <input type="number" min={0} value={deviceTimeoutLogout} onChange={(e) => setDeviceTimeoutLogout(Number(e.target.value) || 0)} className="w-16 px-2 py-2 bg-pos-panel border border-gray-300 rounded text-pos-text text-sm text-center h-[40px]" />
+                        <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => n + 1)}>+</button>
                       </div>
                     </div>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Fixed edge: (Windows)</span>
-                      <input type="checkbox" checked={deviceFixedBorder} onChange={(e) => setDeviceFixedBorder(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceFixedBorder} onChange={(e) => setDeviceFixedBorder(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Always in the foreground: (Windows)</span>
-                      <input type="checkbox" checked={deviceAlwaysOnTop} onChange={(e) => setDeviceAlwaysOnTop(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceAlwaysOnTop} onChange={(e) => setDeviceAlwaysOnTop(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <label className="flex items-center gap-3 cursor-pointer shrink-0">
                         <span className="text-pos-text w-[400px]">Ask a question about an invoice or ticket</span>
-                        <input type="checkbox" checked={deviceAskInvoiceOrTicket} onChange={(e) => setDeviceAskInvoiceOrTicket(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                        <input type="checkbox" checked={deviceAskInvoiceOrTicket} onChange={(e) => setDeviceAskInvoiceOrTicket(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                       </label>
-                      <Dropdown options={[{ value: '-', label: '-' }]} value="-" onChange={() => { }} placeholder="-" className="text-xl min-w-[120px] opacity-60 pointer-events-none" disabled />
+                      <Dropdown options={[{ value: '-', label: '-' }]} value="-" onChange={() => { }} placeholder="-" className="text-sm min-w-[120px] opacity-60 pointer-events-none" disabled />
                     </div>
                   </div>
                 </div>
               )}
               {deviceSettingsTab === 'Printer' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  <div className="flex flex-col gap-8">
+                <div className="grid grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4">
+                  <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Grouping products on the ticket:</span>
-                      <input type="checkbox" checked={devicePrinterGroupingProducts} onChange={(e) => setDevicePrinterGroupingProducts(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={devicePrinterGroupingProducts} onChange={(e) => setDevicePrinterGroupingProducts(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Display error screen on printer error:</span>
-                      <input type="checkbox" checked={devicePrinterShowErrorScreen} onChange={(e) => setDevicePrinterShowErrorScreen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={devicePrinterShowErrorScreen} onChange={(e) => setDevicePrinterShowErrorScreen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Print production message on VAT ticket:</span>
-                      <input type="checkbox" checked={devicePrinterProductionMessageOnVat} onChange={(e) => setDevicePrinterProductionMessageOnVat(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={devicePrinterProductionMessageOnVat} onChange={(e) => setDevicePrinterProductionMessageOnVat(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[500px] shrink-0">Next course order:</span>
-                      <Dropdown options={PRINTING_ORDER_OPTIONS} value={devicePrinterNextCourseOrder} onChange={setDevicePrinterNextCourseOrder} placeholder="Print order" className="text-xl min-w-[180px]" />
+                      <Dropdown options={mapTranslatedOptions(PRINTING_ORDER_OPTIONS)} value={devicePrinterNextCourseOrder} onChange={setDevicePrinterNextCourseOrder} placeholder="Print order" className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[500px] shrink-0">Standard mode ticket printing:</span>
-                      <Dropdown options={GROUPING_RECEIPT_OPTIONS} value={devicePrinterStandardMode} onChange={setDevicePrinterStandardMode} placeholder="Enable" className="text-xl min-w-[180px]" />
+                      <Dropdown options={mapTranslatedOptions(GROUPING_RECEIPT_OPTIONS)} value={devicePrinterStandardMode} onChange={setDevicePrinterStandardMode} placeholder="Enable" className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[500px] shrink-0">QR order printer:</span>
@@ -7710,28 +7819,28 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         value={devicePrinterQROrderPrinter}
                         onChange={setDevicePrinterQROrderPrinter}
                         placeholder="Select printer"
-                        className="text-xl min-w-[180px]"
+                        className="text-sm min-w-[150px]"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Reprint products with next course:</span>
-                      <input type="checkbox" checked={devicePrinterReprintWithNextCourse} onChange={(e) => setDevicePrinterReprintWithNextCourse(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={devicePrinterReprintWithNextCourse} onChange={(e) => setDevicePrinterReprintWithNextCourse(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Print 0 euro tickets:</span>
-                      <input type="checkbox" checked={devicePrinterPrintZeroTickets} onChange={(e) => setDevicePrinterPrintZeroTickets(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={devicePrinterPrintZeroTickets} onChange={(e) => setDevicePrinterPrintZeroTickets(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Print gift voucher at minimum amount:</span>
-                      <input type="checkbox" checked={devicePrinterGiftVoucherAtMin} onChange={(e) => setDevicePrinterGiftVoucherAtMin(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={devicePrinterGiftVoucherAtMin} onChange={(e) => setDevicePrinterGiftVoucherAtMin(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
                 </div>
               )}
               {deviceSettingsTab === 'Category display' && (
-                <div className="grid grid-cols-1 px-20 md:grid-cols-3 lg:grid-cols-4 gap-x-12 gap-4">
+                <div className="grid grid-cols-1 text-sm px-4 md:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-4">
                   {categoriesLoading ? (
                     <p className="text-pos-muted text-xl col-span-full">Loading categories…</p>
                   ) : (
@@ -7750,7 +7859,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 return [...prev, cat.id];
                               });
                             }}
-                            className="w-10 h-10 rounded border-gray-400"
+                            className="w-5 h-5 rounded border-gray-300"
                           />
                           <span className="text-pos-text w-[280px] truncate">{cat.name || cat.id}</span>
                         </label>
@@ -7760,36 +7869,36 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </div>
               )}
               {deviceSettingsTab === 'Orders in waiting' && (
-                <div className="grid px-20 grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  <div className="flex flex-col gap-8">
+                <div className="grid px-4 grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4">
+                  <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Confirm on hold orders:</span>
-                      <input type="checkbox" checked={deviceOrdersConfirmOnHold} onChange={(e) => setDeviceOrdersConfirmOnHold(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceOrdersConfirmOnHold} onChange={(e) => setDeviceOrdersConfirmOnHold(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Print barcode ticket after order creation:</span>
-                      <input type="checkbox" checked={deviceOrdersPrintBarcodeAfterCreate} onChange={(e) => setDeviceOrdersPrintBarcodeAfterCreate(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceOrdersPrintBarcodeAfterCreate} onChange={(e) => setDeviceOrdersPrintBarcodeAfterCreate(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Customer on hold order can be modified:</span>
-                      <input type="checkbox" checked={deviceOrdersCustomerCanBeModified} onChange={(e) => setDeviceOrdersCustomerCanBeModified(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <span className="text-pos-text w-[500px] shrink-0">Customer on hold order can be modified:</span>
+                      <input type="checkbox" checked={deviceOrdersCustomerCanBeModified} onChange={(e) => setDeviceOrdersCustomerCanBeModified(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Book table to waiting order:</span>
-                      <input type="checkbox" checked={deviceOrdersBookTableToWaiting} onChange={(e) => setDeviceOrdersBookTableToWaiting(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceOrdersBookTableToWaiting} onChange={(e) => setDeviceOrdersBookTableToWaiting(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[500px]">Fast customer name on hold orders:</span>
-                      <input type="checkbox" checked={deviceOrdersFastCustomerName} onChange={(e) => setDeviceOrdersFastCustomerName(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceOrdersFastCustomerName} onChange={(e) => setDeviceOrdersFastCustomerName(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
                 </div>
               )}
               {deviceSettingsTab === 'Scheduled orders' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 px-20 gap-x-12 gap-y-4">
-                  <div className="flex flex-col gap-8">
+                <div className="grid grid-cols-1 text-sm md:grid-cols-2 px-4 gap-x-10 gap-y-4">
+                  <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-5">
                       <span className="text-pos-text w-[350px] shrink-0">Scheduled orders printer:</span>
                       <Dropdown
@@ -7821,26 +7930,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <Dropdown options={SCHEDULED_ORDERS_CHECKOUT_AT_OPTIONS} value={deviceScheduledCheckoutAt} onChange={setDeviceScheduledCheckoutAt} placeholder="Select" className="text-xl min-w-[200px] max-w-[200px]" />
                     </div>
                   </div>
-                  <div className="flex flex-col gap-8">
+                  <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Print barcode label:</span>
-                      <input type="checkbox" checked={deviceScheduledPrintBarcodeLabel} onChange={(e) => setDeviceScheduledPrintBarcodeLabel(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <span className="text-pos-text w-[400px] shrink-0">Print barcode label:</span>
+                      <input type="checkbox" checked={deviceScheduledPrintBarcodeLabel} onChange={(e) => setDeviceScheduledPrintBarcodeLabel(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Add delivery note to turnover when printing:</span>
-                      <input type="checkbox" checked={deviceScheduledDeliveryNoteToTurnover} onChange={(e) => setDeviceScheduledDeliveryNoteToTurnover(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceScheduledDeliveryNoteToTurnover} onChange={(e) => setDeviceScheduledDeliveryNoteToTurnover(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">When new planning order print production receipt:</span>
-                      <input type="checkbox" checked={deviceScheduledPrintProductionReceipt} onChange={(e) => setDeviceScheduledPrintProductionReceipt(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceScheduledPrintProductionReceipt} onChange={(e) => setDeviceScheduledPrintProductionReceipt(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">When new planning order print customer production receipt:</span>
-                      <input type="checkbox" checked={deviceScheduledPrintCustomerProductionReceipt} onChange={(e) => setDeviceScheduledPrintCustomerProductionReceipt(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceScheduledPrintCustomerProductionReceipt} onChange={(e) => setDeviceScheduledPrintCustomerProductionReceipt(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Automatically print scheduled web order production slip:</span>
-                      <input type="checkbox" checked={deviceScheduledWebOrderAutoPrint} onChange={(e) => setDeviceScheduledWebOrderAutoPrint(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={deviceScheduledWebOrderAutoPrint} onChange={(e) => setDeviceScheduledWebOrderAutoPrint(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
                 </div>
@@ -7977,14 +8086,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <p className="text-pos-muted text-xl py-4">Settings for “{deviceSettingsTab}” will be available here.</p>
               )}
             </div>
-            <div className="w-full flex items-center px-6 py-8 justify-center shrink-0">
+            <div className="w-full flex items-center px-4 pt-5 pb-5 justify-center shrink-0">
               <button
                 type="button"
-                className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                 disabled={savingDeviceSettings}
                 onClick={handleSaveDeviceSettings}
               >
-                <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                 {tr('control.save', 'Save')}
               </button>
             </div>
@@ -8017,35 +8126,35 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">Use of stock management:</span>
-                      <input type="checkbox" checked={sysUseStockManagement} onChange={(e) => setSysUseStockManagement(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysUseStockManagement} onChange={(e) => setSysUseStockManagement(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">Use of price groups:</span>
-                      <input type="checkbox" checked={sysUsePriceGroups} onChange={(e) => setSysUsePriceGroups(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysUsePriceGroups} onChange={(e) => setSysUsePriceGroups(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">Log in without code:</span>
-                      <input type="checkbox" checked={sysLoginWithoutCode} onChange={(e) => setSysLoginWithoutCode(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysLoginWithoutCode} onChange={(e) => setSysLoginWithoutCode(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">Categories per register:</span>
-                      <input type="checkbox" checked={sysCategorieenPerKassa} onChange={(e) => setSysCategorieenPerKassa(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysCategorieenPerKassa} onChange={(e) => setSysCategorieenPerKassa(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">Automatically accept QR orders:</span>
-                      <input type="checkbox" checked={sysAutoAcceptQROrders} onChange={(e) => setSysAutoAcceptQROrders(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysAutoAcceptQROrders} onChange={(e) => setSysAutoAcceptQROrders(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">QR orders auto checkout:</span>
-                      <input type="checkbox" checked={sysQrOrdersAutomatischAfrekenen} onChange={(e) => setSysQrOrdersAutomatischAfrekenen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysQrOrdersAutomatischAfrekenen} onChange={(e) => setSysQrOrdersAutomatischAfrekenen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">Send only QR orders to kitchen screen:</span>
-                      <input type="checkbox" checked={sysEnkelQROrdersKeukenscherm} onChange={(e) => setSysEnkelQROrdersKeukenscherm(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysEnkelQROrdersKeukenscherm} onChange={(e) => setSysEnkelQROrdersKeukenscherm(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[420px]">16:9 aspect (Windows):</span>
-                      <input type="checkbox" checked={sysAspect169Windows} onChange={(e) => setSysAspect169Windows(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysAspect169Windows} onChange={(e) => setSysAspect169Windows(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[420px] shrink-0">VAT rate of various products:</span>
@@ -8055,31 +8164,31 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Arrange products manually:</span>
-                      <input type="checkbox" checked={sysArrangeProductsManually} onChange={(e) => setSysArrangeProductsManually(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysArrangeProductsManually} onChange={(e) => setSysArrangeProductsManually(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Limit one user per table:</span>
-                      <input type="checkbox" checked={sysLimitOneUserPerTable} onChange={(e) => setSysLimitOneUserPerTable(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysLimitOneUserPerTable} onChange={(e) => setSysLimitOneUserPerTable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">One waiting order per customer:</span>
-                      <input type="checkbox" checked={sysOneWachtorderPerKlant} onChange={(e) => setSysOneWachtorderPerKlant(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysOneWachtorderPerKlant} onChange={(e) => setSysOneWachtorderPerKlant(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Cash button visible with multiple payment options:</span>
-                      <input type="checkbox" checked={sysCashButtonVisibleMultiplePayment} onChange={(e) => setSysCashButtonVisibleMultiplePayment(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysCashButtonVisibleMultiplePayment} onChange={(e) => setSysCashButtonVisibleMultiplePayment(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Use of place settings:</span>
-                      <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Auto load credit:</span>
-                      <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Use latest price:</span>
-                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Deposit return:</span>
@@ -8087,7 +8196,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Print customer details on QR:</span>
-                      <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
                 </div>
@@ -8103,7 +8212,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         value={sysPriceTakeAway}
                         onChange={setSysPriceTakeAway}
                         placeholder="Select"
-                        className="text-xl min-w-[180px]"
+                        className="text-sm min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-10">
@@ -8113,7 +8222,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         value={sysPriceDelivery}
                         onChange={setSysPriceDelivery}
                         placeholder="Select"
-                        className="text-xl min-w-[180px]"
+                        className="text-sm min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-10">
@@ -8123,7 +8232,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         value={sysPriceCounterSale}
                         onChange={setSysPriceCounterSale}
                         placeholder="Select"
-                        className="text-xl min-w-[180px]"
+                        className="text-sm min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-10">
@@ -8133,7 +8242,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         value={sysPriceTableSale}
                         onChange={setSysPriceTableSale}
                         placeholder="Select"
-                        className="text-xl min-w-[180px]"
+                        className="text-sm min-w-[150px]"
                       />
                     </div>
                   </div>
@@ -8157,7 +8266,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[300px] shrink-0">Discount:</span>
-                      <Dropdown options={SAVINGS_DISCOUNT_OPTIONS} value={sysSavingsDiscount} onChange={setSysSavingsDiscount} placeholder="Disabled" className="text-xl min-w-[180px]" />
+                      <Dropdown options={SAVINGS_DISCOUNT_OPTIONS} value={sysSavingsDiscount} onChange={setSysSavingsDiscount} placeholder="Disabled" className="text-sm min-w-[150px]" />
                     </div>
                   </div>
                 </div>
@@ -8167,41 +8276,41 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Ask for VAT ticket printer:</span>
-                      <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Production printer cascade:</span>
-                      <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Display sub-products without price on VAT ticket:</span>
-                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Price per kilo prints:</span>
-                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
                       <span className="text-pos-text w-[400px]">Print unit price:</span>
-                      <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                      <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Type barcode of generated barcode:</span>
-                      <Dropdown options={BARCODE_TYPE_OPTIONS} value={sysBarcodeType} onChange={setSysBarcodeType} placeholder="Code39" className="text-xl min-w-[180px]" />
+                      <Dropdown options={BARCODE_TYPE_OPTIONS} value={sysBarcodeType} onChange={setSysBarcodeType} placeholder="Code39" className="text-sm min-w-[150px]" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-8">
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Validity period voucher:</span>
-                      <Dropdown options={TICKET_VOUCHER_VALIDITY_OPTIONS} value={sysTicketVoucherValidity} onChange={setSysTicketVoucherValidity} placeholder="Select" className="text-xl min-w-[180px]" />
+                      <Dropdown options={TICKET_VOUCHER_VALIDITY_OPTIONS} value={sysTicketVoucherValidity} onChange={setSysTicketVoucherValidity} placeholder="Select" className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Scheduled orders print mode:</span>
-                      <Dropdown options={TICKET_SCHEDULED_PRINT_MODE_OPTIONS} value={sysTicketScheduledPrintMode} onChange={setSysTicketScheduledPrintMode} placeholder="Select" className="text-xl min-w-[180px]" />
+                      <Dropdown options={TICKET_SCHEDULED_PRINT_MODE_OPTIONS} value={sysTicketScheduledPrintMode} onChange={setSysTicketScheduledPrintMode} placeholder="Select" className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text w-[400px] shrink-0">Scheduled orders customer sort:</span>
-                      <Dropdown options={TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS} value={sysTicketScheduledCustomerSort} onChange={setSysTicketScheduledCustomerSort} placeholder="Select" className="text-xl min-w-[180px]" />
+                      <Dropdown options={TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS} value={sysTicketScheduledCustomerSort} onChange={setSysTicketScheduledCustomerSort} placeholder="Select" className="text-sm min-w-[150px]" />
                     </div>
                   </div>
                 </div>
@@ -8228,36 +8337,51 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* New / Edit payment type modal */}
       {showPaymentTypeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative flex flex-col bg-pos-bg justify-between items-center rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1000px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePaymentTypeModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative flex flex-col bg-pos-bg justify-between items-center rounded-xl border border-pos-border shadow-2xl max-w-[90%] w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePaymentTypeModal} aria-label="Close">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 flex flex-col gap-6 mt-[200px]">
-              <div className="flex items-center gap-4">
-                <span className="text-pos-text text-xl font-medium shrink-0 w-[120px]">Name :</span>
+            <div className="p-6 flex flex-col gap-4 pt-14 text-sm">
+              <div className="flex items-center gap-2">
+                <label className="text-pos-text font-medium shrink-0 min-w-[130px]">Name :</label>
                 <input
                   type="text"
                   value={paymentTypeName}
                   onChange={(e) => setPaymentTypeName(e.target.value)}
                   placeholder="e.g. Cash, Bancontact"
-                  className="flex-1 max-w-[320px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                  className="flex-1 max-w-[200px] px-4 py-3 h-[40px] rounded-lg bg-pos-panel border border-gray-300 text-gray-200 placeholder-pos-muted focus:outline-none focus:border-green-500"
                 />
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-pos-text text-xl font-medium shrink-0 w-[120px]">Active :</span>
+              <div className="flex items-center gap-2">
+                <span className="text-pos-text font-medium shrink-0 min-w-[130px]">Active :</span>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={paymentTypeActive} onChange={(e) => setPaymentTypeActive(e.target.checked)} className="w-10 h-10 rounded border-gray-400" />
+                  <input type="checkbox" checked={paymentTypeActive} onChange={(e) => setPaymentTypeActive(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                 </label>
               </div>
-              <div className="flex justify-center right-0 left-0 top-[50%] absolute">
+              <div className="flex items-center gap-2">
+                <label className="text-pos-text font-medium shrink-0 min-w-[130px]">{tr('control.paymentTypes.integration', 'Integration:')}</label>
+                <Dropdown
+                  options={[
+                    { value: 'manual_cash', label: PAYMENT_INTEGRATION_LABELS.manual_cash },
+                    { value: 'cashmatic', label: PAYMENT_INTEGRATION_LABELS.cashmatic },
+                    { value: 'payworld', label: PAYMENT_INTEGRATION_LABELS.payworld },
+                    { value: 'generic', label: PAYMENT_INTEGRATION_LABELS.generic },
+                  ]}
+                  value={paymentTypeIntegration}
+                  onChange={setPaymentTypeIntegration}
+                  placeholder={tr('control.paymentTypes.selectIntegration', 'Select integration')}
+                  className="flex-1 min-w-[200px] max-w-[280px] text-md"
+                />
+              </div>
+              <div className="flex justify-center pt-5 pb-5">
                 <button
                   type="button"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
+                  className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                   disabled={savingPaymentType || !(paymentTypeName || '').trim()}
                   onClick={handleSavePaymentType}
                 >
-                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                  Save
+                  <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  {tr('control.save', 'Save')}
                 </button>
               </div>
             </div>
