@@ -36,7 +36,7 @@ export function DeleteConfirmModal({ open, onClose, onConfirm, message = 'Are yo
           </button>
           <button
             type="button"
-            className="px-8 py-4 rounded-lg text-lg font-semibold text-white hover:text-gray-400 focus:outline-none"
+            className="px-8 py-4 rounded-lg bg-pos-panel text-lg font-semibold text-white hover:text-gray-400 focus:outline-none"
             onClick={onClose}
           >
             {t('no')}

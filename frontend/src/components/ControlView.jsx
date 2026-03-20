@@ -770,8 +770,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   const [priceGroups, setPriceGroups] = useState([]);
   const [priceGroupsLoading, setPriceGroupsLoading] = useState(false);
-  const [priceGroupsPage, setPriceGroupsPage] = useState(0);
-  const PRICE_GROUPS_PAGE_SIZE = 11;
+  const priceGroupsListRef = useRef(null);
+  const [canPriceGroupsScrollUp, setCanPriceGroupsScrollUp] = useState(false);
+  const [canPriceGroupsScrollDown, setCanPriceGroupsScrollDown] = useState(false);
   const [showPriceGroupModal, setShowPriceGroupModal] = useState(false);
   const [editingPriceGroupId, setEditingPriceGroupId] = useState(null);
   const [priceGroupName, setPriceGroupName] = useState('');
@@ -793,7 +794,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const categoriesListRef = useRef(null);
   const [canCategoriesScrollUp, setCanCategoriesScrollUp] = useState(false);
   const [canCategoriesScrollDown, setCanCategoriesScrollDown] = useState(false);
-  const [productsPage, setProductsPage] = useState(0);
+  const productsListRef = useRef(null);
+  const [canProductsScrollUp, setCanProductsScrollUp] = useState(false);
+  const [canProductsScrollDown, setCanProductsScrollDown] = useState(false);
+  const subproductsListRef = useRef(null);
+  const [canSubproductsScrollUp, setCanSubproductsScrollUp] = useState(false);
+  const [canSubproductsScrollDown, setCanSubproductsScrollDown] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -1166,6 +1172,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [subproductModalGroupId, setSubproductModalGroupId] = useState(null);
   const [subproductKioskPicture, setSubproductKioskPicture] = useState('');
   const [subproductAttachToCategoryIds, setSubproductAttachToCategoryIds] = useState([]);
+  const subproductAttachToListRef = useRef(null);
   const [subproductAddCategoryId, setSubproductAddCategoryId] = useState('');
   const [savingSubproduct, setSavingSubproduct] = useState(false);
   const [deleteConfirmSubproductId, setDeleteConfirmSubproductId] = useState(null);
@@ -1246,6 +1253,74 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updateProductsScrollState = useCallback(() => {
+    const el = productsListRef.current;
+    if (!el) {
+      setCanProductsScrollUp(false);
+      setCanProductsScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanProductsScrollUp(el.scrollTop > 0);
+    setCanProductsScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollProductsByPage = useCallback((direction) => {
+    const el = productsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
+  const updateSubproductsScrollState = useCallback(() => {
+    const el = subproductsListRef.current;
+    if (!el) {
+      setCanSubproductsScrollUp(false);
+      setCanSubproductsScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanSubproductsScrollUp(el.scrollTop > 0);
+    setCanSubproductsScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollSubproductsByPage = useCallback((direction) => {
+    const el = subproductsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
+  const scrollSubproductAttachToByPage = useCallback((direction) => {
+    const el = subproductAttachToListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(80, Math.floor(el.clientHeight * 0.9));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
+  const updatePriceGroupsScrollState = useCallback(() => {
+    const el = priceGroupsListRef.current;
+    if (!el) {
+      setCanPriceGroupsScrollUp(false);
+      setCanPriceGroupsScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanPriceGroupsScrollUp(el.scrollTop > 0);
+    setCanPriceGroupsScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollPriceGroupsByPage = useCallback((direction) => {
+    const el = priceGroupsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
   const formatDateForCurrentLanguage = useCallback((isoDate) => {
     if (!isoDate) return '';
     const d = new Date(isoDate);
@@ -1271,6 +1346,21 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (topNavId !== 'categories-products' || subNavId !== 'Categories') return;
     updateCategoriesScrollState();
   }, [topNavId, subNavId, categories, updateCategoriesScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Products') return;
+    updateProductsScrollState();
+  }, [topNavId, subNavId, selectedCategoryId, products, productSearch, updateProductsScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Subproducts') return;
+    updateSubproductsScrollState();
+  }, [topNavId, subNavId, selectedSubproductGroupId, subproducts, updateSubproductsScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Price Groups') return;
+    updatePriceGroupsScrollState();
+  }, [topNavId, subNavId, priceGroups, updatePriceGroupsScrollState]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1312,20 +1402,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (subNavId === 'Categories') fetchCategories();
   }, [subNavId, fetchCategories]);
 
-  useEffect(() => {
-    if (topNavId !== 'categories-products' || subNavId !== 'Products') setProductsPage(0);
-  }, [topNavId, subNavId]);
-  useEffect(() => {
-    setProductsPage(0);
-  }, [selectedCategoryId]);
-
-  const [subproductsPage, setSubproductsPage] = useState(0);
   const [kitchenMessagesPage, setKitchenMessagesPage] = useState(0);
   const [discountsPage, setDiscountsPage] = useState(0);
-  useEffect(() => {
-    if (topNavId !== 'categories-products' || subNavId !== 'Subproducts') setSubproductsPage(0);
-  }, [topNavId, subNavId]);
-  useEffect(() => { setSubproductsPage(0); }, [selectedSubproductGroupId]);
   useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Kitchen messages') setKitchenMessagesPage(0);
   }, [topNavId, subNavId]);
@@ -5287,48 +5365,47 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 if (priceGroups.length === 0) {
                   return <ul className="w-full flex flex-col"><li className="text-pos-muted text-3xl py-4">{tr('control.priceGroups.empty', 'No price groups yet.')}</li></ul>;
                 }
-                const total = priceGroups.length;
-                const totalPages = Math.max(1, Math.ceil(total / PRICE_GROUPS_PAGE_SIZE));
-                const page = Math.min(priceGroupsPage, totalPages - 1);
-                const start = page * PRICE_GROUPS_PAGE_SIZE;
-                const paginated = priceGroups.slice(start, start + PRICE_GROUPS_PAGE_SIZE);
-                const canPrev = page > 0;
-                const canNext = page < totalPages - 1;
                 return (
                   <>
-                    <ul className="w-full flex flex-col">
-                      {paginated.map((pg) => (
-                        <li
-                          key={pg.id}
-                          className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
-                        >
-                          <span className="font-medium">{pg.name}</span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
-                              onClick={() => openEditPriceGroupModal(pg)}
-                              aria-label="Edit"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                              onClick={() => setDeleteConfirmId(pg.id)}
-                              aria-label="Delete"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                    <div
+                      ref={priceGroupsListRef}
+                      className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                      onScroll={updatePriceGroupsScrollState}
+                    >
+                      <ul className="w-full flex flex-col">
+                        {priceGroups.map((pg) => (
+                          <li
+                            key={pg.id}
+                            className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
+                          >
+                            <span className="font-medium">{pg.name}</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
+                                onClick={() => openEditPriceGroupModal(pg)}
+                                aria-label="Edit"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                onClick={() => setDeleteConfirmId(pg.id)}
+                                aria-label="Delete"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                     <PaginationArrows
-                      canPrev={canPrev}
-                      canNext={canNext}
-                      onPrev={() => setPriceGroupsPage((p) => Math.max(0, p - 1))}
-                      onNext={() => setPriceGroupsPage((p) => Math.min(totalPages - 1, p + 1))}
+                      canPrev={canPriceGroupsScrollUp}
+                      canNext={canPriceGroupsScrollDown}
+                      onPrev={() => scrollPriceGroupsByPage('up')}
+                      onNext={() => scrollPriceGroupsByPage('down')}
                     />
                   </>
                 );
@@ -5425,12 +5502,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </div>
             );
           })() : topNavId === 'categories-products' && subNavId === 'Products' ? (() => {
-            const PRODUCTS_PER_PAGE = 10;
-            const totalProductsPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
-            const productsPageClamped = Math.min(productsPage, totalProductsPages - 1);
-            const paginatedProducts = filteredProducts.slice(productsPageClamped * PRODUCTS_PER_PAGE, (productsPageClamped + 1) * PRODUCTS_PER_PAGE);
-            const canPrevProducts = productsPageClamped > 0;
-            const canNextProducts = productsPageClamped < totalProductsPages - 1;
             return (
               <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px] flex flex-col">
                 {/* Action bar: New Product, Positioning, Search */}
@@ -5506,7 +5577,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                 )}
                 {/* Product list: name (left), Subproducts (center), Edit/Delete (right) */}
-                <div className="flex-1 overflow-auto min-h-0 bg-pos-bg">
+                <div
+                  ref={productsListRef}
+                  className="flex-1 overflow-auto max-h-[470px] min-h-0 bg-pos-bg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  onScroll={updateProductsScrollState}
+                >
                   {!selectedCategoryId ? (
                     <p className="text-pos-muted text-xl py-4 text-center">{tr('control.products.selectCategoryHint', 'Select a category or add one in Categories.')}</p>
                   ) : productsLoading ? (
@@ -5515,7 +5590,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <p className="text-pos-muted text-xl py-4 text-center">{tr('control.products.emptyInCategory', 'No products in this category yet.')}</p>
                   ) : (
                     <ul className="w-full flex flex-col">
-                      {paginatedProducts.map((product) => (
+                      {filteredProducts.map((product) => (
                         <li
                           key={product.id}
                           className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedProductId === product.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
@@ -5561,21 +5636,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </div>
                 {selectedCategoryId && filteredProducts.length > 0 && (
                   <PaginationArrows
-                    canPrev={canPrevProducts}
-                    canNext={canNextProducts}
-                    onPrev={() => setProductsPage((p) => Math.max(0, p - 1))}
-                    onNext={() => setProductsPage((p) => Math.min(totalProductsPages - 1, p + 1))}
+                    canPrev={canProductsScrollUp}
+                    canNext={canProductsScrollDown}
+                    onPrev={() => scrollProductsByPage('up')}
+                    onNext={() => scrollProductsByPage('down')}
                   />
                 )}
               </div>
             );
           })() : topNavId === 'categories-products' && subNavId === 'Subproducts' ? (() => {
-            const SUBPRODUCTS_PER_PAGE = 10;
-            const totalSubproductsPages = Math.max(1, Math.ceil(subproducts.length / SUBPRODUCTS_PER_PAGE));
-            const subPage = Math.min(subproductsPage, totalSubproductsPages - 1);
-            const paginatedSubproducts = subproducts.slice(subPage * SUBPRODUCTS_PER_PAGE, (subPage + 1) * SUBPRODUCTS_PER_PAGE);
-            const canPrevSub = subPage > 0;
-            const canNextSub = subPage < totalSubproductsPages - 1;
             return (
               <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px] flex flex-col">
                 <div className="flex items-center w-full justify-center gap-4 mb-2 flex-wrap">
@@ -5633,7 +5702,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </button>
                   </div>
                 )}
-                <div className="flex-1 overflow-auto min-h-0 bg-pos-bg">
+                <div
+                  ref={subproductsListRef}
+                  className="flex-1 overflow-auto min-h-0 bg-pos-bg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  onScroll={updateSubproductsScrollState}
+                >
                   {!selectedSubproductGroupId ? (
                     <p className="text-pos-muted text-xl py-4 text-center">{tr('control.subproducts.selectGroupHint', 'Select a group or add one via Manage Groups.')}</p>
                   ) : subproductGroupsLoading ? (
@@ -5644,7 +5717,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <p className="text-pos-muted text-xl py-4 text-center">{tr('control.subproducts.empty', 'No subproducts in this group yet.')}</p>
                   ) : (
                     <ul className="w-full flex flex-col">
-                      {paginatedSubproducts.map((sp) => (
+                      {subproducts.map((sp) => (
                         <li
                           key={sp.id}
                           className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedSubproductId === sp.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
@@ -5666,10 +5739,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </div>
                 {selectedSubproductGroupId && subproducts.length > 0 && (
                   <PaginationArrows
-                    canPrev={canPrevSub}
-                    canNext={canNextSub}
-                    onPrev={() => setSubproductsPage((p) => Math.max(0, p - 1))}
-                    onNext={() => setSubproductsPage((p) => Math.min(totalSubproductsPages - 1, p + 1))}
+                    canPrev={canSubproductsScrollUp}
+                    canNext={canSubproductsScrollDown}
+                    onPrev={() => scrollSubproductsByPage('up')}
+                    onNext={() => scrollSubproductsByPage('down')}
                   />
                 )}
               </div>
@@ -8147,8 +8220,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <label className="block text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
-                    readOnly
                     value={priceGroupName}
+                    onChange={(e) => setPriceGroupName(e.target.value)}
                     placeholder={tr('control.enterName', 'Enter name')}
                     className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                   />
@@ -9219,76 +9292,78 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showSubproductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
-              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex-1 min-h-0 overflow-auto w-full">
-              <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
-                <div className="w-full flex flex-col justify-center items-center gap-10">
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Name : </label>
+              <div className="p-6 flex w-full text-sm pt-14">
+                <div className='flex flex-col gap-3 w-1/3'>
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[110px] text-md font-medium text-gray-200 mb-2">Name : </label>
                     <input
                       type="text"
                       value={subproductName}
                       onChange={(e) => handleSubproductNameChange(e.target.value)}
                       onFocus={() => setSubproductActiveField('name')}
                       placeholder=""
-                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                      className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Key name : </label>
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[110px] text-md font-medium text-gray-200 mb-2">Key name : </label>
                     <input
                       type="text"
                       value={subproductKeyName}
                       onChange={(e) => setSubproductKeyName(e.target.value)}
                       onFocus={() => setSubproductActiveField('keyName')}
                       placeholder=""
-                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                      className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Production name : </label>
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[110px] text-md font-medium text-gray-200 mb-2">Production name : </label>
                     <input
                       type="text"
                       value={subproductProductionName}
                       onChange={(e) => setSubproductProductionName(e.target.value)}
                       onFocus={() => setSubproductActiveField('productionName')}
                       placeholder=""
-                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                      className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Price : </label>
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[110px] text-md font-medium text-gray-200 mb-2">Price : </label>
                     <input
                       type="text"
                       value={subproductPrice}
                       onChange={(e) => setSubproductPrice(e.target.value)}
                       onFocus={() => setSubproductActiveField('price')}
                       placeholder=""
-                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                      className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">VAT Take out : </label>
-                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatTakeOut} onChange={setSubproductVatTakeOut} placeholder="--" className="text-md min-w-[200px]" />
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[110px] text-md font-medium text-gray-200 mb-2">VAT Take out : </label>
+                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatTakeOut} onChange={setSubproductVatTakeOut} placeholder="--" className="text-md min-w-[150px]" />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">VAT Eat in : </label>
-                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatEatIn} onChange={setSubproductVatEatIn} placeholder="--" className="text-md min-w-[200px]" />
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[110px] text-md font-medium text-gray-200 mb-2">VAT Eat in : </label>
+                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatEatIn} onChange={setSubproductVatEatIn} placeholder="--" className="text-md min-w-[150px]" />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Group : </label>
+                </div>
+                <div className='flex flex-col gap-3 w-1/3'>
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[100px] text-md font-medium text-gray-200 mb-2">Group : </label>
                     <Dropdown
                       options={subproductGroups.map((g) => ({ value: g.id, label: g.name }))}
                       value={subproductModalGroupId}
                       onChange={setSubproductModalGroupId}
                       placeholder="--"
-                      className="text-md min-w-[200px]"
+                      className="text-md min-w-[150px]"
                     />
                   </div>
-                  <div className="flex gap-2 w-full items-center justify-center">
-                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Kiosk picture : </label>
+                  <div className="flex gap-2 w-full items-center">
+                    <label className="block min-w-[100px] text-md font-medium text-gray-200 mb-2">Kiosk picture : </label>
                     <div className="w-[200px] flex items-center justify-start flex-wrap gap-2">
                       {!subproductKioskPicture ? (
                         <label className="px-4 py-2 border border-gray-300 rounded-lg text-gray-200 hover:bg-pos-panel cursor-pointer shrink-0 text-md">
@@ -9326,61 +9401,61 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-col w-full max-w-md items-center gap-3">
-                    <label className="block text-md font-medium text-gray-200 mb-1">Attach To</label>
-                    <div className="border border-gray-300 rounded-lg bg-pos-panel/30 w-full h-[220px] overflow-y-auto">
-                      <ul className="p-2">
-                        {categories.length === 0 ? (
-                          <li className="text-pos-muted text-md py-2 px-2">No categories available</li>
-                        ) : (
-                          categories.map((c) => {
-                            const attached = subproductAttachToCategoryIds.includes(c.id);
-                            const toggle = () => setSubproductAttachToCategoryIds((prev) => attached ? prev.filter((id) => id !== c.id) : [...prev, c.id]);
-                            return (
-                              <li
-                                key={c.id}
-                                role="button"
-                                tabIndex={0}
-                                className={`text-md py-1.5 px-2 flex items-center gap-2 cursor-pointer rounded select-none ${attached ? 'text-gray-200 font-medium bg-pos-panel' : 'text-pos-muted'} hover:bg-pos-panel/70`}
-                                onClick={toggle}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
-                                aria-label={attached ? `Attached to ${c.name}. Click to detach.` : `Click to attach to ${c.name}`}
-                              >
-                                <span className="uppercase font-medium truncate flex-1 min-w-0">{(c.name || '').toUpperCase()}</span>
-                                <input
-                                  type="checkbox"
-                                  checked={attached}
-                                  onChange={() => { }}
-                                  onClick={(e) => { e.stopPropagation(); toggle(); }}
-                                  className="w-5 h-5 rounded border-gray-300 cursor-pointer shrink-0"
-                                  aria-label={attached ? `Detach from ${c.name}` : `Attach to ${c.name}`}
-                                />
-                              </li>
-                            );
-                          })
-                        )}
-                      </ul>
-                    </div>
-                    <div className="flex w-full justify-around gap-2 items-center pt-2">
-                      <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Move attached list up" onClick={() => setSubproductAttachToCategoryIds((prev) => prev.length < 2 ? prev : [prev[prev.length - 1], ...prev.slice(0, -1)])}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                      </button>
-                      <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Move attached list down" onClick={() => setSubproductAttachToCategoryIds((prev) => prev.length < 2 ? prev : [...prev.slice(1), prev[0]])}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                      </button>
-                    </div>
+                </div>
+                <div className="flex flex-col w-1/3 items-center gap-3">
+                  <label className="block text-md font-medium text-gray-200 mb-1">Attach To</label>
+                  <div ref={subproductAttachToListRef} className="border border-gray-300 rounded-lg bg-pos-panel/30 w-full h-[220px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <ul className="p-2">
+                      {categories.length === 0 ? (
+                        <li className="text-pos-muted text-md py-2 px-2">No categories available</li>
+                      ) : (
+                        categories.map((c) => {
+                          const attached = subproductAttachToCategoryIds.includes(c.id);
+                          const toggle = () => setSubproductAttachToCategoryIds((prev) => attached ? prev.filter((id) => id !== c.id) : [...prev, c.id]);
+                          return (
+                            <li
+                              key={c.id}
+                              role="button"
+                              tabIndex={0}
+                              className={`text-md py-1.5 px-2 flex items-center gap-2 cursor-pointer rounded select-none ${attached ? 'text-gray-200 font-medium bg-pos-panel' : 'text-pos-muted'} hover:bg-pos-panel/70`}
+                              onClick={toggle}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
+                              aria-label={attached ? `Attached to ${c.name}. Click to detach.` : `Click to attach to ${c.name}`}
+                            >
+                              <span className="uppercase font-medium truncate flex-1 min-w-0">{(c.name || '').toUpperCase()}</span>
+                              <input
+                                type="checkbox"
+                                checked={attached}
+                                onChange={() => { }}
+                                onClick={(e) => { e.stopPropagation(); toggle(); }}
+                                className="w-5 h-5 rounded border-gray-300 cursor-pointer shrink-0"
+                                aria-label={attached ? `Detach from ${c.name}` : `Attach to ${c.name}`}
+                              />
+                            </li>
+                          );
+                        })
+                      )}
+                    </ul>
+                  </div>
+                  <div className="flex w-full justify-around gap-2 items-center pt-2">
+                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Scroll attach list up" onClick={() => scrollSubproductAttachToByPage('up')}>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                    </button>
+                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Scroll attach list down" onClick={() => scrollSubproductAttachToByPage('down')}>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-center pt-5 pb-5 shrink-0">
+            <div className="flex justify-center shrink-0">
               <button
                 type="button"
-                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                 disabled={savingSubproduct}
                 onClick={handleSaveSubproduct}
               >
-                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
                   <path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                 </svg>
                 {tr('control.save', 'Save')}
@@ -9420,7 +9495,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <div
                       ref={manageGroupsListRef}
-                      className="w-full border border-gray-300 max-h-[250px] overflow-y-auto rounded-lg overflow-hidden bg-pos-panel/30 cursor-grab active:cursor-grabbing"
+                      className="w-full border border-gray-300 max-h-[250px] overflow-y-auto rounded-lg overflow-hidden bg-pos-panel/30 cursor-grab active:cursor-grabbing [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                       onScroll={updateManageGroupsPaginationState}
                       onPointerDown={(e) => {
                         if (e.pointerType === 'mouse' && e.button !== 0) return;
