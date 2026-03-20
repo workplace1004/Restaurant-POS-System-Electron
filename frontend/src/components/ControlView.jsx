@@ -124,7 +124,9 @@ const RFID_READER_TYPE_OPTIONS = [
 
 const BARCODE_SCANNER_TYPE_OPTIONS = [
   { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' },
-  { value: 'serial', labelKey: 'control.external.serial', fallback: 'Serial' }
+  { value: 'serial', labelKey: 'control.external.serial', fallback: 'Serial' },
+  { value: 'keyboard-input', labelKey: 'control.external.barcodeScannerType.keyboardInput', fallback: 'Keyboard input' },
+  { value: 'tcp-ip', labelKey: 'control.external.barcodeScannerType.tcpIp', fallback: 'TCP / IP' }
 ];
 
 const BARCODE_SCANNER_PORT_OPTIONS = [
@@ -137,7 +139,7 @@ const BARCODE_SCANNER_PORT_OPTIONS = [
 const CREDIT_CARD_TYPE_OPTIONS = [
   { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' },
   { value: 'payworld', labelKey: 'control.external.creditCardType.payworld', fallback: 'Payworld' },
-  { value: 'viva_wallet', labelKey: 'control.external.creditCardType.vivaWallet', fallback: 'Viva wallet' }
+  { value: 'viva-wallet', labelKey: 'control.external.creditCardType.vivaWallet', fallback: 'Viva wallet' }
 ];
 
 const SCALE_TYPE_OPTIONS = [
@@ -1127,8 +1129,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [rfidReaderKeyboardValue, setRfidReaderKeyboardValue] = useState('');
   const [savingRfidReader, setSavingRfidReader] = useState(false);
 
-  const [barcodeScannerType, setBarcodeScannerType] = useState('serial');
-  const [barcodeScannerPort, setBarcodeScannerPort] = useState('COM 1');
+  const [barcodeScannerType, setBarcodeScannerType] = useState('disabled');
   const [barcodeScannerKeyboardValue, setBarcodeScannerKeyboardValue] = useState('');
   const [savingBarcodeScanner, setSavingBarcodeScanner] = useState(false);
 
@@ -4287,24 +4288,25 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   useEffect(() => {
     if (topNavId !== 'external-devices' || subNavId !== 'Credit Card') return;
     let cancelled = false;
-    const loadCreditCardType = async () => {
+    const load = async () => {
       try {
-        const res = await fetch(`${API}/settings/credit-card-type`);
+        const res = await fetch(`${API}/settings/credit-card`);
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || cancelled) return;
-        const v = data?.value;
-        if (v && ['disabled', 'payworld', 'viva_wallet'].includes(v)) setCreditCardType(v);
-      } catch (_) {
-        try {
-          const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_credit_card');
-          if (raw) {
-            const s = JSON.parse(raw);
-            if (s.type != null && !cancelled) setCreditCardType(s.type);
-          }
-        } catch (_) { }
-      }
+        if (cancelled) return;
+        if (res.ok && data.type != null) {
+          setCreditCardType(data.type);
+          return;
+        }
+      } catch (_) { }
+      try {
+        const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_credit_card');
+        if (raw && !cancelled) {
+          const s = JSON.parse(raw);
+          if (s.type != null) setCreditCardType(s.type);
+        }
+      } catch (_) { }
     };
-    loadCreditCardType();
+    load();
     return () => { cancelled = true; };
   }, [topNavId, subNavId]);
 
@@ -4448,17 +4450,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const handleSaveCreditCard = async () => {
     setSavingCreditCard(true);
     try {
-      const res = await fetch(`${API}/settings/credit-card-type`, {
+      const res = await fetch(`${API}/settings/credit-card`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: creditCardType })
+        body: JSON.stringify({ type: creditCardType }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to save');
       if (typeof localStorage !== 'undefined') localStorage.setItem('pos_credit_card', JSON.stringify({ type: creditCardType }));
       showToast('success', tr('control.saved', 'Saved.'));
     } catch (e) {
-      showToast('error', e?.message || 'Failed to save');
+      showToast('error', e?.message || tr('control.saveFailed', 'Save failed.'));
     } finally {
       setSavingCreditCard(false);
     }
