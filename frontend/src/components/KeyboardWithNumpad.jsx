@@ -162,7 +162,7 @@ export function KeyboardWithNumpad({
                 {display(k)}
               </button>
             ))}
-            <button type="button" className={`${KEY_STYLE} w-[126px]`} onClick={() => sendKey('Backspace')} aria-label="Backspace">
+            <button type="button" className={`${KEY_STYLE} min-w-[126px]`} onClick={() => sendKey('Backspace')} aria-label="Backspace">
               ←
             </button>
           </div>

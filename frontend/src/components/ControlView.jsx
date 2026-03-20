@@ -753,6 +753,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [discountOn, setDiscountOn] = useState('products');
   const [discountPieces, setDiscountPieces] = useState('');
   const [discountCombinable, setDiscountCombinable] = useState(false);
+  const [discountTargetId, setDiscountTargetId] = useState('');
+  const [discountTargetIds, setDiscountTargetIds] = useState([]);
+  const [discountProductOptions, setDiscountProductOptions] = useState([]);
+  const discountTargetListRef = useRef(null);
+  const [canDiscountTargetScrollUp, setCanDiscountTargetScrollUp] = useState(false);
+  const [canDiscountTargetScrollDown, setCanDiscountTargetScrollDown] = useState(false);
   const [discountKeyboardValue, setDiscountKeyboardValue] = useState('');
   const [savingDiscount, setSavingDiscount] = useState(false);
   const [deleteConfirmDiscountId, setDeleteConfirmDiscountId] = useState(null);
@@ -903,7 +909,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [tableLocationTextColor, setTableLocationTextColor] = useState('light');
   const [savingTableLocation, setSavingTableLocation] = useState(false);
   const [deleteConfirmTableLocationId, setDeleteConfirmTableLocationId] = useState(null);
-  const [tableLocationsPage, setTableLocationsPage] = useState(0);
+  const tableLocationsListRef = useRef(null);
+  const [canTableLocationsScrollUp, setCanTableLocationsScrollUp] = useState(false);
+  const [canTableLocationsScrollDown, setCanTableLocationsScrollDown] = useState(false);
   const tableLocationNameInputRef = useRef(null);
   const [showSetTablesModal, setShowSetTablesModal] = useState(false);
   const [setTablesLocationId, setSetTablesLocationId] = useState(null);
@@ -1213,6 +1221,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updateTableLocationsScrollState = useCallback(() => {
+    const el = tableLocationsListRef.current;
+    if (!el) {
+      setCanTableLocationsScrollUp(false);
+      setCanTableLocationsScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanTableLocationsScrollUp(el.scrollTop > 0);
+    setCanTableLocationsScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollTableLocationsByPage = useCallback((direction) => {
+    const el = tableLocationsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
   const updateDiscountsScrollState = useCallback(() => {
     const el = discountsListRef.current;
     if (!el) {
@@ -1301,6 +1329,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updateDiscountTargetScrollState = useCallback(() => {
+    const el = discountTargetListRef.current;
+    if (!el) {
+      setCanDiscountTargetScrollUp(false);
+      setCanDiscountTargetScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanDiscountTargetScrollUp(el.scrollTop > 0);
+    setCanDiscountTargetScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollDiscountTargetByPage = useCallback((direction) => {
+    const el = discountTargetListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(80, Math.floor(el.clientHeight * 0.9));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
   const updatePriceGroupsScrollState = useCallback(() => {
     const el = priceGroupsListRef.current;
     if (!el) {
@@ -1343,6 +1391,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   }, [topNavId, subNavId, discounts, updateDiscountsScrollState]);
 
   useEffect(() => {
+    if (!showDiscountModal) return;
+    updateDiscountTargetScrollState();
+  }, [showDiscountModal, discountTargetIds, updateDiscountTargetScrollState]);
+
+  useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Categories') return;
     updateCategoriesScrollState();
   }, [topNavId, subNavId, categories, updateCategoriesScrollState]);
@@ -1361,6 +1414,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (topNavId !== 'categories-products' || subNavId !== 'Price Groups') return;
     updatePriceGroupsScrollState();
   }, [topNavId, subNavId, priceGroups, updatePriceGroupsScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'tables') return;
+    updateTableLocationsScrollState();
+  }, [topNavId, tableLocations, updateTableLocationsScrollState]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1697,10 +1755,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   useEffect(() => {
     if (topNavId === 'tables') fetchTableLocations();
   }, [topNavId, fetchTableLocations]);
-
-  useEffect(() => {
-    if (topNavId !== 'tables') setTableLocationsPage(0);
-  }, [topNavId]);
 
   const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
@@ -4599,6 +4653,50 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     } catch (_) { }
   }, [topNavId, subNavId]);
 
+  useEffect(() => {
+    if (!showDiscountModal) return;
+    let alive = true;
+    const loadProductsForDiscounts = async () => {
+      const normalizeOptions = (list) => {
+        const seen = new Set();
+        return list
+          .filter((p) => p && p.id != null)
+          .map((p) => ({ value: p.id, label: p.name || `#${p.id}` }))
+          .filter((opt) => {
+            const key = String(opt.value);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+      };
+      // Load through categories endpoints to avoid /api/products 404 noise
+      try {
+        const categoriesRes = await fetch(`${API}/categories`);
+        const categoriesData = await categoriesRes.json();
+        const cats = Array.isArray(categoriesData) ? categoriesData : [];
+        const settled = await Promise.allSettled(
+          cats
+            .filter((c) => c?.id != null)
+            .map((c) =>
+              fetch(`${API}/categories/${c.id}/products`)
+                .then((r) => (r.ok ? r.json() : []))
+                .catch(() => [])
+            )
+        );
+        if (!alive) return;
+        const merged = settled
+          .filter((x) => x.status === 'fulfilled')
+          .flatMap((x) => (Array.isArray(x.value) ? x.value : []));
+        setDiscountProductOptions(normalizeOptions(merged));
+      } catch {
+        if (alive) setDiscountProductOptions([]);
+      }
+    };
+    loadProductsForDiscounts();
+    return () => { alive = false; };
+  }, [showDiscountModal]);
+
   const openNewDiscountModal = () => {
     setEditingDiscountId(null);
     setDiscountName('');
@@ -4609,6 +4707,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setDiscountStartDate(today);
     setDiscountEndDate(today);
     setDiscountOn('products');
+    setDiscountTargetId('');
+    setDiscountTargetIds([]);
     setDiscountPieces('');
     setDiscountCombinable(false);
     setDiscountKeyboardValue('');
@@ -4624,6 +4724,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setDiscountStartDate(d.startDate || '');
     setDiscountEndDate(d.endDate || '');
     setDiscountOn(d.discountOn || 'products');
+    const ids = Array.isArray(d.targetIds) ? d.targetIds.filter(Boolean) : (d.targetId ? [d.targetId] : []);
+    setDiscountTargetIds(ids);
+    setDiscountTargetId('');
     setDiscountPieces(String(d.pieces ?? ''));
     setDiscountCombinable(!!d.combinable);
     setDiscountKeyboardValue('');
@@ -4634,6 +4737,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setShowDiscountModal(false);
     setEditingDiscountId(null);
     setDiscountName('');
+    setDiscountTargetId('');
+    setDiscountTargetIds([]);
     setDiscountKeyboardValue('');
     setDiscountCalendarField(null);
   };
@@ -4655,6 +4760,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         startDate: discountStartDate,
         endDate: discountEndDate,
         discountOn,
+        targetId: discountTargetIds[0] || '',
+        targetIds: discountTargetIds,
         pieces: discountPieces.trim(),
         combinable: discountCombinable
       };
@@ -4865,12 +4972,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
         {/* Sub-navigation - External Devices */}
         {controlSidebarId === 'personalize' && topNavId === 'external-devices' && (
-          <div className="flex items-center w-full justify-around gap-1 px-4 py-3 bg-pos-bg">
+          <div className="flex items-center w-full justify-between gap-1 px-4 bg-pos-bg">
             {EXTERNAL_DEVICES_SUB_NAV_ITEMS.map((label) => (
               <button
                 key={label}
                 type="button"
-                className={`px-4 py-2 rounded-lg text-xl transition-colors ${subNavId === label
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${subNavId === label
                   ? 'bg-pos-panel text-pos-text font-medium'
                   : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50'
                   }`}
@@ -5874,15 +5981,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </p>
             </div>
           ) : topNavId === 'external-devices' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[820px]">
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 py-2">
               {subNavId === 'Printer' && (
-                <div className="flex flex-col min-h-[300px]">
+                <div className="flex flex-col">
                   <div className="flex justify-around mb-6 shrink-0">
                     {PRINTER_TABS.map((tab) => (
                       <button
                         key={tab}
                         type="button"
-                        className={`px-4 py-3 text-xl font-medium border-b-2 transition-colors ${printerTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${printerTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
                         onClick={() => setPrinterTab(tab)}
                       >
                         {tab}
@@ -5890,11 +5997,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     ))}
                   </div>
                   {printerTab === 'General' && (
-                    <div className="relative flex flex-col min-h-[750px] pb-24">
-                      <div className="flex items-center justify-center mb-6">
+                    <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                      <div className="flex items-center w-full justify-center mb-2">
                         <button
                           type="button"
-                          className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                          className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                           onClick={openNewPrinterModal}
                         >
                           Add printer
@@ -5909,35 +6016,61 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         const paginated = sorted.slice(start, start + PRINTERS_PAGE_SIZE);
                         const canPrev = page > 0;
                         const canNext = page < totalPages - 1;
-                        return (
+                        return sorted.length === 0 ? (
+                          <ul className="w-full flex flex-col">
+                            <li className="text-pos-muted text-3xl py-4">No printers yet.</li>
+                          </ul>
+                        ) : (
                           <>
-                            <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50 max-h-[680px] overflow-auto">
-                              {paginated.map((p) => (
-                                <li key={p.id} className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors">
-                                  <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0" onClick={() => setDefaultPrinter(p.id)} aria-label={p.isDefault ? 'Default printer' : 'Set as default'}>
-                                    {p.isDefault ? (
-                                      <span className="w-8 h-8 inline-flex justify-center items-center text-green-500 text-2xl">{'\u2713'}</span>
-                                    ) : (
-                                      <span className="w-8 h-8 inline-block rounded-full border-2 border-pos-muted" />
-                                    )}
-                                  </button>
-                                  <span className="flex-1 text-pos-text text-xl font-medium ml-2">{p.name}</span>
-                                  <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => openEditPrinterModal(p)} aria-label="Edit">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                  </button>
-                                  <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg ml-2" onClick={() => setDeleteConfirmPrinterId(p.id)} aria-label="Delete">
-                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                            <div className='fixed z-50 top-[97%] ml-[750px]'>
-                              <PaginationArrows
-                                canPrev={canPrev}
-                                canNext={canNext}
-                                onPrev={() => setPrintersPage((p) => Math.max(0, p - 1))}
-                                onNext={() => setPrintersPage((p) => Math.min(totalPages - 1, p + 1))}
-                              />
+                            <div className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                              <ul className="w-full flex flex-col">
+                                {paginated.map((p) => (
+                                  <li
+                                    key={p.id}
+                                    className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
+                                  >
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                        type="button"
+                                        className="p-2 flex justify-center rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                        onClick={() => setDefaultPrinter(p.id)}
+                                        aria-label={p.isDefault ? 'Default printer' : 'Set as default'}
+                                      >
+                                        {p.isDefault ? (
+                                          <span className="w-4 h-4 inline-flex justify-center items-center text-green-500 text-sm">{'\u2713'}</span>
+                                        ) : (
+                                          <span className="w-4 h-4 inline-block rounded-full border-2 border-pos-muted" />
+                                        )}
+                                      </button>
+                                    </div>
+                                    <span className="flex-1 text-center font-medium">{p.name}</span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                        type="button"
+                                        className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
+                                        onClick={() => openEditPrinterModal(p)}
+                                        aria-label="Edit"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                        onClick={() => setDeleteConfirmPrinterId(p.id)}
+                                        aria-label="Delete"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                      </button>
+                                    </div>
+                                    <PaginationArrows
+                                      canPrev={canPrev}
+                                      canNext={canNext}
+                                      onPrev={() => setPrintersPage((p) => Math.max(0, p - 1))}
+                                      onNext={() => setPrintersPage((p) => Math.min(totalPages - 1, p + 1))}
+                                    />
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
                           </>
                         );
@@ -6059,7 +6192,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </div>
                       </div>
                       <div className="flex justify-center mt-[180px]">
-                        <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingProdTickets} onClick={handleSaveProductionTickets}>
+                        <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProdTickets} onClick={handleSaveProductionTickets}>
                           <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                           Save
                         </button>
@@ -6381,85 +6514,85 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
             </div>
           ) : topNavId === 'tables' ? (() => {
-            const TABLE_LOCATIONS_PER_PAGE = 11;
-            const totalTableLocationsPages = Math.max(1, Math.ceil(tableLocations.length / TABLE_LOCATIONS_PER_PAGE));
-            const tlPage = Math.min(tableLocationsPage, totalTableLocationsPages - 1);
-            const paginatedTableLocations = tableLocations.slice(tlPage * TABLE_LOCATIONS_PER_PAGE, (tlPage + 1) * TABLE_LOCATIONS_PER_PAGE);
-            const canPrevTl = tlPage > 0;
-            const canNextTl = tlPage < totalTableLocationsPages - 1;
             return (
-              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[950px] pb-24">
-                <div className="flex items-center w-full justify-center mb-6">
+              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-4 min-h-[690px] pb-16">
+                <div className="flex items-center w-full justify-center mb-4">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                     disabled={tableLocationsLoading}
                     onClick={openTableLocationModal}
                   >
                     {tr('control.tables.new', 'New table setting')}
                   </button>
                 </div>
-                <ul className="w-full flex flex-col">
-                  {tableLocationsLoading ? (
-                    <li className="text-pos-muted text-xl py-4">{tr('control.tables.loading', 'Loading table locations...')}</li>
-                  ) : tableLocations.length === 0 ? (
-                    <li className="text-pos-muted text-xl py-6 text-center">{tr('control.tables.empty', 'No table locations yet.')}</li>
-                  ) : (
-                    paginatedTableLocations.map((loc) => {
-                      const hasSavedLayout = (() => {
-                        try {
-                          if (loc?.layoutJson == null || loc.layoutJson === '') return false;
-                          const parsed = JSON.parse(loc.layoutJson);
-                          return Array.isArray(parsed?.tables) && parsed.tables.length > 0;
-                        } catch {
-                          return false;
-                        }
-                      })();
-                      return (
-                        <li
-                          key={loc.id}
-                          className="flex justify-between items-center w-full px-10 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
-                        >
-                          <span className="font-medium">{loc.name}</span>
-                          <div className="flex absolute left-1/2 justify-center">
-                            <button
-                              type="button"
-                              className={`w-full text-center px-4 py-2 rounded-lg text-xl hover:bg-pos-panel ${hasSavedLayout ? 'text-white' : 'text-pos-muted hover:text-pos-text'
-                                }`}
-                              onClick={() => openSetTablesModal(loc)}
-                            >
-                              {tr('control.tables.setTables', 'Set tables')}
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                              onClick={() => openEditTableLocationModal(loc)}
-                              aria-label="Edit"
-                            >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                              onClick={() => setDeleteConfirmTableLocationId(loc.id)}
-                              aria-label="Delete"
-                            >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
+                <div
+                  ref={tableLocationsListRef}
+                  className="w-full max-h-[560px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  onScroll={updateTableLocationsScrollState}
+                >
+                  <ul className="w-full flex flex-col">
+                    {tableLocationsLoading ? (
+                      <li className="text-pos-muted text-sm py-4 text-center">{tr('control.tables.loading', 'Loading table locations...')}</li>
+                    ) : tableLocations.length === 0 ? (
+                      <li className="text-pos-muted text-sm py-6 text-center">{tr('control.tables.empty', 'No table locations yet.')}</li>
+                    ) : (
+                      tableLocations.map((loc) => {
+                        const hasSavedLayout = (() => {
+                          try {
+                            if (loc?.layoutJson == null || loc.layoutJson === '') return false;
+                            const parsed = JSON.parse(loc.layoutJson);
+                            return Array.isArray(parsed?.tables) && parsed.tables.length > 0;
+                          } catch {
+                            return false;
+                          }
+                        })();
+                        return (
+                          <li
+                            key={loc.id}
+                            className="flex justify-between relative items-center w-full px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
+                          >
+                            <span className="font-medium">{loc.name}</span>
+                            <div className="flex absolute right-1/2 items-center justify-center">
+                              <button
+                                type="button"
+                                className={`w-full text-center px-3 py-1 rounded-lg text-sm hover:bg-pos-panel ${hasSavedLayout ? 'text-white' : 'text-pos-muted hover:text-pos-text'
+                                  }`}
+                                onClick={() => openSetTablesModal(loc)}
+                              >
+                                {tr('control.tables.setTables', 'Set tables')}
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                className="p-1 rounded text-pos-text hover:bg-pos-panel"
+                                onClick={() => openEditTableLocationModal(loc)}
+                                aria-label="Edit"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="p-1 rounded text-pos-text hover:bg-pos-panel"
+                                onClick={() => setDeleteConfirmTableLocationId(loc.id)}
+                                aria-label="Delete"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                </div>
                 {tableLocations.length > 0 && (
                   <PaginationArrows
-                    canPrev={canPrevTl}
-                    canNext={canNextTl}
-                    onPrev={() => setTableLocationsPage((p) => Math.max(0, p - 1))}
-                    onNext={() => setTableLocationsPage((p) => Math.min(totalTableLocationsPages - 1, p + 1))}
+                    canPrev={canTableLocationsScrollUp}
+                    canNext={canTableLocationsScrollDown}
+                    onPrev={() => scrollTableLocationsByPage('up')}
+                    onNext={() => scrollTableLocationsByPage('down')}
                   />
                 )}
               </div>
@@ -6637,128 +6770,181 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* New / Edit discount modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeDiscountModal} aria-label="Close">
-              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <div className="flex-1 min-h-0 overflow-auto w-full">
-              <div className="p-6 pb-0 flex text-sm space-y-3 w-full pt-14">
-                <div className='flex flex-col w-2/3 gap-3'>
-                  <div className='flex w-full gap-5'>
-                    <div className="flex items-center">
-                      <label className="block font-medium min-w-[100px] text-gray-200">{tr('name', 'Name')} : </label>
-                      <input type="text" value={discountName} onChange={(e) => setDiscountName(e.target.value)} placeholder={tr('control.discounts.modal.discountNamePlaceholder', 'Discount name')} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200 placeholder:text-gray-500" />
-                    </div>
-                    <div className="flex w-full items-center">
-                      <label className="block font-medium text-gray-200 min-w-[100px]">{tr('control.discounts.modal.discountOn', 'Discount on')} : </label>
-                      <Dropdown options={DISCOUNT_ON_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.on.${opt.value}`, opt.label) }))} value={discountOn} onChange={setDiscountOn} placeholder={tr('control.discounts.on.products', 'Products')} className="text-md min-w-[150px]" />
-                    </div>
-                  </div>
-                  <div className="flex w-full items-center flex-wrap">
-                    <div className="flex items-center">
-                      <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.discounts.modal.trigger', 'Trigger')} : </label>
-                      <Dropdown options={DISCOUNT_TRIGGER_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.trigger.${opt.value}`, opt.label) }))} value={discountTrigger} onChange={setDiscountTrigger} placeholder={tr('control.discounts.trigger.number', 'Number')} className="text-md min-w-[150px]" />
-                    </div>
-                    <div className="flex gap-5 items-center pl-5">
-                      <input type="text" value={discountPieces} onChange={(e) => setDiscountPieces(e.target.value)} placeholder="" className="px-4 w-[70px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
-                      <label className="block font-medium text-gray-200">{tr('control.discounts.modal.pieces', 'Piece(s)')}</label>
-                    </div>
-                    <div className="flex items-center gap-3 pl-5">
-                      <div className="flex items-center justify-start">
-                        <input type="checkbox" checked={discountCombinable} onChange={(e) => setDiscountCombinable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+        (() => {
+          const discountTargetOptions = discountOn === 'categories'
+            ? categories
+              .filter((c) => c && c.id != null)
+              .map((c) => ({ value: c.id, label: c.name || `#${c.id}` }))
+            : discountProductOptions;
+          const discountTargetOptionMap = new Map(discountTargetOptions.map((o) => [String(o.value), o.label]));
+          const visibleDiscountTargetOptions = discountTargetOptions.filter((o) => !discountTargetIds.includes(o.value));
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+                <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeDiscountModal} aria-label="Close">
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div className="flex-1 min-h-0 overflow-auto w-full">
+                  <div className="p-6 pb-0 flex text-sm space-y-3 w-full pt-14">
+                    <div className='flex flex-col w-2/3 gap-3'>
+                      <div className='flex w-full gap-5'>
+                        <div className="flex items-center">
+                          <label className="block font-medium min-w-[100px] text-gray-200">{tr('name', 'Name')} : </label>
+                          <input type="text" value={discountName} onChange={(e) => setDiscountName(e.target.value)} placeholder={tr('control.discounts.modal.discountNamePlaceholder', 'Discount name')} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200 placeholder:text-gray-500" />
+                        </div>
+                        <div className="flex w-full items-center">
+                          <label className="block font-medium text-gray-200 min-w-[100px]">{tr('control.discounts.modal.discountOn', 'Discount on')} : </label>
+                          <Dropdown options={DISCOUNT_ON_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.on.${opt.value}`, opt.label) }))} value={discountOn} onChange={setDiscountOn} placeholder={tr('control.discounts.on.products', 'Products')} className="text-md min-w-[150px]" />
+                        </div>
                       </div>
-                      <label className="block items-center font-medium text-gray-200">{tr('control.discounts.modal.combinable', 'Combinable')}</label>
+                      <div className="flex w-full items-center flex-wrap">
+                        <div className="flex items-center">
+                          <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.discounts.modal.trigger', 'Trigger')} : </label>
+                          <Dropdown options={DISCOUNT_TRIGGER_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.trigger.${opt.value}`, opt.label) }))} value={discountTrigger} onChange={setDiscountTrigger} placeholder={tr('control.discounts.trigger.number', 'Number')} className="text-md min-w-[150px]" />
+                        </div>
+                        <div className="flex gap-5 items-center pl-5">
+                          <input type="text" value={discountPieces} onChange={(e) => setDiscountPieces(e.target.value)} placeholder="" className="px-4 w-[70px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
+                          <label className="block font-medium text-gray-200">{tr('control.discounts.modal.pieces', 'Piece(s)')}</label>
+                        </div>
+                        <div className="flex items-center gap-3 pl-5">
+                          <div className="flex items-center justify-start">
+                            <input type="checkbox" checked={discountCombinable} onChange={(e) => setDiscountCombinable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                          </div>
+                          <label className="block items-center font-medium text-gray-200">{tr('control.discounts.modal.combinable', 'Combinable')}</label>
+                        </div>
+                      </div>
+                      <div className="flex w-full items-center flex-wrap">
+                        <div className="flex items-center">
+                          <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.optionButton.discount', 'Discount')} : </label>
+                          <Dropdown options={DISCOUNT_TYPE_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.type.${opt.value}`, opt.label) }))} value={discountType} onChange={setDiscountType} placeholder={tr('control.discounts.type.amount', 'Amount')} className="text-md min-w-[150px]" />
+                        </div>
+                        <div className="flex items-center pl-5 gap-5">
+                          <input type="text" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder="0" className="flex-1 px-4 max-w-[70px] h-[40px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200" />
+                          <span className="text-md text-gray-200 shrink-0">{tr('control.discounts.modal.currency', 'euro')}</span>
+                        </div>
+                      </div>
+                      <div className="flex w-full items-center">
+                        <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.discounts.modal.startDate', 'Starting date')} : </label>
+                        <div className="flex items-center gap-5 w-[150px]">
+                          <input
+                            type="text"
+                            readOnly
+                            value={formatDateForCurrentLanguage(discountStartDate)}
+                            placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
+                            className="flex-1 px-4 h-[40px] w-[150px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
+                            onClick={() => setDiscountCalendarField('start')}
+                          />
+                          <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('start')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex w-full items-center">
+                        <label className="block min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.discounts.modal.endDate', 'End date')} : </label>
+                        <div className="flex items-center gap-5 w-[150px]">
+                          <input
+                            type="text"
+                            readOnly
+                            value={formatDateForCurrentLanguage(discountEndDate)}
+                            placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
+                            className="flex-1 px-4 h-[40px] py-3 w-[150px] border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
+                            onClick={() => setDiscountCalendarField('end')}
+                          />
+                          <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('end')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex w-full items-center flex-wrap">
-                    <div className="flex items-center">
-                      <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.optionButton.discount', 'Discount')} : </label>
-                      <Dropdown options={DISCOUNT_TYPE_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.type.${opt.value}`, opt.label) }))} value={discountType} onChange={setDiscountType} placeholder={tr('control.discounts.type.amount', 'Amount')} className="text-md min-w-[150px]" />
-                    </div>
-                    <div className="flex items-center pl-5 gap-5">
-                      <input type="text" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder="0" className="flex-1 px-4 max-w-[70px] h-[40px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200" />
-                      <span className="text-md text-gray-200 shrink-0">{tr('control.discounts.modal.currency', 'euro')}</span>
-                    </div>
-                  </div>
-                  <div className="flex w-full items-center">
-                    <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.discounts.modal.startDate', 'Starting date')} : </label>
-                    <div className="flex items-center gap-5 w-[150px]">
-                      <input
-                        type="text"
-                        readOnly
-                        value={formatDateForCurrentLanguage(discountStartDate)}
-                        placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
-                        className="flex-1 px-4 h-[40px] w-[150px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
-                        onClick={() => setDiscountCalendarField('start')}
+                    <div className="flex flex-col w-1/3 max-w-md items-center gap-3">
+                      <Dropdown
+                        options={visibleDiscountTargetOptions}
+                        value={discountTargetId}
+                        onChange={(v) => {
+                          if (!v) return;
+                          setDiscountTargetIds((prev) => (prev.includes(v) ? prev : [...prev, v]));
+                          setDiscountTargetId('');
+                        }}
+                        placeholder={discountOn === 'categories' ? tr('control.discounts.on.categories', 'Categories') : tr('control.discounts.on.products', 'Products')}
+                        className="text-md min-w-[150px] w-full"
                       />
-                      <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('start')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex w-full items-center">
-                    <label className="block min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.discounts.modal.endDate', 'End date')} : </label>
-                    <div className="flex items-center gap-5 w-[150px]">
-                      <input
-                        type="text"
-                        readOnly
-                        value={formatDateForCurrentLanguage(discountEndDate)}
-                        placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
-                        className="flex-1 px-4 h-[40px] py-3 w-[150px] border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
-                        onClick={() => setDiscountCalendarField('end')}
-                      />
-                      <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('end')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      </button>
+                      <div
+                        ref={discountTargetListRef}
+                        className="w-full min-h-[220px] max-h-[220px] rounded-lg border border-gray-300 bg-pos-panel/30 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                        onScroll={updateDiscountTargetScrollState}
+                      >
+                        <ul className="p-2">
+                          {discountTargetIds.map((id) => (
+                            <li key={id} className="text-md py-1.5 px-2 flex items-center justify-between gap-2 text-gray-200 hover:bg-pos-panel/70 rounded">
+                              <span className="truncate">{discountTargetOptionMap.get(String(id)) || String(id)}</span>
+                              <button
+                                type="button"
+                                className="p-1 rounded hover:bg-pos-panel"
+                                onClick={() => setDiscountTargetIds((prev) => prev.filter((x) => x !== id))}
+                                aria-label="Remove"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="flex w-full justify-around gap-2 items-center pt-2">
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                          aria-label="Scroll up"
+                          disabled={!canDiscountTargetScrollUp}
+                          onClick={() => scrollDiscountTargetByPage('up')}
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                          aria-label="Scroll down"
+                          disabled={!canDiscountTargetScrollDown}
+                          onClick={() => scrollDiscountTargetByPage('down')}
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col w-1/3 max-w-md items-center gap-3">
-                  <Dropdown options={[{ value: 'a', label: 'a' }]} value="a" onChange={() => { }} placeholder="a" className="text-md min-w-[150px] w-full" />
-                  <div className="w-full min-h-[220px] rounded-lg border border-gray-300 bg-pos-panel/30" />
-                  <div className="flex w-full justify-around gap-2 items-center pt-2">
-                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Up">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                    </button>
-                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Down">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                  </div>
+                <div className="flex justify-center pb-5 shrink-0">
+                  <button
+                    type="button"
+                    className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                    disabled={savingDiscount}
+                    onClick={handleSaveDiscount}
+                  >
+                    <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                    {tr('control.save', 'Save')}
+                  </button>
                 </div>
+                <div className="shrink-0">
+                  <KeyboardWithNumpad value={discountKeyboardValue} onChange={setDiscountKeyboardValue} />
+                </div>
+                {discountCalendarField && (
+                  <CalendarModal
+                    open
+                    onClose={() => setDiscountCalendarField(null)}
+                    value={discountCalendarField === 'start' ? discountStartDate : discountEndDate}
+                    onChange={(date) => {
+                      const yyyy = date.getFullYear();
+                      const mm = String(date.getMonth() + 1).padStart(2, '0');
+                      const dd = String(date.getDate()).padStart(2, '0');
+                      const iso = `${yyyy}-${mm}-${dd}`;
+                      if (discountCalendarField === 'start') setDiscountStartDate(iso);
+                      else setDiscountEndDate(iso);
+                    }}
+                  />
+                )}
               </div>
             </div>
-            <div className="flex justify-center pb-5 shrink-0">
-              <button
-                type="button"
-                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
-                disabled={savingDiscount}
-                onClick={handleSaveDiscount}
-              >
-                <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                {tr('control.save', 'Save')}
-              </button>
-            </div>
-            <div className="shrink-0">
-              <KeyboardWithNumpad value={discountKeyboardValue} onChange={setDiscountKeyboardValue} />
-            </div>
-            {discountCalendarField && (
-              <CalendarModal
-                open
-                onClose={() => setDiscountCalendarField(null)}
-                value={discountCalendarField === 'start' ? discountStartDate : discountEndDate}
-                onChange={(date) => {
-                  const yyyy = date.getFullYear();
-                  const mm = String(date.getMonth() + 1).padStart(2, '0');
-                  const dd = String(date.getDate()).padStart(2, '0');
-                  const iso = `${yyyy}-${mm}-${dd}`;
-                  if (discountCalendarField === 'start') setDiscountStartDate(iso);
-                  else setDiscountEndDate(iso);
-                }}
-              />
-            )}
-          </div>
-        </div>
+          );
+        })()
       )}
 
       {/* New / Edit kitchen message modal */}
@@ -6800,69 +6986,71 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* New / Edit table location modal */}
       {showTableLocationModal && topNavId === 'tables' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border justify-between items-center shadow-2xl max-w-[1430px] w-full overflow-hidden h-[1000px]" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeTableLocationModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 overflow-auto flex-1 flex flex-col gap-10 mt-[100px]">
-              <div className="flex items-center gap-3">
-                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Table Name:</span>
-                <input
-                  type="text"
-                  ref={tableLocationNameInputRef}
-                  value={tableLocationName}
-                  onChange={(e) => setTableLocationName(e.target.value)}
-                  onClick={(e) => {
-                    setTableLocationSelectionStart(e.target.selectionStart ?? 0);
-                    setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
-                  }}
-                  onKeyUp={(e) => {
-                    setTableLocationSelectionStart(e.target.selectionStart ?? 0);
-                    setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
-                  }}
-                  onSelect={(e) => {
-                    setTableLocationSelectionStart(e.target.selectionStart ?? 0);
-                    setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
-                  }}
-                  placeholder="e.g. room 1"
-                  className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text caret-white text-xl focus:outline-none focus:border-green-500"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Background:</span>
-                <Dropdown
-                  options={TABLE_LOCATION_BACKGROUND_OPTIONS}
-                  value={tableLocationBackground}
-                  onChange={setTableLocationBackground}
-                  placeholder="Default"
-                  className="flex-1 text-xl min-w-0 max-w-[280px]"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-pos-text text-xl font-medium shrink-0 w-[160px]">Text color:</span>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'light'} onChange={() => setTableLocationTextColor('light')} className="w-6 h-6" />
-                    <span className="text-pos-text text-xl">light</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'dark'} onChange={() => setTableLocationTextColor('dark')} className="w-6 h-6" />
-                    <span className="text-pos-text text-xl">dark</span>
-                  </label>
+            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
+              <div className="w-full flex flex-col justify-center items-center gap-10">
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Table Name :</label>
+                  <input
+                    type="text"
+                    ref={tableLocationNameInputRef}
+                    value={tableLocationName}
+                    onChange={(e) => setTableLocationName(e.target.value)}
+                    onClick={(e) => {
+                      setTableLocationSelectionStart(e.target.selectionStart ?? 0);
+                      setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
+                    }}
+                    onKeyUp={(e) => {
+                      setTableLocationSelectionStart(e.target.selectionStart ?? 0);
+                      setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
+                    }}
+                    onSelect={(e) => {
+                      setTableLocationSelectionStart(e.target.selectionStart ?? 0);
+                      setTableLocationSelectionEnd(e.target.selectionEnd ?? 0);
+                    }}
+                    placeholder="e.g. room 1"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200 caret-white focus:outline-none focus:border-green-500"
+                  />
+                </div>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Background :</label>
+                  <Dropdown
+                    options={TABLE_LOCATION_BACKGROUND_OPTIONS}
+                    value={tableLocationBackground}
+                    onChange={setTableLocationBackground}
+                    placeholder="Default"
+                    className="text-md min-w-[200px]"
+                  />
+                </div>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Text color :</label>
+                  <div className="w-[200px] flex gap-6 items-center justify-start">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'light'} onChange={() => setTableLocationTextColor('light')} className="w-5 h-5 rounded border-gray-300" />
+                      <span className="text-gray-200 text-md">light</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="tableLocationTextColor" checked={tableLocationTextColor === 'dark'} onChange={() => setTableLocationTextColor('dark')} className="w-5 h-5 rounded border-gray-300" />
+                      <span className="text-gray-200 text-md">dark</span>
+                    </label>
+                  </div>
                 </div>
               </div>
-              <div className="flex justify-center pt-16">
-                <button
-                  type="button"
-                  className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
-                  disabled={savingTableLocation}
-                  onClick={handleSaveTableLocation}
-                >
-                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                  Save
-                </button>
-              </div>
+            </div>
+            <div className="flex justify-center pt-5 pb-5">
+              <button
+                type="button"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                disabled={savingTableLocation}
+                onClick={handleSaveTableLocation}
+              >
+                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                Save
+              </button>
             </div>
             <div className="shrink-0">
               <KeyboardWithNumpad
@@ -9043,7 +9231,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           key={c.id}
                           type="button"
                           onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); }}
-                          className={`px-4 py-2 text-md font-medium border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-green-600 text-white' : 'bg-pos-panel text-gray-200 hover:bg-pos-bg'
+                          className={`px-4 py-2 text-sm font-medium border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-green-600 text-white' : 'bg-pos-panel text-gray-200 hover:bg-pos-bg'
                             }`}
                         >
                           {(c.name || '').toUpperCase()}
@@ -9075,7 +9263,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
                 <div className="flex-1 min-h-0 grid grid-cols-[200px_1fr] gap-4">
                   <div
-                    className="border border-gray-300 bg-pos-panel/50 p-3 overflow-y-auto rounded-lg"
+                    className="border border-gray-300 bg-pos-panel/50 p-3 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden rounded-lg"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDropOnPool}
                   >
@@ -9097,7 +9285,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-0 border border-gray-300 bg-pos-panel/30 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-5 gap-0 flex h-full justify-center items-center bg-pos-panel/30 rounded-lg overflow-hidden">
                     {cells.map((itemId, idx) => {
                       const item = itemId ? itemMap.get(itemId) : null;
                       const selected = item && positioningSelectedProductId === item.id && positioningSelectedCellIndex === idx;
@@ -9108,7 +9296,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       return (
                         <div
                           key={item?.id || `empty-${idx}`}
-                          className={`h-[70px] border border-gray-300 px-2 text-center text-md ${tileClass} ${selected ? 'ring-2 ring-gray-300' : ''}`}
+                          className={`h-[75px] border border-gray-300 px-2 text-center text-md ${tileClass} ${selected ? 'ring-2 ring-gray-300' : ''}`}
                           style={selected ? { boxShadow: 'inset 0 0 0 2px #9ca3af' } : undefined}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDropOnCell(e, idx)}
@@ -9137,7 +9325,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="px-6 py-3 rounded-lg border border-gray-300 text-md font-medium text-gray-200 bg-pos-panel hover:bg-pos-bg disabled:opacity-50"
+                      className="px-6 py-2 rounded-lg border border-gray-300 text-md font-medium text-gray-200 bg-pos-panel hover:bg-pos-bg disabled:opacity-50"
                       disabled={!Number.isInteger(positioningSelectedCellIndex)}
                       onClick={removeFromPlace}
                     >
@@ -9162,11 +9350,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                   <button
                     type="button"
-                    className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                    className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                     disabled={savingPositioningLayout}
                     onClick={saveProductPositioningLayout}
                   >
-                    <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                    <svg fill="#ffffff" width="16px" height="16px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                     {savingPositioningLayout ? tr('control.saving', 'Saving...') : tr('control.save', 'Save')}
                   </button>
                 </div>
