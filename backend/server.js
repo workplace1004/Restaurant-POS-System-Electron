@@ -1457,6 +1457,99 @@ app.post('/api/payment-terminals/:id/test', async (req, res) => {
   }
 });
 
+// ---------- Payment methods (Control + checkout) ----------
+app.get('/api/payment-methods', async (req, res) => {
+  try {
+    const activeOnly =
+      req.query.active === '1' ||
+      req.query.active === 'true' ||
+      req.query.activeOnly === '1' ||
+      req.query.activeOnly === 'true';
+    const list = await prisma.paymentMethod.findMany({
+      where: activeOnly ? { active: true } : undefined,
+      orderBy: { sortOrder: 'asc' },
+    });
+    res.json({ data: list.map(paymentMethodToApi) });
+  } catch (err) {
+    console.error('GET /api/payment-methods', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch payment methods' });
+  }
+});
+
+app.post('/api/payment-methods', async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const integration = normalizePaymentIntegration(req.body?.integration);
+    const active = !(req.body?.active === false || req.body?.active === 0);
+    const maxRow = await prisma.paymentMethod.aggregate({ _max: { sortOrder: true } });
+    const sortOrder = Number.isFinite(Number(req.body?.sortOrder))
+      ? Number(req.body.sortOrder)
+      : (maxRow._max.sortOrder ?? -1) + 1;
+    const created = await prisma.paymentMethod.create({
+      data: { name, integration, active, sortOrder },
+    });
+    res.status(201).json({ data: paymentMethodToApi(created) });
+  } catch (err) {
+    console.error('POST /api/payment-methods', err);
+    res.status(500).json({ error: err.message || 'Failed to create payment method' });
+  }
+});
+
+app.put('/api/payment-methods/reorder', async (req, res) => {
+  try {
+    const ids = req.body?.orderedIds || req.body?.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'orderedIds array is required' });
+    }
+    await prisma.$transaction(
+      ids.map((id, i) =>
+        prisma.paymentMethod.update({
+          where: { id: String(id) },
+          data: { sortOrder: i },
+        }),
+      ),
+    );
+    const list = await prisma.paymentMethod.findMany({ orderBy: { sortOrder: 'asc' } });
+    res.json({ data: list.map(paymentMethodToApi) });
+  } catch (err) {
+    console.error('PUT /api/payment-methods/reorder', err);
+    res.status(500).json({ error: err.message || 'Failed to reorder payment methods' });
+  }
+});
+
+app.put('/api/payment-methods/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const data = {};
+    if (req.body.name !== undefined) {
+      const name = String(req.body.name).trim();
+      if (!name) return res.status(400).json({ error: 'name cannot be empty' });
+      data.name = name;
+    }
+    if (req.body.active !== undefined) data.active = !(req.body.active === false || req.body.active === 0);
+    if (req.body.integration !== undefined) data.integration = normalizePaymentIntegration(req.body.integration);
+    if (req.body.sortOrder !== undefined) data.sortOrder = Number(req.body.sortOrder);
+    const updated = await prisma.paymentMethod.update({ where: { id }, data });
+    res.json({ data: paymentMethodToApi(updated) });
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Payment method not found' });
+    console.error('PUT /api/payment-methods/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to update payment method' });
+  }
+});
+
+app.delete('/api/payment-methods/:id', async (req, res) => {
+  try {
+    await prisma.paymentMethod.delete({ where: { id: req.params.id } });
+    res.status(204).send();
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Payment method not found' });
+    console.error('DELETE /api/payment-methods/:id', err);
+    res.status(500).json({ error: err.message || 'Failed to delete payment method' });
+  }
+});
+
 // ---------- Printers – same API as 123 ----------
 function printerToApi(p) {
   if (!p) return p;
@@ -1500,6 +1593,86 @@ function validatePrinterConnection(type, connectionString) {
 
 function formatEuroAmount(value) {
   return `€${(Math.round((Number(value) || 0) * 100) / 100).toFixed(2)}`;
+}
+
+const PAYMENT_INTEGRATIONS = new Set(['manual_cash', 'cashmatic', 'payworld', 'generic']);
+
+function normalizePaymentIntegration(value) {
+  const v = String(value || '').trim().toLowerCase();
+  return PAYMENT_INTEGRATIONS.has(v) ? v : 'generic';
+}
+
+function paymentMethodToApi(m) {
+  if (!m) return m;
+  return {
+    id: m.id,
+    name: m.name,
+    active: !!m.active,
+    sortOrder: m.sortOrder ?? 0,
+    integration: m.integration || 'generic',
+  };
+}
+
+/** Build paid total and receipt lines from new `amounts` map or legacy cash/bancontact/visa/payworld. */
+async function resolveReceiptPaymentBreakdown(paymentBreakdown, dbTotal) {
+  const raw = paymentBreakdown || {};
+  const amounts = raw.amounts && typeof raw.amounts === 'object' ? raw.amounts : null;
+
+  if (amounts && Object.keys(amounts).length > 0) {
+    const ids = Object.keys(amounts).filter((id) => Math.max(0, Number(amounts[id]) || 0) > 0.0001);
+    if (ids.length === 0) {
+      return { paidTotal: 0, paymentMethodLines: [], paymentMethodsSummary: {} };
+    }
+    const methods = await prisma.paymentMethod.findMany({ where: { id: { in: ids } } });
+    const byId = new Map(methods.map((m) => [m.id, m]));
+    let paidTotalRaw = 0;
+    const paymentMethodLines = [];
+    const paymentMethodsSummary = {};
+    for (const id of ids) {
+      const amt = Math.round(Math.max(0, Number(amounts[id]) || 0) * 100) / 100;
+      if (amt <= 0) continue;
+      paidTotalRaw += amt;
+      const m = byId.get(id);
+      const label = m?.name ? String(m.name).toUpperCase() : 'METHOD';
+      paymentMethodLines.push(`${label}: ${formatEuroAmount(amt)}`);
+      paymentMethodsSummary[id] = { name: m?.name || id, amount: amt, integration: m?.integration || 'generic' };
+    }
+    const paidTotal = Math.round(paidTotalRaw * 100) / 100;
+    return { paidTotal, paymentMethodLines, paymentMethodsSummary };
+  }
+
+  const cash = Math.max(0, Number(raw.cash) || 0);
+  const bancontact = Math.max(0, Number(raw.bancontact) || 0);
+  const visa = Math.max(0, Number(raw.visa) || 0);
+  const payworld = Math.max(0, Number(raw.payworld) || 0);
+  const paidTotalRaw = cash + bancontact + visa + payworld;
+  const paidTotal = Math.round((paidTotalRaw > 0 ? paidTotalRaw : dbTotal) * 100) / 100;
+  const paymentMethodLines = [
+    cash > 0 ? `CASHMATIC: ${formatEuroAmount(cash)}` : null,
+    bancontact > 0 ? `BANCONTACT: ${formatEuroAmount(bancontact)}` : null,
+    visa > 0 ? `VISA: ${formatEuroAmount(visa)}` : null,
+    payworld > 0 ? `PAYWORLD: ${formatEuroAmount(payworld)}` : null,
+  ].filter(Boolean);
+  return {
+    paidTotal,
+    paymentMethodLines,
+    paymentMethodsSummary: { cash, bancontact, visa, payworld },
+  };
+}
+
+async function ensureDefaultPaymentMethods() {
+  const count = await prisma.paymentMethod.count();
+  if (count > 0) return;
+  await prisma.paymentMethod.createMany({
+    data: [
+      { name: 'Cash', integration: 'manual_cash', active: true, sortOrder: 0 },
+      { name: 'Cashmatic', integration: 'cashmatic', active: true, sortOrder: 1 },
+      { name: 'Card (Payworld)', integration: 'payworld', active: true, sortOrder: 2 },
+      { name: 'Bancontact', integration: 'generic', active: true, sortOrder: 3 },
+      { name: 'Visa', integration: 'generic', active: false, sortOrder: 4 },
+    ],
+  });
+  serverLog('payment-methods', 'Seeded default payment methods');
 }
 
 function parseTcpTarget(connectionString) {
@@ -1807,19 +1980,10 @@ app.post('/api/printers/receipt', async (req, res) => {
 
     const dbTotal = Math.round(order.items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0) * 100) / 100;
     const paymentBreakdown = req.body?.paymentBreakdown || {};
-    const cash = Math.max(0, Number(paymentBreakdown.cash) || 0);
-    const bancontact = Math.max(0, Number(paymentBreakdown.bancontact) || 0);
-    const visa = Math.max(0, Number(paymentBreakdown.visa) || 0);
-    const paidTotalRaw = cash + bancontact + visa;
-    const paidTotal = Math.round((paidTotalRaw > 0 ? paidTotalRaw : dbTotal) * 100) / 100;
+    const { paidTotal, paymentMethodLines, paymentMethodsSummary } = await resolveReceiptPaymentBreakdown(paymentBreakdown, dbTotal);
     if (Math.abs(paidTotal - dbTotal) > 0.009) {
       return res.status(400).json({ error: `Paid total (${formatEuroAmount(paidTotal)}) must match order total (${formatEuroAmount(dbTotal)}).` });
     }
-    const paymentMethodLines = [
-      cash > 0 ? `CASHMATIC: ${formatEuroAmount(cash)}` : null,
-      bancontact > 0 ? `BANCONTACT: ${formatEuroAmount(bancontact)}` : null,
-      visa > 0 ? `VISA: ${formatEuroAmount(visa)}` : null,
-    ].filter(Boolean);
 
     const requestedPrinterId = req.body?.printerId ? String(req.body.printerId).trim() : null;
     const enabledPrinters = await prisma.printer.findMany({
@@ -1916,7 +2080,7 @@ app.post('/api/printers/receipt', async (req, res) => {
       items: itemLines.length,
       total: dbTotal,
       paidTotal,
-      paymentMethods: { cash, bancontact, visa },
+      paymentMethods: paymentMethodsSummary,
     });
     return res.json({
       success: true,
@@ -1927,7 +2091,7 @@ app.post('/api/printers/receipt', async (req, res) => {
         printerName: defaultPrinter.name,
         total: dbTotal,
         paidTotal,
-        paymentMethods: { cash, bancontact, visa },
+        paymentMethods: paymentMethodsSummary,
         items: itemLines,
         printJobs,
         printed: true,
@@ -2360,18 +2524,25 @@ io.on('connection', (socket) => {
 const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || '0.0.0.0';
 
-httpServer.listen(PORT, HOST, () => {
-  const nets = os.networkInterfaces();
-  const ipv4s = [];
-  for (const items of Object.values(nets)) {
-    for (const info of items || []) {
-      if (info.family === 'IPv4' && !info.internal) ipv4s.push(info.address);
+(async () => {
+  try {
+    await ensureDefaultPaymentMethods();
+  } catch (e) {
+    console.error('ensureDefaultPaymentMethods failed', e);
+  }
+  httpServer.listen(PORT, HOST, () => {
+    const nets = os.networkInterfaces();
+    const ipv4s = [];
+    for (const items of Object.values(nets)) {
+      for (const info of items || []) {
+        if (info.family === 'IPv4' && !info.internal) ipv4s.push(info.address);
+      }
     }
-  }
-  console.log(`POS Backend running on ${HOST}:${PORT}`);
-  console.log(`Local:  http://localhost:${PORT}`);
-  if (ipv4s.length) {
-    console.log('LAN URLs:');
-    for (const ip of ipv4s) console.log(`- http://${ip}:${PORT}`);
-  }
-});
+    console.log(`POS Backend running on ${HOST}:${PORT}`);
+    console.log(`Local:  http://localhost:${PORT}`);
+    if (ipv4s.length) {
+      console.log('LAN URLs:');
+      for (const ip of ipv4s) console.log(`- http://${ip}:${PORT}`);
+    }
+  });
+})();

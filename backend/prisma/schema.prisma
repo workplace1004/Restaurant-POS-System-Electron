@@ -184,6 +184,17 @@ model PaymentTerminal {
   updatedAt        DateTime @updatedAt
 }
 
+// POS payment methods (Control → DB; checkout uses active methods)
+model PaymentMethod {
+  id           String   @id @default(cuid())
+  name         String
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  integration  String   @default("generic") // manual_cash | cashmatic | payworld | generic
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model KitchenMessage {
   id   String @id @default(cuid())
   name String
