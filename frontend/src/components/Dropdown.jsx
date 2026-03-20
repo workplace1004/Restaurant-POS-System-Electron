@@ -63,7 +63,7 @@ export function Dropdown({ options = [], value, onChange, placeholder = 'Selectâ
           key={opt.value}
           role="option"
           aria-selected={opt.value === value}
-          className={`px-4 py-2 cursor-pointer text-white text-lg transition-colors ${opt.value === value ? 'bg-pos-panel font-medium' : 'text-gray-800 hover:bg-pos-panel'}`}
+          className={`px-4 py-2 cursor-pointer text-white text-md transition-colors ${opt.value === value ? 'bg-pos-panel font-medium' : 'text-gray-800 hover:bg-pos-panel'}`}
           onClick={() => {
             onChange(opt.value);
             setOpen(false);
@@ -81,7 +81,7 @@ export function Dropdown({ options = [], value, onChange, placeholder = 'Selectâ
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
-        className={`w-full flex items-center h-[50px] justify-between gap-2 px-4 py-3 text-left border border-gray-300 rounded-lg bg-pos-panel text-white text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+        className={`w-full flex items-center h-[40px] justify-between gap-2 px-4 py-3 text-left border border-gray-300 rounded-lg bg-pos-panel text-white text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={displayLabel}

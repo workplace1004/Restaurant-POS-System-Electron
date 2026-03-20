@@ -193,7 +193,7 @@ export function KeyboardWithNumpad({
             </button>
           </div>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           {NUMPAD.map((row, i) => (
             <div key={i} className="flex gap-1">
               {row.map((k) => (

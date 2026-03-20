@@ -757,6 +757,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [savingDiscount, setSavingDiscount] = useState(false);
   const [deleteConfirmDiscountId, setDeleteConfirmDiscountId] = useState(null);
   const [discountCalendarField, setDiscountCalendarField] = useState(null); // 'start' | 'end' | null
+  const discountsListRef = useRef(null);
+  const [canDiscountsScrollUp, setCanDiscountsScrollUp] = useState(false);
+  const [canDiscountsScrollDown, setCanDiscountsScrollDown] = useState(false);
 
   const [kitchenMessages, setKitchenMessages] = useState([]);
   const [showKitchenMessageModal, setShowKitchenMessageModal] = useState(false);
@@ -787,7 +790,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [categoryActiveField, setCategoryActiveField] = useState('name');
   const [savingCategory, setSavingCategory] = useState(false);
   const [deleteConfirmCategoryId, setDeleteConfirmCategoryId] = useState(null);
-  const [categoriesPage, setCategoriesPage] = useState(0);
+  const categoriesListRef = useRef(null);
+  const [canCategoriesScrollUp, setCanCategoriesScrollUp] = useState(false);
+  const [canCategoriesScrollDown, setCanCategoriesScrollDown] = useState(false);
   const [productsPage, setProductsPage] = useState(0);
 
   const [products, setProducts] = useState([]);
@@ -1171,10 +1176,101 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [deleteConfirmGroupId, setDeleteConfirmGroupId] = useState(null);
   const [savingGroup, setSavingGroup] = useState(false);
   const [selectedManageGroupId, setSelectedManageGroupId] = useState(null);
+  const manageGroupsListRef = useRef(null);
+  const manageGroupsDragRef = useRef({ active: false, startY: 0, startScrollTop: 0, pointerId: null });
+  const [canManageGroupsPageUp, setCanManageGroupsPageUp] = useState(false);
+  const [canManageGroupsPageDown, setCanManageGroupsPageDown] = useState(false);
+  const LOCALE_BY_LANG = { en: 'en-US', nl: 'nl-NL', fr: 'fr-FR', tr: 'tr-TR' };
 
   const showToast = useCallback((type, text) => {
     setToast({ id: Date.now(), type, text });
   }, []);
+
+  const updateManageGroupsPaginationState = useCallback(() => {
+    const el = manageGroupsListRef.current;
+    if (!el) {
+      setCanManageGroupsPageUp(false);
+      setCanManageGroupsPageDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanManageGroupsPageUp(el.scrollTop > 0);
+    setCanManageGroupsPageDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const pageManageGroups = useCallback((direction) => {
+    const el = manageGroupsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
+  const updateDiscountsScrollState = useCallback(() => {
+    const el = discountsListRef.current;
+    if (!el) {
+      setCanDiscountsScrollUp(false);
+      setCanDiscountsScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanDiscountsScrollUp(el.scrollTop > 0);
+    setCanDiscountsScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollDiscountsByPage = useCallback((direction) => {
+    const el = discountsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
+  const updateCategoriesScrollState = useCallback(() => {
+    const el = categoriesListRef.current;
+    if (!el) {
+      setCanCategoriesScrollUp(false);
+      setCanCategoriesScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanCategoriesScrollUp(el.scrollTop > 0);
+    setCanCategoriesScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollCategoriesByPage = useCallback((direction) => {
+    const el = categoriesListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
+  const formatDateForCurrentLanguage = useCallback((isoDate) => {
+    if (!isoDate) return '';
+    const d = new Date(isoDate);
+    if (Number.isNaN(d.getTime())) return isoDate;
+    return d.toLocaleDateString(LOCALE_BY_LANG[lang] || 'en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+    });
+  }, [lang]);
+
+  useEffect(() => {
+    if (!showManageGroupsModal) return;
+    updateManageGroupsPaginationState();
+  }, [showManageGroupsModal, subproductGroups, updateManageGroupsPaginationState]);
+
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Discounts') return;
+    updateDiscountsScrollState();
+  }, [topNavId, subNavId, discounts, updateDiscountsScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Categories') return;
+    updateCategoriesScrollState();
+  }, [topNavId, subNavId, categories, updateCategoriesScrollState]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1215,10 +1311,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   useEffect(() => {
     if (subNavId === 'Categories') fetchCategories();
   }, [subNavId, fetchCategories]);
-
-  useEffect(() => {
-    if (topNavId !== 'categories-products' || subNavId !== 'Categories') setCategoriesPage(0);
-  }, [topNavId, subNavId]);
 
   useEffect(() => {
     if (topNavId !== 'categories-products' || subNavId !== 'Products') setProductsPage(0);
@@ -5243,13 +5335,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               })()}
             </div>
           ) : topNavId === 'categories-products' && subNavId === 'Categories' ? (() => {
-            const CATEGORIES_PER_PAGE = 11;
             const sortedCategories = [...categories].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-            const totalCategoriesPages = Math.max(1, Math.ceil(sortedCategories.length / CATEGORIES_PER_PAGE));
-            const page = Math.min(categoriesPage, totalCategoriesPages - 1);
-            const paginatedCategories = sortedCategories.slice(page * CATEGORIES_PER_PAGE, (page + 1) * CATEGORIES_PER_PAGE);
-            const canPrev = page > 0;
-            const canNext = page < totalCategoriesPages - 1;
             return (
               <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
                 <div className="flex items-center w-full justify-center mb-2">
@@ -5262,69 +5348,78 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     {tr('control.categories.new', 'New category')}
                   </button>
                 </div>
-                <ul className="w-full flex flex-col">
-                  {categoriesLoading ? (
+                {categoriesLoading ? (
+                  <ul className="w-full flex flex-col">
                     <li className="text-pos-muted text-xl py-4">{tr('control.categories.loading', 'Loading categories...')}</li>
-                  ) : sortedCategories.length === 0 ? (
+                  </ul>
+                ) : sortedCategories.length === 0 ? (
+                  <ul className="w-full flex flex-col">
                     <li className="text-pos-muted text-3xl py-4">{tr('control.categories.empty', 'No categories yet.')}</li>
-                  ) : (
-                    paginatedCategories.map((cat, index) => {
-                      const globalIndex = page * CATEGORIES_PER_PAGE + index;
-                      return (
-                        <li
-                          key={cat.id}
-                          className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
-                        >
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
-                              onClick={() => handleMoveCategory(cat.id, 'down')}
-                              disabled={globalIndex >= sortedCategories.length - 1}
-                              aria-label="Move down"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
-                              onClick={() => handleMoveCategory(cat.id, 'up')}
-                              disabled={globalIndex <= 0}
-                              aria-label="Move up"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v14" /></svg>
-                            </button>
-                          </div>
-                          <span className="flex-1 text-center font-medium">{cat.name}</span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
-                              onClick={() => openEditCategoryModal(cat)}
-                              aria-label="Edit"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                              onClick={() => setDeleteConfirmCategoryId(cat.id)}
-                              aria-label="Delete"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-                {sortedCategories.length > 0 && (
+                  </ul>
+                ) : (
+                  <>
+                    <div
+                      ref={categoriesListRef}
+                      className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                      onScroll={updateCategoriesScrollState}
+                    >
+                      <ul className="w-full flex flex-col">
+                        {sortedCategories.map((cat, index) => (
+                          <li
+                            key={cat.id}
+                            className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
+                          >
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
+                                onClick={() => handleMoveCategory(cat.id, 'down')}
+                                disabled={index >= sortedCategories.length - 1}
+                                aria-label="Move down"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
+                                onClick={() => handleMoveCategory(cat.id, 'up')}
+                                disabled={index <= 0}
+                                aria-label="Move up"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v14" /></svg>
+                              </button>
+                            </div>
+                            <span className="flex-1 text-center font-medium">{cat.name}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
+                                onClick={() => openEditCategoryModal(cat)}
+                                aria-label="Edit"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                onClick={() => setDeleteConfirmCategoryId(cat.id)}
+                                aria-label="Delete"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                )}
+                {sortedCategories.length > 0 && !categoriesLoading && (
                   <PaginationArrows
-                    canPrev={canPrev}
-                    canNext={canNext}
-                    onPrev={() => setCategoriesPage((p) => Math.max(0, p - 1))}
-                    onNext={() => setCategoriesPage((p) => Math.min(totalCategoriesPages - 1, p + 1))}
+                    canPrev={canCategoriesScrollUp}
+                    canNext={canCategoriesScrollDown}
+                    onPrev={() => scrollCategoriesByPage('up')}
+                    onNext={() => scrollCategoriesByPage('down')}
                   />
                 )}
               </div>
@@ -5337,21 +5432,21 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             const canPrevProducts = productsPageClamped > 0;
             const canNextProducts = productsPageClamped < totalProductsPages - 1;
             return (
-              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[880px] flex flex-col pb-24">
-                {/* Action bar: New Product, Positioning, Search (right-aligned like reference) */}
-                <div className="flex items-center w-full justify-around gap-4 mb-4 flex-wrap">
+              <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px] flex flex-col">
+                {/* Action bar: New Product, Positioning, Search */}
+                <div className="flex items-center w-full justify-center gap-4 mb-2 flex-wrap">
                   <button
                     type="button"
                     disabled={!selectedCategoryId || productsLoading}
                     onClick={openProductModal}
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                   >
                     {tr('control.products.new', 'New Product')}
                   </button>
                   <button
                     type="button"
                     onClick={openProductPositioningModal}
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                   >
                     {tr('control.products.positioning', 'Positioning')}
                   </button>
@@ -5362,12 +5457,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     placeholder={tr('control.products.searchPlaceholder', 'Search products')}
                     onClick={() => setShowProductSearchKeyboard(true)}
                     onFocus={() => setShowProductSearchKeyboard(true)}
-                    className="px-4 py-2 rounded-lg bg-pos-bg border border-pos-border text-pos-text text-xl min-w-[200px] placeholder:text-pos-muted cursor-pointer"
+                    className="px-4 py-3 rounded-lg bg-pos-bg border border-pos-border text-pos-text text-sm min-w-[200px] placeholder:text-pos-muted cursor-pointer"
                   />
                 </div>
                 {/* Category tabs: horizontal, scrollable, selected with underline */}
                 {categories.length > 0 && (
-                  <div className="flex items-center gap-2 mb-4 overflow-hidden">
+                  <div className="flex items-center gap-2 mb-2 overflow-hidden">
                     <button
                       type="button"
                       className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
@@ -5377,14 +5472,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       }}
                       aria-label="Scroll left"
                     >
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                     </button>
-                    <div id="products-category-scroll" className="flex gap-4 overflow-x-auto flex-1 min-w-0 scrollbar-thin">
+                    <div
+                      id="products-category-scroll"
+                      className="flex gap-2 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    >
                       {categories.map((cat) => (
                         <button
                           key={cat.id}
                           type="button"
-                          className={`px-5 py-3 text-xl font-medium whitespace-nowrap shrink-0 transition-colors border-b-2 ${selectedCategoryId === cat.id
+                          className={`px-4 py-2 text-sm font-medium whitespace-nowrap shrink-0 transition-colors border-b-2 ${selectedCategoryId === cat.id
                             ? 'bg-pos-bg/80 text-pos-text border-green-500'
                             : 'text-pos-muted hover:text-pos-text bg-transparent border-transparent hover:bg-pos-panel/50'
                             }`}
@@ -5403,33 +5501,33 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       }}
                       aria-label="Scroll right"
                     >
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </button>
                   </div>
                 )}
                 {/* Product list: name (left), Subproducts (center), Edit/Delete (right) */}
-                <div className="flex-1 overflow-auto border border-pos-border rounded-lg bg-pos-bg">
+                <div className="flex-1 overflow-auto min-h-0 bg-pos-bg">
                   {!selectedCategoryId ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.products.selectCategoryHint', 'Select a category or add one in Categories.')}</p>
+                    <p className="text-pos-muted text-xl py-4 text-center">{tr('control.products.selectCategoryHint', 'Select a category or add one in Categories.')}</p>
                   ) : productsLoading ? (
-                    <p className="text-pos-muted text-xl p-6">{tr('control.products.loading', 'Loading products...')}</p>
+                    <p className="text-pos-muted text-xl py-4">{tr('control.products.loading', 'Loading products...')}</p>
                   ) : filteredProducts.length === 0 ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.products.emptyInCategory', 'No products in this category yet.')}</p>
+                    <p className="text-pos-muted text-xl py-4 text-center">{tr('control.products.emptyInCategory', 'No products in this category yet.')}</p>
                   ) : (
-                    <ul className="w-full">
+                    <ul className="w-full flex flex-col">
                       {paginatedProducts.map((product) => (
                         <li
                           key={product.id}
-                          className={`flex items-center px-10 w-full py-3 border-b border-pos-border text-pos-text text-xl last:border-b-0 cursor-pointer ${selectedProductId === product.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
+                          className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedProductId === product.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
                           onClick={(e) => { if (!e.target.closest('button')) setSelectedProductId(product.id); }}
                         >
                           <span className="min-w-[30%] text-left font-medium truncate" title={product.name}>
                             {product.name}
                           </span>
-                          <span className="flex-shrink-0 min-w-[30%] text-center text-pos-muted text-xl">
+                          <span className="flex-shrink-0 min-w-[30%] text-center text-pos-muted text-sm">
                             <button
                               type="button"
-                              className="px-3 py-1 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+                              className="px-2 py-1 rounded text-sm text-pos-muted hover:text-pos-text hover:bg-pos-panel"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openProductSubproductsModal(product);
@@ -5438,14 +5536,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               {tr('control.products.subproductsColumn', 'Subproducts')}
                             </button>
                           </span>
-                          <div className="flex items-center justify-end min-w-[40%] gap-10 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end min-w-[40%] gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                              className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
                               onClick={() => openEditProductModal(product)}
                               aria-label="Edit"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
                             <button
                               type="button"
@@ -5453,7 +5551,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               onClick={() => setDeleteConfirmProductId(product.id)}
                               aria-label="Delete"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </li>
@@ -5479,11 +5577,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             const canPrevSub = subPage > 0;
             const canNextSub = subPage < totalSubproductsPages - 1;
             return (
-              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[880px] flex flex-col pb-24">
-                <div className="flex items-center justify-around mb-4">
+              <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px] flex flex-col">
+                <div className="flex items-center w-full justify-center gap-4 mb-2 flex-wrap">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                     disabled={subproductsLoading}
                     onClick={openSubproductModal}
                   >
@@ -5491,28 +5589,34 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
                     onClick={() => setShowManageGroupsModal(true)}
                   >
                     {tr('control.subproducts.manageGroups', 'Manage Groups')}
                   </button>
                 </div>
                 {subproductGroups.length > 0 && (
-                  <div className="flex items-center gap-2 mb-4 overflow-hidden">
+                  <div className="flex items-center gap-2 mb-2 overflow-hidden">
                     <button
                       type="button"
-                      className="p-2 rounded bg-pos-bg border border-pos-border text-pos-text hover:bg-pos-panel shrink-0"
+                      className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
                       onClick={() => { const el = document.getElementById('subproducts-group-scroll'); if (el) el.scrollBy({ left: -200, behavior: 'smooth' }); }}
                       aria-label="Scroll left"
                     >
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                     </button>
-                    <div id="subproducts-group-scroll" className="flex gap-2 overflow-x-auto flex-1 min-w-0 py-2 px-1 rounded-lg">
+                    <div
+                      id="subproducts-group-scroll"
+                      className="flex gap-2 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    >
                       {subproductGroups.map((grp) => (
                         <button
                           key={grp.id}
                           type="button"
-                          className={`px-7 py-4 rounded-lg text-2xl font-medium whitespace-nowrap shrink-0 transition-colors ${selectedSubproductGroupId === grp.id ? 'bg-pos-panel text-pos-text border border-pos-border' : 'text-pos-muted hover:text-pos-text bg-pos-panel/50 border border-transparent'}`}
+                          className={`px-4 py-2 text-sm font-medium whitespace-nowrap shrink-0 transition-colors border-b-2 ${selectedSubproductGroupId === grp.id
+                            ? 'bg-pos-bg/80 text-pos-text border-green-500'
+                            : 'text-pos-muted hover:text-pos-text bg-transparent border-transparent hover:bg-pos-panel/50'
+                            }`}
                           onClick={() => setSelectedSubproductGroupId(grp.id)}
                         >
                           {grp.name}
@@ -5521,44 +5625,46 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <button
                       type="button"
-                      className="p-2 rounded bg-pos-bg border border-pos-border text-pos-text hover:bg-pos-panel shrink-0"
+                      className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
                       onClick={() => { const el = document.getElementById('subproducts-group-scroll'); if (el) el.scrollBy({ left: 200, behavior: 'smooth' }); }}
                       aria-label="Scroll right"
                     >
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </button>
                   </div>
                 )}
-                <div className="flex-1 overflow-auto border border-gray-400 rounded-lg min-h-[200px]">
+                <div className="flex-1 overflow-auto min-h-0 bg-pos-bg">
                   {!selectedSubproductGroupId ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.subproducts.selectGroupHint', 'Select a group or add one via Manage Groups.')}</p>
+                    <p className="text-pos-muted text-xl py-4 text-center">{tr('control.subproducts.selectGroupHint', 'Select a group or add one via Manage Groups.')}</p>
                   ) : subproductGroupsLoading ? (
-                    <p className="text-pos-muted text-xl p-6">{tr('control.subproducts.loadingGroups', 'Loading groups...')}</p>
+                    <p className="text-pos-muted text-xl py-4">{tr('control.subproducts.loadingGroups', 'Loading groups...')}</p>
                   ) : subproductsLoading ? (
-                    <p className="text-pos-muted text-xl p-6">{tr('control.subproducts.loading', 'Loading subproducts...')}</p>
+                    <p className="text-pos-muted text-xl py-4">{tr('control.subproducts.loading', 'Loading subproducts...')}</p>
                   ) : subproducts.length === 0 ? (
-                    <p className="text-pos-muted text-xl p-6 text-center">{tr('control.subproducts.empty', 'No subproducts in this group yet.')}</p>
+                    <p className="text-pos-muted text-xl py-4 text-center">{tr('control.subproducts.empty', 'No subproducts in this group yet.')}</p>
                   ) : (
-                    <ul className="w-full">
+                    <ul className="w-full flex flex-col">
                       {paginatedSubproducts.map((sp) => (
                         <li
                           key={sp.id}
-                          className={`flex items-center  w-full px-10 py-3 text-pos-text text-xl cursor-pointer ${selectedSubproductId === sp.id ? 'bg-pos-panel/70' : 'hover:bg-pos-panel/40'}`}
+                          className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedSubproductId === sp.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
                           onClick={(e) => { if (!e.target.closest('button')) setSelectedSubproductId(sp.id); }}
                         >
-                          <span className="flex-1 font-medium">{sp.name}</span>
-                          <button type="button" className="p-2 pr-20 rounded text-pos-text hover:bg-pos-bg" onClick={(e) => { e.stopPropagation(); openEditSubproductModal(sp); }} aria-label="Edit">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                          </button>
-                          <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={(e) => { e.stopPropagation(); setDeleteConfirmSubproductId(sp.id); }} aria-label="Delete">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
+                          <span className="flex-1 font-medium truncate" title={sp.name}>{sp.name}</span>
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button type="button" className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel" onClick={() => openEditSubproductModal(sp)} aria-label="Edit">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                            <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-panel" onClick={() => setDeleteConfirmSubproductId(sp.id)} aria-label="Delete">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
                   )}
                 </div>
-                {subproducts.length > 0 && (
+                {selectedSubproductGroupId && subproducts.length > 0 && (
                   <PaginationArrows
                     canPrev={canPrevSub}
                     canNext={canNextSub}
@@ -5627,58 +5733,62 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </div>
             );
           })() : topNavId === 'categories-products' && subNavId === 'Discounts' ? (() => {
-            const DISCOUNTS_PER_PAGE = 10;
-            const totalDiscountsPages = Math.max(1, Math.ceil(discounts.length / DISCOUNTS_PER_PAGE));
-            const discPage = Math.min(discountsPage, totalDiscountsPages - 1);
-            const paginatedDiscounts = discounts.slice(discPage * DISCOUNTS_PER_PAGE, (discPage + 1) * DISCOUNTS_PER_PAGE);
-            const canPrevDisc = discPage > 0;
-            const canNextDisc = discPage < totalDiscountsPages - 1;
             return (
-              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[880px] pb-24">
-                <div className="flex items-center justify-center mb-6">
+              <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                <div className="flex items-center w-full justify-center mb-2">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
                     onClick={openNewDiscountModal}
                   >
                     {tr('control.discounts.new', 'New discount')}
                   </button>
                 </div>
                 {discounts.length === 0 ? (
-                  <p className="text-pos-muted text-xl py-8 text-center">{tr('control.discounts.empty', 'No discounts yet.')}</p>
+                  <ul className="w-full flex flex-col">
+                    <li className="text-pos-muted text-xl py-4 text-center">{tr('control.discounts.empty', 'No discounts yet.')}</li>
+                  </ul>
                 ) : (
                   <>
-                    <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
-                      {paginatedDiscounts.map((d) => (
-                        <li
-                          key={d.id}
-                          className="flex items-center w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors"
-                        >
-                          <span className="flex-1 text-pos-text text-xl font-medium">{d.name || '—'}</span>
-                          <button
-                            type="button"
-                            className="p-2 rounded pr-20 text-pos-text hover:bg-pos-bg"
-                            onClick={() => openEditDiscountModal(d)}
-                            aria-label="Edit"
+                    <div
+                      ref={discountsListRef}
+                      className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                      onScroll={updateDiscountsScrollState}
+                    >
+                      <ul className="w-full flex flex-col">
+                        {discounts.map((d) => (
+                          <li
+                            key={d.id}
+                            className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
                           >
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="p-2 rounded text-pos-text hover:bg-pos-bg"
-                            onClick={() => setDeleteConfirmDiscountId(d.id)}
-                            aria-label="Delete"
-                          >
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                            <span className="flex-1 font-medium truncate" title={d.name || '—'}>{d.name || '—'}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
+                                onClick={() => openEditDiscountModal(d)}
+                                aria-label="Edit"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              </button>
+                              <button
+                                type="button"
+                                className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                onClick={() => setDeleteConfirmDiscountId(d.id)}
+                                aria-label="Delete"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                     <PaginationArrows
-                      canPrev={canPrevDisc}
-                      canNext={canNextDisc}
-                      onPrev={() => setDiscountsPage((p) => Math.max(0, p - 1))}
-                      onNext={() => setDiscountsPage((p) => Math.min(totalDiscountsPages - 1, p + 1))}
+                      canPrev={canDiscountsScrollUp}
+                      canNext={canDiscountsScrollDown}
+                      onPrev={() => scrollDiscountsByPage('up')}
+                      onNext={() => scrollDiscountsByPage('down')}
                     />
                   </>
                 )}
@@ -6454,106 +6564,110 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* New / Edit discount modal */}
       {showDiscountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full min-h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeDiscountModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex-1 overflow-auto px-14 mt-[110px]">
-              <div className="grid md:grid-cols-3 gap-6 mb-6">
-                <div className="flex flex-col col-span-2 gap-6">
-                  <div className='flex gap-10'>
-                    <div className='flex items-center gap-24'>
-                      <label className="block text-pos-text text-xl font-medium mb-1">Name:</label>
-                      <input type="text" value={discountName} onChange={(e) => setDiscountName(e.target.value)} placeholder="Discount name" className="w-full px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl" />
+            <div className="flex-1 min-h-0 overflow-auto w-full">
+              <div className="p-6 pb-0 flex text-sm space-y-3 w-full pt-14">
+                <div className='flex flex-col w-2/3 gap-3'>
+                  <div className='flex w-full gap-5'>
+                    <div className="flex items-center">
+                      <label className="block font-medium min-w-[100px] text-gray-200">{tr('name', 'Name')} : </label>
+                      <input type="text" value={discountName} onChange={(e) => setDiscountName(e.target.value)} placeholder={tr('control.discounts.modal.discountNamePlaceholder', 'Discount name')} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200 placeholder:text-gray-500" />
                     </div>
-                    <div className='flex items-center gap-10'>
-                      <label className="block text-pos-text text-xl font-medium mb-1">Discount on:</label>
-                      <div className="flex gap-2 items-center">
-                        <Dropdown options={DISCOUNT_ON_OPTIONS} value={discountOn} onChange={setDiscountOn} placeholder="Products" className="text-xl min-w-[250px]" />
+                    <div className="flex w-full items-center">
+                      <label className="block font-medium text-gray-200 min-w-[100px]">{tr('control.discounts.modal.discountOn', 'Discount on')} : </label>
+                      <Dropdown options={DISCOUNT_ON_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.on.${opt.value}`, opt.label) }))} value={discountOn} onChange={setDiscountOn} placeholder={tr('control.discounts.on.products', 'Products')} className="text-md min-w-[150px]" />
+                    </div>
+                  </div>
+                  <div className="flex w-full items-center flex-wrap">
+                    <div className="flex items-center">
+                      <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.discounts.modal.trigger', 'Trigger')} : </label>
+                      <Dropdown options={DISCOUNT_TRIGGER_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.trigger.${opt.value}`, opt.label) }))} value={discountTrigger} onChange={setDiscountTrigger} placeholder={tr('control.discounts.trigger.number', 'Number')} className="text-md min-w-[150px]" />
+                    </div>
+                    <div className="flex gap-5 items-center pl-5">
+                      <input type="text" value={discountPieces} onChange={(e) => setDiscountPieces(e.target.value)} placeholder="" className="px-4 w-[70px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
+                      <label className="block font-medium text-gray-200">{tr('control.discounts.modal.pieces', 'Piece(s)')}</label>
+                    </div>
+                    <div className="flex items-center gap-3 pl-5">
+                      <div className="flex items-center justify-start">
+                        <input type="checkbox" checked={discountCombinable} onChange={(e) => setDiscountCombinable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                       </div>
+                      <label className="block items-center font-medium text-gray-200">{tr('control.discounts.modal.combinable', 'Combinable')}</label>
                     </div>
                   </div>
-                  <div className='flex items-center gap-10'>
-                    <div className='flex items-center gap-[80px]'>
-                      <label className="block text-pos-text text-xl font-medium mb-1">Trigger:</label>
-                      <Dropdown options={DISCOUNT_TRIGGER_OPTIONS} value={discountTrigger} onChange={setDiscountTrigger} placeholder="Number" className="w-full min-w-[250px] text-xl" />
+                  <div className="flex w-full items-center flex-wrap">
+                    <div className="flex items-center">
+                      <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.optionButton.discount', 'Discount')} : </label>
+                      <Dropdown options={DISCOUNT_TYPE_OPTIONS.map((opt) => ({ ...opt, label: tr(`control.discounts.type.${opt.value}`, opt.label) }))} value={discountType} onChange={setDiscountType} placeholder={tr('control.discounts.type.amount', 'Amount')} className="text-md min-w-[150px]" />
                     </div>
-                    <div className='flex items-center gap-10'>
-                      <div className="flex items-center gap-4">
-                        <input type="text" value={discountPieces} onChange={(e) => setDiscountPieces(e.target.value)} placeholder="" className="max-w-[100px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                        <label className="block text-pos-text text-xl font-medium mb-1">Piece(s)</label>
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={discountCombinable} onChange={(e) => setDiscountCombinable(e.target.checked)} className="w-10 h-8 rounded border-pos-border bg-pos-bg text-green-600" />
-                        <span className="text-pos-text text-xl">Combinable</span>
-                      </label>
+                    <div className="flex items-center pl-5 gap-5">
+                      <input type="text" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder="0" className="flex-1 px-4 max-w-[70px] h-[40px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200" />
+                      <span className="text-md text-gray-200 shrink-0">{tr('control.discounts.modal.currency', 'euro')}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-10">
-                    <div className="flex gap-[66px] items-center">
-                      <label className="block text-pos-text text-xl font-medium mb-1">Discount:</label>
-                      <Dropdown options={DISCOUNT_TYPE_OPTIONS} value={discountType} onChange={setDiscountType} placeholder="Amount" className="w-full min-w-[250px] text-xl" />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <input type="text" value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder="0" className="max-w-[100px] px-3 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                      <span className="text-pos-text text-xl">euro</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-8">
-                    <label className="block text-pos-text text-xl font-medium mb-1">Starting date:</label>
-                    <div className="flex items-center gap-2">
+                  <div className="flex w-full items-center">
+                    <label className="block min-w-[100px] font-medium text-gray-200">{tr('control.discounts.modal.startDate', 'Starting date')} : </label>
+                    <div className="flex items-center gap-5 w-[150px]">
                       <input
                         type="text"
                         readOnly
-                        value={discountStartDate ? (() => { const d = new Date(discountStartDate); return isNaN(d.getTime()) ? discountStartDate : d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }); })() : ''}
-                        placeholder="MM/DD/YYYY"
-                        className="px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl min-w-[180px] cursor-pointer"
+                        value={formatDateForCurrentLanguage(discountStartDate)}
+                        placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
+                        className="flex-1 px-4 h-[40px] w-[150px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
                         onClick={() => setDiscountCalendarField('start')}
                       />
-                      <button type="button" className="p-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" onClick={() => setDiscountCalendarField('start')} aria-label="Open calendar">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('start')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-[65px]">
-                    <label className="block text-pos-text text-xl font-medium mb-1">End date:</label>
-                    <div className="flex items-center gap-2">
+                  <div className="flex w-full items-center">
+                    <label className="block min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.discounts.modal.endDate', 'End date')} : </label>
+                    <div className="flex items-center gap-5 w-[150px]">
                       <input
                         type="text"
                         readOnly
-                        value={discountEndDate ? (() => { const d = new Date(discountEndDate); return isNaN(d.getTime()) ? discountEndDate : d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }); })() : ''}
-                        placeholder="MM/DD/YYYY"
-                        className="px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl min-w-[180px] cursor-pointer"
+                        value={formatDateForCurrentLanguage(discountEndDate)}
+                        placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
+                        className="flex-1 px-4 h-[40px] py-3 w-[150px] border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
                         onClick={() => setDiscountCalendarField('end')}
                       />
-                      <button type="button" className="p-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" onClick={() => setDiscountCalendarField('end')} aria-label="Open calendar">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('end')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       </button>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col gap-4">
-                  <div className='flex items-center justify-center'>
-                    <Dropdown options={[{ value: 'a', label: 'a' }]} value="a" onChange={() => { }} placeholder="a" className="min-w-[200px] max-w-12 w-full text-xl" />
-                  </div>
-                  <div className="flex-1 min-h-[320px] rounded-lg border border-pos-border bg-white/5 mt-2" />
-                  <div className='flex justify-center items-center gap-10'>
-                    <button type="button" className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" aria-label="Up">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                <div className="flex flex-col w-1/3 max-w-md items-center gap-3">
+                  <Dropdown options={[{ value: 'a', label: 'a' }]} value="a" onChange={() => { }} placeholder="a" className="text-md min-w-[150px] w-full" />
+                  <div className="w-full min-h-[220px] rounded-lg border border-gray-300 bg-pos-panel/30" />
+                  <div className="flex w-full justify-around gap-2 items-center pt-2">
+                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Up">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
                     </button>
-                    <button type="button" className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg" aria-label="Down">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Down">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="absolute right-0 left-0 top-[50%] flex justify-center">
-                <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingDiscount} onClick={handleSaveDiscount}>
-                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                  {tr('control.save', 'Save')}
-                </button>
-              </div>
+            </div>
+            <div className="flex justify-center pb-5 shrink-0">
+              <button
+                type="button"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                disabled={savingDiscount}
+                onClick={handleSaveDiscount}
+              >
+                <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                {tr('control.save', 'Save')}
+              </button>
+            </div>
+            <div className="shrink-0">
+              <KeyboardWithNumpad value={discountKeyboardValue} onChange={setDiscountKeyboardValue} />
             </div>
             {discountCalendarField && (
               <CalendarModal
@@ -6570,9 +6684,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 }}
               />
             )}
-            <div className="shrink-0 w-full justify-center flex">
-              <KeyboardWithNumpad value={discountKeyboardValue} onChange={setDiscountKeyboardValue} />
-            </div>
           </div>
         </div>
       )}
@@ -8033,23 +8144,23 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
               <div className='w-full flex flex-col justify-center items-center gap-10'>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block text-xl pr-[50px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
+                  <label className="block text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
                     readOnly
                     value={priceGroupName}
                     placeholder={tr('control.enterName', 'Enter name')}
-                    className="px-4 w-[300px] bg-pos-panel h-[50px] py-3 text-xl border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
-                  <label className="block text-xl pr-[70px] font-medium text-gray-200 mb-2">{tr('control.vat', 'VAT')} : </label>
+                  <label className="block text-md pr-[60px] font-medium text-gray-200 mb-2">{tr('control.vat', 'VAT')} : </label>
                   <Dropdown
                     options={VAT_OPTIONS.map((o) => ({ ...o, label: tr(`vatOption.${o.value}`, o.label) }))}
                     value={priceGroupTax}
                     onChange={setPriceGroupTax}
                     placeholder={tr('control.selectVat', 'Select VAT')}
-                    className="text-xl min-w-[300px]"
+                    className="text-md min-w-[200px]"
                   />
                 </div>
               </div>
@@ -8057,11 +8168,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center pt-20 pb-5">
               <button
                 type="button"
-                className="flex items-center text-xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                 disabled={savingPriceGroup}
                 onClick={handleSavePriceGroup}
               >
-                <svg fill="#ffffff" width="20px" height="20px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
+                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
                   <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                 </svg>
                 {tr('control.save', 'Save')}
@@ -8075,66 +8186,70 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Add / Edit category modal */}
       {showCategoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1380px] h-[980px] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeCategoryModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center overflow-auto pt-14">
-              <div className="w-full flex flex-col justify-center items-center gap-6 max-w-2xl">
-                <div className="flex gap-2 w-full items-center mt-8">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('name', 'Name')} :</label>
+            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
+              <div className="w-full flex flex-col justify-center items-center gap-10">
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
                     readOnly
                     value={categoryName}
-                    className="flex-1 px-4 bg-pos-panel h-[60px] py-3 text-xl border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     onFocus={() => setCategoryActiveField('name')}
                     onClick={() => setCategoryActiveField('name')}
                   />
                 </div>
-                <div className="flex gap-2 w-full items-center">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('control.inWebshop', 'In webshop')} :</label>
-                  <input
-                    type="checkbox"
-                    checked={categoryInWebshop}
-                    onChange={(e) => setCategoryInWebshop(e.target.checked)}
-                    className="w-8 h-8 rounded border-gray-300"
-                  />
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.inWebshop', 'In webshop')} : </label>
+                  <div className="w-[200px] flex items-center justify-start">
+                    <input
+                      type="checkbox"
+                      checked={categoryInWebshop}
+                      onChange={(e) => setCategoryInWebshop(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300"
+                    />
+                  </div>
                 </div>
-                <div className="flex gap-2 w-full items-center">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('control.displayOnThisCashRegister', 'Display on this cash register')} :</label>
-                  <input
-                    type="checkbox"
-                    checked={categoryDisplayOnCashRegister}
-                    onChange={(e) => setCategoryDisplayOnCashRegister(e.target.checked)}
-                    className="w-8 h-8 rounded border-gray-300"
-                  />
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block max-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('control.displayOnThisCashRegister', 'Display on this cash register')} : </label>
+                  <div className="w-[200px] flex items-center justify-start">
+                    <input
+                      type="checkbox"
+                      checked={categoryDisplayOnCashRegister}
+                      onChange={(e) => setCategoryDisplayOnCashRegister(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300"
+                    />
+                  </div>
                 </div>
-                <div className="flex gap-2 w-full items-center">
-                  <label className="block text-3xl w-[200px] font-medium text-gray-200 shrink-0">{tr('nextCourse', 'Next course')} :</label>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">{tr('nextCourse', 'Next course')} : </label>
                   <input
                     type="text"
                     readOnly
                     value={categoryNextCourse}
-                    className="flex-1 px-4 bg-pos-panel h-[60px] py-3 text-xl border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     onFocus={() => setCategoryActiveField('nextCourse')}
                     onClick={() => setCategoryActiveField('nextCourse')}
                   />
                 </div>
               </div>
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  className="flex items-center mt-20 text-4xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
-                  disabled={savingCategory}
-                  onClick={handleSaveCategory}
-                >
-                  <svg fill="#ffffff" width="30px" height="30px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
-                    <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
-                  </svg>
-                  {tr('control.save', 'Save')}
-                </button>
-              </div>
+            </div>
+            <div className="flex justify-center pt-5 pb-5">
+              <button
+                type="button"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                disabled={savingCategory}
+                onClick={handleSaveCategory}
+              >
+                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
+                  <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
+                </svg>
+                {tr('control.save', 'Save')}
+              </button>
             </div>
             <KeyboardWithNumpad
               value={categoryActiveField === 'name' ? categoryName : categoryNextCourse}
@@ -8147,11 +8262,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* New / Edit product modal */}
       {showProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1380px] h-[1050px] w-full mx-4 overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex gap-1 w-full justify-around px-4 py-2 py-5 shrink-0 pr-14">
+            <div className="flex gap-1 w-full justify-around px-4 py-2 shrink-0 pr-14">
               {[
                 { id: 'general', label: tr('control.productModal.tab.general', 'General') },
                 { id: 'advanced', label: tr('control.productModal.tab.advanced', 'Advanced') },
@@ -8166,7 +8281,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     key={tab.id}
                     type="button"
                     disabled={isLocked}
-                    className={`px-4 py-2 rounded-lg text-xl font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
+                    className={`px-4 py-2 rounded-lg text-md font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
                     onClick={() => !isLocked && setProductTab(tab.id)}
                   >
                     {tab.label}
@@ -8179,39 +8294,39 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               {productTab === 'general' && (
                 <div className="p-6 pb-0">
                   <div className="grid grid-cols-3 gap-6">
-                    <div className="flex text-xl flex-col gap-4">
+                    <div className="flex text-md flex-col gap-4">
                       <div className="flex items-center gap-1">
-                        <label className="text-xl font-medium text-gray-200 w-[300px]">{tr('name', 'Name')}:</label>
-                        <input type="text" readOnly value={productName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
+                        <label className="text-md font-medium text-gray-200 w-[300px]">{tr('name', 'Name')}:</label>
+                        <input type="text" readOnly value={productName} className={`w-full px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.name ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('name')} onClick={() => setProductActiveField('name')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.testName', 'Test name')}:</label>
-                        <input type="text" readOnly value={productKeyName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
+                        <label className="w-[300px] font-medium text-gray-200 text-md">{tr('control.productModal.testName', 'Test name')}:</label>
+                        <input type="text" readOnly value={productKeyName} className={`w-full px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.keyName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('keyName')} onClick={() => setProductActiveField('keyName')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[300px] font-medium text-gray-200">{tr('control.productModal.productionName', 'Production name')}:</label>
-                        <input type="text" readOnly value={productProductionName} className={`w-full px-4 py-3 border rounded-lg text-pos-text text-xl ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
+                        <label className="w-[300px] font-medium text-gray-200 text-md">{tr('control.productModal.productionName', 'Production name')}:</label>
+                        <input type="text" readOnly value={productProductionName} className={`w-full px-4 h-[40px] py-3 border rounded-lg text-pos-text text-md ${productFieldErrors.productionName ? 'bg-rose-500/40 border-rose-400' : 'bg-pos-panel border-pos-border'}`} onFocus={() => setProductActiveField('productionName')} onClick={() => setProductActiveField('productionName')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="w-[170px] font-medium text-gray-200">{tr('control.productModal.price', 'Price')}:</label>
-                        <input type="text" readOnly value={productPrice} className="w-full px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
+                        <label className="w-[170px] font-medium text-gray-200 text-md">{tr('control.productModal.price', 'Price')}:</label>
+                        <input type="text" readOnly value={productPrice} className="w-full px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md max-w-[150px]" onFocus={() => setProductActiveField('price')} onClick={() => setProductActiveField('price')} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="min-w-[170px] font-medium text-gray-200">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatTakeOut} onChange={(v) => { setProductVatTakeOut(v); setProductFieldErrors((e) => ({ ...e, vatTakeOut: false })); }} placeholder="--" className={`text-xl min-w-[150px] ${productFieldErrors.vatTakeOut ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
+                        <label className="min-w-[170px] font-medium text-gray-200 text-md">{tr('control.productModal.vatTakeOut', 'VAT Take out')}:</label>
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatTakeOut} onChange={(v) => { setProductVatTakeOut(v); setProductFieldErrors((e) => ({ ...e, vatTakeOut: false })); }} placeholder="--" className={`text-md min-w-[200px] ${productFieldErrors.vatTakeOut ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <label className="min-w-[170px] font-medium text-gray-200">{tr('control.productModal.vatEatIn', 'VAT Eat in')}:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatEatIn} onChange={(v) => { setProductVatEatIn(v); setProductFieldErrors((e) => ({ ...e, vatEatIn: false })); }} placeholder="--" className={`text-xl min-w-[150px] ${productFieldErrors.vatEatIn ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
+                        <label className="min-w-[170px] font-medium text-gray-200 text-md">{tr('control.productModal.vatEatIn', 'VAT Eat in')}:</label>
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={productVatEatIn} onChange={(v) => { setProductVatEatIn(v); setProductFieldErrors((e) => ({ ...e, vatEatIn: false })); }} placeholder="--" className={`text-md min-w-[200px] ${productFieldErrors.vatEatIn ? '!bg-rose-500/40 !border-rose-400' : ''}`} />
                       </div>
                       {productTabsUnlocked ? (
-                        <div className="flex items-center gap-1 h-[50px]">
-                          <label className="min-w-[170px] font-medium text-gray-200">Id:</label>
-                          <span className="text-pos-text text-xl">{productDisplayNumber != null ? productDisplayNumber : '—'}</span>
+                        <div className="flex items-center gap-1 h-[40px]">
+                          <label className="min-w-[170px] font-medium text-gray-200 text-md">Id:</label>
+                          <span className="text-pos-text text-md">{productDisplayNumber != null ? productDisplayNumber : '—'}</span>
                         </div>
                       )
                         : (
-                          <div className="flex items-center gap-1 h-[50px]">
+                          <div className="flex items-center gap-1 h-[40px]">
                           </div>
                         )
                       }
@@ -8242,8 +8357,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           const prevIds = ids.slice(0, i);
                           const optionsForI = i === 0 ? categories : categories.filter((c) => !prevIds.includes(c.id));
                           return (
-                            <div key={i} className="flex gap-1 w-full h-[50px]">
-                              <label className="pr-5 font-medium text-xl items-center justify-center flex h-[50px] text-gray-200">{tr('control.productModal.category', 'Category')}:</label>
+                            <div key={i} className="flex gap-1 w-full h-[40px]">
+                              <label className="pr-5 font-medium text-md items-center justify-center flex h-[40px] text-gray-200">{tr('control.productModal.category', 'Category')}:</label>
                               <Dropdown
                                 options={optionsForI.map((c) => ({ value: c.id, label: c.name }))}
                                 value={ids[i] || ''}
@@ -8258,7 +8373,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 }}
                                 placeholder="--"
                                 inline
-                                className="text-xl w-full min-w-[320px]"
+                                className="text-md w-full min-w-[200px]"
                               />
                             </div>
                           );
@@ -8267,49 +8382,49 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <div className="flex flex-col gap-4">
                       <div className="flex gap-1 items-center w-full">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.addition', 'Addition')}:</label>
-                        <Dropdown options={[{ value: 'Subproducts', label: tr('control.productModal.subproducts', 'Subproducts') }]} value={productAddition} onChange={setProductAddition} placeholder="--" className="text-xl w-full min-w-[320px]" />
+                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.addition', 'Addition')}:</label>
+                        <Dropdown options={[{ value: 'Subproducts', label: tr('control.productModal.subproducts', 'Subproducts') }]} value={productAddition} onChange={setProductAddition} placeholder="--" className="text-md w-full min-w-[200px]" />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="min-w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
+                        <label className="min-w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
                         <div className="flex gap-2 items-center w-full">
-                          <input type="text" readOnly value={productBarcode} className="flex-1 px-4 py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-xl " onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
+                          <input type="text" readOnly value={productBarcode} className="flex-1 px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md" onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
                           <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
-                            <svg className={`w-6 h-6 ${barcodeButtonSpinning ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            <svg className={`w-5 h-5 ${barcodeButtonSpinning ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           </button>
                         </div>
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer1', 'Printer 1')}:</label>
+                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.printer1', 'Printer 1')}:</label>
                         <Dropdown
                           options={getUniqueProductPrinterOptions(productPrinter1, [productPrinter2, productPrinter3])}
                           value={productPrinter1}
                           onChange={setProductPrinter1}
-                          className="text-xl w-full min-w-[320px]"
+                          className="text-md w-full min-w-[200px]"
                         />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer2', 'Printer 2')}:</label>
+                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.printer2', 'Printer 2')}:</label>
                         <Dropdown
                           options={getUniqueProductPrinterOptions(productPrinter2, [productPrinter1, productPrinter3])}
                           value={productPrinter2}
                           onChange={setProductPrinter2}
-                          className="text-xl w-full min-w-[320px]"
+                          className="text-md w-full min-w-[200px]"
                         />
                       </div>
                       <div className="flex gap-1 items-center">
-                        <label className="w-[100px] font-medium text-xl text-gray-200">{tr('control.productModal.printer3', 'Printer 3')}:</label>
+                        <label className="w-[100px] font-medium text-md text-gray-200">{tr('control.productModal.printer3', 'Printer 3')}:</label>
                         <Dropdown
                           options={getUniqueProductPrinterOptions(productPrinter3, [productPrinter1, productPrinter2])}
                           value={productPrinter3}
                           onChange={setProductPrinter3}
-                          className="text-xl w-full min-w-[320px]"
+                          className="text-md w-full min-w-[200px]"
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="flex w-full justify-center gap-4">
-                    <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg text-xl" onClick={async () => {
+                  <div className="flex w-full justify-center gap-4 pt-20 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg" onClick={async () => {
                       if (!validateProductRequired()) return;
                       setProductTabsUnlocked(true);
                       if (!editingProductId) {
@@ -8320,11 +8435,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         } catch { /* keep — */ }
                       }
                     }}>
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       {tr('control.productModal.completeFurther', 'Complete further')}
                     </button>
-                    <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl" disabled={savingProduct} onClick={handleSaveProduct}>
-                      <svg fill="#ffffff" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProduct} onClick={handleSaveProduct}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.productModal.addAndClose', 'Add and close')}
                     </button>
                   </div>
@@ -8334,47 +8449,47 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="p-6 pb-0 flex flex-col gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="flex flex-col gap-4">
-                      <label className="flex items-center text-xl gap-2 text-pos-text">
+                      <label className="flex items-center text-md gap-2 text-pos-text">
                         Open price:
-                        <input type="checkbox" checked={advancedOpenPrice} onChange={(e) => setAdvancedOpenPrice(e.target.checked)} className="rounded border-pos-border w-8 h-8 text-xl  mt-1 mb-1 ml-[120px]" />
+                        <input type="checkbox" checked={advancedOpenPrice} onChange={(e) => setAdvancedOpenPrice(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[120px]" />
                       </label>
-                      <label className="flex items-center text-xl gap-2 text-pos-text">
+                      <label className="flex items-center text-md gap-2 text-pos-text">
                         Libra:
-                        <input type="checkbox" checked={advancedWeegschaal} onChange={(e) => setAdvancedWeegschaal(e.target.checked)} className="rounded border-pos-border w-8 h-8 text-xl mt-1 mb-1 ml-[170px]" />
+                        <input type="checkbox" checked={advancedWeegschaal} onChange={(e) => setAdvancedWeegschaal(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[170px]" />
                       </label>
-                      <label className="flex items-center text-xl gap-2 text-pos-text">
+                      <label className="flex items-center text-md gap-2 text-pos-text">
                         Subproduct requires :
-                        <input type="checkbox" checked={advancedSubproductRequires} onChange={(e) => setAdvancedSubproductRequires(e.target.checked)} className="rounded border-pos-border w-8 h-8 text-xl mt-1 ml-[37px]" />
+                        <input type="checkbox" checked={advancedSubproductRequires} onChange={(e) => setAdvancedSubproductRequires(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 ml-[37px]" />
                       </label>
                       <div className="flex items-center gap-1">
-                        <label className="block text-pos-text mb-1 text-xl min-w-[220px]">Empty price:</label>
-                        <input type="text" value={advancedLeeggoedPrijs} onChange={(e) => setAdvancedLeeggoedPrijs(e.target.value)} onFocus={() => setProductActiveField('leeggoedPrijs')} className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-xl max-w-[180px]" />
+                        <label className="block text-pos-text mb-1 text-md min-w-[220px]">Empty price:</label>
+                        <input type="text" value={advancedLeeggoedPrijs} onChange={(e) => setAdvancedLeeggoedPrijs(e.target.value)} onFocus={() => setProductActiveField('leeggoedPrijs')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md max-w-[200px]" />
                       </div>
                     </div>
                     <div className="flex flex-col gap-4">
-                      <label className="flex items-center text-xl gap-2 text-pos-text">
+                      <label className="flex items-center text-md gap-2 text-pos-text">
                         Pager required:
-                        <input type="checkbox" checked={advancedPagerVerplicht} onChange={(e) => setAdvancedPagerVerplicht(e.target.checked)} className="rounded border-pos-border w-8 h-8 text-xl mt-1 mb-1 ml-[120px]" />
+                        <input type="checkbox" checked={advancedPagerVerplicht} onChange={(e) => setAdvancedPagerVerplicht(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[120px]" />
                       </label>
-                      <label className="flex items-center text-xl gap-2 text-pos-text">
+                      <label className="flex items-center text-md gap-2 text-pos-text">
                         Bold print:
-                        <input type="checkbox" checked={advancedBoldPrint} onChange={(e) => setAdvancedBoldPrint(e.target.checked)} className="rounded border-pos-border w-8 h-8 text-xl mt-1 mb-1 ml-[160px]" />
+                        <input type="checkbox" checked={advancedBoldPrint} onChange={(e) => setAdvancedBoldPrint(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[160px]" />
                       </label>
-                      <label className="flex items-center text-xl gap-2 text-pos-text">
+                      <label className="flex items-center text-md gap-2 text-pos-text">
                         Grouping receipt:
-                        <input type="checkbox" checked={advancedGroupingReceipt} onChange={(e) => setAdvancedGroupingReceipt(e.target.checked)} className="rounded border-pos-border w-8 h-8 text-xl mt-1 mb-1 ml-[100px]" />
+                        <input type="checkbox" checked={advancedGroupingReceipt} onChange={(e) => setAdvancedGroupingReceipt(e.target.checked)} className="rounded border-pos-border w-5 h-5 mt-1 mb-1 ml-[100px]" />
                       </label>
                     </div>
                     <div className="flex flex-col gap-4">
-                      <div className="flex text-xl items-center gap-1">
+                      <div className="flex text-md items-center gap-1">
                         <label className="block min-w-[170px] mr-3 text-pos-text mb-1">Label extra info:</label>
-                        <input type="text" value={advancedLabelExtraInfo} onChange={(e) => setAdvancedLabelExtraInfo(e.target.value)} onFocus={() => setProductActiveField('labelExtraInfo')} className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-xl max-w-[320px]" />
+                        <input type="text" value={advancedLabelExtraInfo} onChange={(e) => setAdvancedLabelExtraInfo(e.target.value)} onFocus={() => setProductActiveField('labelExtraInfo')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md max-w-[320px]" />
                       </div>
-                      <div className="flex text-xl items-center gap-3">
+                      <div className="flex text-md items-center gap-3">
                         <label className="block min-w-[170px] mr-1.5 text-pos-text mb-1">Cash register photo:</label>
                         <div className="flex items-center gap-3">
                           {!advancedKassaPhotoPreview ? (
-                            <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-xl">
+                            <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
                               Select
                               <input
                                 type="file"
@@ -8397,10 +8512,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             </label>
                           ) : (
                             <>
-                              <img src={advancedKassaPhotoPreview} alt="Cash register" className="w-[100px] h-[100px] object-cover rounded-lg border border-pos-border shrink-0" />
+                              <img src={advancedKassaPhotoPreview} alt="Cash register" className="w-16 h-16 object-cover rounded-lg border border-pos-border shrink-0" />
                               <button
                                 type="button"
-                                className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 text-xl shrink-0"
+                                className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 text-md shrink-0"
                                 onClick={() => {
                                   setAdvancedKassaPhotoPreview(null);
                                 }}
@@ -8411,23 +8526,23 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           )}
                         </div>
                       </div>
-                      <div className="flex text-xl items-center gap-1">
+                      <div className="flex text-md items-center gap-1">
                         <label className="block min-w-[180px] text-pos-text mb-1">Pre-pack expiry type:</label>
-                        <Dropdown options={VERVALTYPE_OPTIONS} value={advancedVoorverpakVervaltype} onChange={setAdvancedVoorverpakVervaltype} placeholder="Select…" className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-xl min-w-[247px]" />
+                        <Dropdown options={VERVALTYPE_OPTIONS} value={advancedVoorverpakVervaltype} onChange={setAdvancedVoorverpakVervaltype} placeholder="Select…" className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md min-w-[200px]" />
                       </div>
-                      <div className="flex text-xl items-center gap-1">
+                      <div className="flex text-md items-center gap-1">
                         <label className="block min-w-[180px] text-pos-text mb-1">Shelf life:</label>
-                        <input type="text" value={advancedHoudbareDagen} onChange={(e) => setAdvancedHoudbareDagen(e.target.value)} onFocus={() => setProductActiveField('houdbareDagen')} className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <input type="text" value={advancedHoudbareDagen} onChange={(e) => setAdvancedHoudbareDagen(e.target.value)} onFocus={() => setProductActiveField('houdbareDagen')} className="w-full h-[40px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <div className="flex text-xl gap-1">
+                      <div className="flex text-md gap-1">
                         <label className="block min-w-[180px] text-pos-text mb-1">Storage, use:</label>
-                        <textarea value={advancedBewarenGebruik} onChange={(e) => setAdvancedBewarenGebruik(e.target.value)} onFocus={() => setProductActiveField('bewarenGebruik')} rows={4} className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text resize-none" />
+                        <textarea value={advancedBewarenGebruik} onChange={(e) => setAdvancedBewarenGebruik(e.target.value)} onFocus={() => setProductActiveField('bewarenGebruik')} rows={4} className="w-full border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md resize-none" />
                       </div>
                     </div>
                   </div>
-                  <div className="flex text-2xl justify-center absolute top-[50%] left-0 right-0">
-                    <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center pt-20 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -8436,18 +8551,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               {productTab === 'extra_prices' && (
                 <div className="p-6 flex flex-col gap-5">
                   <div className="overflow-x-auto">
-                    <div className="flex gap-4 text-xl w-full justify-around mb-5 text-pos-text">
+                    <div className="flex gap-4 text-md w-full justify-around mb-5 text-pos-text">
                       <div className="font-medium">Pricegroup</div>
                       <div className="font-medium">Other name</div>
                       <div className="font-medium">Other printer</div>
                       <div className="font-medium">Other price</div>
                     </div>
-                    <table className="w-full h-[300px] border-collapse border border-pos-border rounded-lg text-pos-text text-xl">
+                    <table className="w-full h-[300px] border-collapse border border-pos-border rounded-lg text-pos-text text-md">
                       <tbody className='h-[50px] flex flex-col w-full'>
                         {extraPricesRows.map((row, idx) => (
                           <tr key={idx} className="bg-pos-bg">
                             <td className="w-[323px] px-4 py-2">
-                              <span className="px-3 py-2 block flex justify-center rounded-lg text-pos-text text-xl">{row.priceGroupLabel}</span>
+                              <span className="px-3 py-2 block flex justify-center rounded-lg text-pos-text text-md">{row.priceGroupLabel}</span>
                             </td>
                             <td className="w-[330px] px-4 py-2">
                               <input
@@ -8455,7 +8570,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 value={row.otherName}
                                 onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherName: e.target.value } : r))}
                                 onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherName'); }}
-                                className="w-full max-w-[150px] ml-[80px] rounded-lg px-3 py-2 border border-pos-border flex justify-center bg-pos-panel text-pos-text"
+                                className="w-full max-w-[150px] ml-[80px] rounded-lg px-3 py-2 border border-pos-border flex justify-center bg-pos-panel text-pos-text text-md"
                               />
                             </td>
                             <td className="w-[350px] px-4 py-2">
@@ -8464,7 +8579,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 value={row.otherPrinter}
                                 onChange={(v) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrinter: v } : r))}
                                 placeholder="--"
-                                className="w-full rounded-lg px-3 py-2 bg-pos-bg text-pos-text"
+                                className="w-full rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md"
                               />
                             </td>
                             <td className="w-[320px] px-4 py-2">
@@ -8473,7 +8588,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 value={row.otherPrice}
                                 onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrice: e.target.value } : r))}
                                 onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherPrice'); }}
-                                className="w-full rounded-lg ml-[100px] max-w-[120px] px-3 py-2 border border-pos-border bg-pos-panel text-pos-text"
+                                className="w-full rounded-lg ml-[100px] max-w-[120px] px-3 py-2 border border-pos-border bg-pos-panel text-pos-text text-md"
                               />
                             </td>
                           </tr>
@@ -8482,88 +8597,88 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </table>
                   </div>
                   <div className="flex items-center justify-around px-[400px]">
-                    <button type="button" className="p-2 rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-3xl" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
-                    <button type="button" className="p-2 rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-3xl" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
+                    <button type="button" className="p-2 rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
+                    <button type="button" className="p-2 rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
                   </div>
-                  <div className="flex justify-center">
-                    <button type="button" className="flex items-center gap-4 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 text-2xl" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center pt-20 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
               {productTab === 'purchase_stock' && (
-                <div className="p-6 flex flex-col gap-6 text-xl">
+                <div className="p-6 flex flex-col gap-6 text-md">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="flex flex-col gap-6">
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[65px]">Purchase VAT:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={purchaseVat} onChange={setPurchaseVat} placeholder="--" className="border min-w-[150px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[65px] text-md">Purchase VAT:</label>
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={purchaseVat} onChange={setPurchaseVat} placeholder="--" className="border min-w-[200px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[20px]">Purchase price excl:</label>
-                        <input type="text" value={purchasePriceExcl} onChange={(e) => setPurchasePriceExcl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceExcl')} className="border max-w-[220px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[20px] text-md">Purchase price excl:</label>
+                        <input type="text" value={purchasePriceExcl} onChange={(e) => setPurchasePriceExcl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceExcl')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[20px]">Purchase price incl.:</label>
-                        <input type="text" value={purchasePriceIncl} onChange={(e) => setPurchasePriceIncl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceIncl')} className="border max-w-[220px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[20px] text-md">Purchase price incl.:</label>
+                        <input type="text" value={purchasePriceIncl} onChange={(e) => setPurchasePriceIncl(e.target.value)} onFocus={() => setProductActiveField('purchasePriceIncl')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[35px]">Profit percentage:</label>
-                        <input type="text" value={profitPct} onChange={(e) => setProfitPct(e.target.value)} onFocus={() => setProductActiveField('profitPct')} className="border border-pos-border rounded-lg px-3 max-w-[220px] py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[35px] text-md">Profit percentage:</label>
+                        <input type="text" value={profitPct} onChange={(e) => setProfitPct(e.target.value)} onFocus={() => setProductActiveField('profitPct')} className="border border-pos-border rounded-lg px-3 max-w-[220px] h-[40px] py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                     </div>
                     <div className="flex flex-col gap-6">
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[75px]">Unit:</label>
-                        <Dropdown options={PURCHASE_UNIT_OPTIONS} value={purchaseUnit} onChange={setPurchaseUnit} placeholder="--" className="border border-pos-border min-w-[150px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[75px] text-md">Unit:</label>
+                        <Dropdown options={PURCHASE_UNIT_OPTIONS} value={purchaseUnit} onChange={setPurchaseUnit} placeholder="--" className="border border-pos-border min-w-[200px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[10px]">Unit content:</label>
-                        <input type="text" value={unitContent} onChange={(e) => setUnitContent(e.target.value)} onFocus={() => setProductActiveField('unitContent')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[10px] text-md">Unit content:</label>
+                        <input type="text" value={unitContent} onChange={(e) => setUnitContent(e.target.value)} onFocus={() => setProductActiveField('unitContent')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[70px]">Stock:</label>
-                        <input type="text" value={stock} onChange={(e) => setStock(e.target.value)} onFocus={() => setProductActiveField('stock')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[70px] text-md">Stock:</label>
+                        <input type="text" value={stock} onChange={(e) => setStock(e.target.value)} onFocus={() => setProductActiveField('stock')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
                       </div>
                     </div>
                     <div className="flex flex-col gap-6">
                       <div className='flex items-center gap-28'>
-                        <label className="block text-pos-text pr-3 mb-1">Supplier:</label>
-                        <Dropdown options={PURCHASE_SUPPLIER_OPTIONS} value={purchaseSupplier} onChange={setPurchaseSupplier} placeholder="--" className="border min-w-[150px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text pr-3 mb-1 text-md">Supplier:</label>
+                        <Dropdown options={PURCHASE_SUPPLIER_OPTIONS} value={purchaseSupplier} onChange={setPurchaseSupplier} placeholder="--" className="border min-w-[200px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-16'>
-                        <label className="block text-pos-text pr-3 mb-1">Supplier code:</label>
-                        <input type="text" value={supplierCode} onChange={(e) => setSupplierCode(e.target.value)} onFocus={() => setProductActiveField('supplierCode')} className="border max-w-[200px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text pr-3 mb-1 text-md">Supplier code:</label>
+                        <input type="text" value={supplierCode} onChange={(e) => setSupplierCode(e.target.value)} onFocus={() => setProductActiveField('supplierCode')} className="border max-w-[200px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <label className="flex items-center gap-12 text-pos-text">
+                      <label className="flex items-center gap-12 text-pos-text text-md">
                         Stock notification
-                        <input type="checkbox" checked={stockNotification} onChange={(e) => setStockNotification(e.target.checked)} className="rounded w-8 h-8 border-pos-border" />
+                        <input type="checkbox" checked={stockNotification} onChange={(e) => setStockNotification(e.target.checked)} className="rounded w-5 h-5 border-pos-border" />
                       </label>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 pr-[55px]">Expiration date:</label>
-                        <input type="text" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} onFocus={() => setProductActiveField('expirationDate')} className="border border-pos-border max-w-[200px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text" placeholder="" />
+                        <label className="block text-pos-text mb-1 pr-[55px] text-md">Expiration date:</label>
+                        <input type="text" value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} onFocus={() => setProductActiveField('expirationDate')} className="border border-pos-border max-w-[200px] h-[40px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" placeholder="" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text pr-[10px] mb-1">Declaration of expiry:</label>
+                        <label className="block text-pos-text pr-[10px] mb-1 text-md">Declaration of expiry:</label>
                         <div className="flex items-center gap-2">
-                          <input type="text" value={declarationExpiryDays} onChange={(e) => setDeclarationExpiryDays(e.target.value)} onFocus={() => setProductActiveField('declarationExpiryDays')} className="border max-w-[80px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text max-w-[120px]" />
+                          <input type="text" value={declarationExpiryDays} onChange={(e) => setDeclarationExpiryDays(e.target.value)} onFocus={() => setProductActiveField('declarationExpiryDays')} className="border max-w-[120px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                           <span className="text-pos-text text-md">days in advance</span>
                         </div>
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 pr-[10px]">Notification sold out:</label>
+                        <label className="block text-pos-text mb-1 pr-[10px] text-md">Notification sold out:</label>
                         <div className="flex items-center gap-2">
-                          <input type="text" value={notificationSoldOutPieces} onChange={(e) => setNotificationSoldOutPieces(e.target.value)} onFocus={() => setProductActiveField('notificationSoldOutPieces')} className="border max-w-[80px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text max-w-[120px]" />
+                          <input type="text" value={notificationSoldOutPieces} onChange={(e) => setNotificationSoldOutPieces(e.target.value)} onFocus={() => setProductActiveField('notificationSoldOutPieces')} className="border max-w-[120px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                           <span className="text-pos-text text-md">pieces in advance</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center absolute top-[50%] left-0 right-0">
-                    <button type="button" className="flex text-2xl items-center gap-4 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center pt-20 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -8572,95 +8687,95 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               {productTab === 'webshop' && (
                 <div className="p-6 flex flex-col gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex text-xl flex-col gap-4">
-                      <label className="flex items-center gap-2 text-pos-text">
+                    <div className="flex text-md flex-col gap-4">
+                      <label className="flex items-center gap-2 text-pos-text text-md">
                         In webshop:
-                        <input type="checkbox" checked={productInWebshop} onChange={(e) => setProductInWebshop(e.target.checked)} className="w-8 h-8 ml-[100px] rounded border-pos-border" />
+                        <input type="checkbox" checked={productInWebshop} onChange={(e) => setProductInWebshop(e.target.checked)} className="w-5 h-5 ml-[100px] rounded border-pos-border" />
                       </label>
-                      <label className="flex items-center gap-2 text-pos-text">
+                      <label className="flex items-center gap-2 text-pos-text text-md">
                         Online orderable:
-                        <input type="checkbox" checked={webshopOnlineOrderable} onChange={(e) => setWebshopOnlineOrderable(e.target.checked)} className="w-8 h-8 ml-[57px] rounded border-pos-border" />
+                        <input type="checkbox" checked={webshopOnlineOrderable} onChange={(e) => setWebshopOnlineOrderable(e.target.checked)} className="w-5 h-5 ml-[57px] rounded border-pos-border" />
                       </label>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[65px]">Website remark:</label>
-                        <input type="text" value={websiteRemark} onChange={(e) => setWebsiteRemark(e.target.value)} onFocus={() => setProductActiveField('websiteRemark')} className="border max-w-[220px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[65px] text-md">Website remark:</label>
+                        <input type="text" value={websiteRemark} onChange={(e) => setWebsiteRemark(e.target.value)} onFocus={() => setProductActiveField('websiteRemark')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[75px]">Website order:</label>
-                        <input type="text" value={websiteOrder} onChange={(e) => setWebsiteOrder(e.target.value)} onFocus={() => setProductActiveField('websiteOrder')} className="border max-w-[220px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[75px] text-md">Website order:</label>
+                        <input type="text" value={websiteOrder} onChange={(e) => setWebsiteOrder(e.target.value)} onFocus={() => setProductActiveField('websiteOrder')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                     </div>
-                    <div className="flex text-xl flex-col gap-4">
+                    <div className="flex text-md flex-col gap-4">
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[70px]">Short web text:</label>
-                        <input type="text" value={shortWebText} onChange={(e) => setShortWebText(e.target.value)} onFocus={() => setProductActiveField('shortWebText')} className="border max-w-[220px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text mb-1 mr-[70px] text-md">Short web text:</label>
+                        <input type="text" value={shortWebText} onChange={(e) => setShortWebText(e.target.value)} onFocus={() => setProductActiveField('shortWebText')} className="border max-w-[220px] h-[40px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text mb-1 mr-[70px]">Website photo:</label>
+                        <label className="block text-pos-text mb-1 mr-[70px] text-md">Website photo:</label>
                         <div className="flex items-center gap-2">
-                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0">
+                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
                             Choose File
                             <input type="file" className="hidden" accept="image/*" onChange={(e) => setWebsitePhotoFileName(e.target.files?.[0]?.name ?? '')} />
                           </label>
-                          <span className="text-pos-muted text-xl">{websitePhotoFileName || 'No file chosen'}</span>
+                          <span className="text-pos-muted text-md">{websitePhotoFileName || 'No file chosen'}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center">
-                    <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center pt-20 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
               {productTab === 'kiosk' && (
-                <div className="p-6 flex flex-col  gap-6">
-                  <div className="grid grid-cols-2 gap-4 text-xl">
+                <div className="p-6 flex flex-col gap-6">
+                  <div className="grid grid-cols-2 gap-4 text-md">
                     <div className='flex flex-col gap-5'>
                       <div className='flex items-center gap-2'>
-                        <label className="block w-[150px] text-pos-text mb-1">Kiosk info:</label>
-                        <input type="text" value={kioskInfo} onChange={(e) => setKioskInfo(e.target.value)} onFocus={() => setProductActiveField('kioskInfo')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block w-[150px] text-pos-text mb-1 text-md">Kiosk info:</label>
+                        <input type="text" value={kioskInfo} onChange={(e) => setKioskInfo(e.target.value)} onFocus={() => setProductActiveField('kioskInfo')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
                       </div>
-                      <label className="flex items-center gap-2 text-pos-text">
+                      <label className="flex items-center gap-2 text-pos-text text-md">
                         Kiosk take away:
-                        <input type="checkbox" checked={kioskTakeAway} onChange={(e) => setKioskTakeAway(e.target.checked)} className="w-8 h-8 ml-4 rounded border-pos-border" />
+                        <input type="checkbox" checked={kioskTakeAway} onChange={(e) => setKioskTakeAway(e.target.checked)} className="w-5 h-5 ml-4 rounded border-pos-border" />
                       </label>
                       <div className='flex items-center gap-2'>
-                        <label className="block w-[150px] text-pos-text mb-1">Kiosk eat in:</label>
-                        <input type="text" value={kioskEatIn} onChange={(e) => setKioskEatIn(e.target.value)} onFocus={() => setProductActiveField('kioskEatIn')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text max-w-md" />
+                        <label className="block w-[150px] text-pos-text mb-1 text-md">Kiosk eat in:</label>
+                        <input type="text" value={kioskEatIn} onChange={(e) => setKioskEatIn(e.target.value)} onFocus={() => setProductActiveField('kioskEatIn')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md max-w-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block w-[150px] text-pos-text mb-1">Kiosk subtitle:</label>
-                        <input type="text" value={kioskSubtitle} onChange={(e) => setKioskSubtitle(e.target.value)} onFocus={() => setProductActiveField('kioskSubtitle')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block w-[150px] text-pos-text mb-1 text-md">Kiosk subtitle:</label>
+                        <input type="text" value={kioskSubtitle} onChange={(e) => setKioskSubtitle(e.target.value)} onFocus={() => setProductActiveField('kioskSubtitle')} className="border border-pos-border rounded-lg px-3 py-2 h-[40px] bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text w-[150px] mb-1">Kiosk min. subs:</label>
-                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMinSubs} onChange={setKioskMinSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text w-[150px] mb-1 text-md">Kiosk min. subs:</label>
+                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMinSubs} onChange={setKioskMinSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center gap-2'>
-                        <label className="block text-pos-text w-[150px] mb-1">Kiosk max. subs:</label>
-                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMaxSubs} onChange={setKioskMaxSubs} className="min-w-[200px]  border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <label className="block text-pos-text w-[150px] mb-1 text-md">Kiosk max. subs:</label>
+                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMaxSubs} onChange={setKioskMaxSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
                       </div>
                     </div>
                     <div className='flex items-start gap-2'>
                       <div className='flex items-center'>
-                        <label className="block text-pos-text mb-1 pr-10">Kiosk picture:</label>
+                        <label className="block text-pos-text mb-1 pr-10 text-md">Kiosk picture:</label>
                         <div className="flex items-center gap-2">
-                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0">
+                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
                             Choose File
                             <input type="file" className="hidden" accept="image/*" onChange={(e) => setKioskPictureFileName(e.target.files?.[0]?.name ?? '')} />
                           </label>
-                          <span className="text-pos-muted text-xl pl-5">{kioskPictureFileName || 'No file chosen'}</span>
+                          <span className="text-pos-muted text-md pl-5">{kioskPictureFileName || 'No file chosen'}</span>
                         </div>
 
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-center">
-                    <button type="button" className="flex items-center gap-2 px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700" onClick={handleSaveProduct} disabled={savingProduct}>
-                      <svg fill="#ffffff" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <div className="flex justify-center pt-20 pb-5">
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                      <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -8816,22 +8931,22 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         };
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="relative bg-gray-100 rounded-xl shadow-2xl w-full max-w-[1320px] h-[850px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
-                className="absolute top-4 right-4 z-10 p-2 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+                className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
                 onClick={closeProductPositioningModal}
                 aria-label="Close positioning modal"
               >
                 <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
 
-              <div className="h-full p-8 flex flex-col">
-                <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 min-h-0 w-full p-6 flex flex-col pt-20">
+                <div className="flex items-center gap-2 mb-4 shrink-0">
                   <button
                     type="button"
-                    className="p-2 rounded text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+                    className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel disabled:opacity-40 shrink-0"
                     disabled={!canPrevCategory}
                     onClick={() => {
                       if (!canPrevCategory) return;
@@ -8841,16 +8956,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     }}
                     aria-label="Previous category"
                   >
-                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                   </button>
-                  <div className="flex-1 overflow-x-auto">
+                  <div className="flex-1 overflow-x-auto min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <div className="flex min-w-max border-b border-gray-300">
                       {categories.map((c) => (
                         <button
                           key={c.id}
                           type="button"
                           onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); }}
-                          className={`px-10 py-4 text-3xl border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-blue-400 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                          className={`px-4 py-2 text-md font-medium border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-green-600 text-white' : 'bg-pos-panel text-gray-200 hover:bg-pos-bg'
                             }`}
                         >
                           {(c.name || '').toUpperCase()}
@@ -8860,7 +8975,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                   <button
                     type="button"
-                    className="p-2 rounded text-gray-700 hover:bg-gray-200 disabled:opacity-40"
+                    className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel disabled:opacity-40 shrink-0"
                     disabled={!canNextCategory}
                     onClick={() => {
                       if (!canNextCategory) return;
@@ -8870,19 +8985,19 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     }}
                     aria-label="Next category"
                   >
-                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                   </button>
                 </div>
 
-                <div className="flex justify-center gap-8 mb-4">
+                <div className="flex justify-center gap-4 mb-4 shrink-0">
                   {Array.from({ length: pages }, (_, i) => (
-                    <span key={i} className={`w-3 h-3 rounded-full ${i === 0 ? 'bg-gray-800' : 'bg-gray-400'}`} />
+                    <span key={i} className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-gray-300' : 'bg-gray-600'}`} />
                   ))}
                 </div>
 
-                <div className="flex-1 grid grid-cols-[280px_1fr] gap-8">
+                <div className="flex-1 min-h-0 grid grid-cols-[200px_1fr] gap-4">
                   <div
-                    className="border border-gray-300 bg-white p-3 overflow-y-auto"
+                    className="border border-gray-300 bg-pos-panel/50 p-3 overflow-y-auto rounded-lg"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDropOnPool}
                   >
@@ -8895,7 +9010,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             type="button"
                             draggable
                             onDragStart={(e) => handleDragStartFromPool(e, item._positioningId)}
-                            className={`text-left px-3 py-2 rounded border text-sm ${item.type === 'product' ? 'bg-green-500/90 text-white border-green-600' : 'bg-amber-500/90 text-white border-amber-600'
+                            className={`text-left px-3 py-2 rounded border text-md ${item.type === 'product' ? 'bg-green-500/90 text-white border-green-600' : 'bg-amber-500/90 text-white border-amber-600'
                               }`}
                           >
                             <div className="truncate">{item.name}</div>
@@ -8904,19 +9019,19 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-0 border border-gray-300 bg-white">
+                  <div className="grid grid-cols-5 gap-0 border border-gray-300 bg-pos-panel/30 rounded-lg overflow-hidden">
                     {cells.map((itemId, idx) => {
                       const item = itemId ? itemMap.get(itemId) : null;
                       const selected = item && positioningSelectedProductId === item.id && positioningSelectedCellIndex === idx;
                       const selectedColorId = categoryColors[String(idx)];
                       const tileClass = item
                         ? tileClassByColorId(selectedColorId, item.type)
-                        : 'bg-gray-100';
+                        : 'bg-pos-panel/50';
                       return (
                         <div
                           key={item?.id || `empty-${idx}`}
-                          className={`h-[82px] border border-gray-300 px-2 text-center text-xl ${tileClass} ${selected ? 'ring-2 ring-black' : ''}`}
-                          style={selected ? { boxShadow: 'inset 0 0 0 2px #111827' } : undefined}
+                          className={`h-[70px] border border-gray-300 px-2 text-center text-md ${tileClass} ${selected ? 'ring-2 ring-gray-300' : ''}`}
+                          style={selected ? { boxShadow: 'inset 0 0 0 2px #9ca3af' } : undefined}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDropOnCell(e, idx)}
                         >
@@ -8931,8 +9046,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               }}
                               className="w-full h-full"
                             >
-                              <div className="truncate">{item.name}</div>
-                              <div className="text-lg">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)}</div>
+                              <div className="truncate text-md">{item.name}</div>
+                              <div className="text-md">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)}</div>
                             </button>
                           ) : null}
                         </div>
@@ -8940,27 +9055,27 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     })}
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-center gap-8">
-                  <div className="flex items-center gap-3">
+                <div className="mt-4 flex items-center justify-center gap-6 shrink-0 pt-5 pb-5">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="px-8 py-3 rounded border border-gray-300 text-2xl text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                      className="px-6 py-3 rounded-lg border border-gray-300 text-md font-medium text-gray-200 bg-pos-panel hover:bg-pos-bg disabled:opacity-50"
                       disabled={!Number.isInteger(positioningSelectedCellIndex)}
                       onClick={removeFromPlace}
                     >
                       {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
                     </button>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     {COLOR_OPTIONS.map((option) => (
                       <button
                         key={option.id}
                         type="button"
                         disabled={!Number.isInteger(positioningSelectedCellIndex)}
                         onClick={() => applyColorToSelectedCell(option.id)}
-                        className={`w-24 h-12 rounded border border-gray-300 ${option.className} ${Number.isInteger(positioningSelectedCellIndex) &&
+                        className={`w-14 h-8 rounded border border-gray-300 text-md ${option.className} ${Number.isInteger(positioningSelectedCellIndex) &&
                           categoryColors[String(positioningSelectedCellIndex)] === option.id
-                          ? 'ring-2 ring-black'
+                          ? 'ring-2 ring-gray-300'
                           : ''
                           }`}
                         aria-label={`Set tile color ${option.id}`}
@@ -8969,15 +9084,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                   <button
                     type="button"
-                    className="px-8 py-3 rounded border border-emerald-700 text-2xl text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+                    className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
                     disabled={savingPositioningLayout}
                     onClick={saveProductPositioningLayout}
                   >
+                    <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                     {savingPositioningLayout ? tr('control.saving', 'Saving...') : tr('control.save', 'Save')}
                   </button>
                 </div>
                 {positioningLayoutSaveMessage ? (
-                  <div className="mt-2 text-center text-xl text-gray-700">{positioningLayoutSaveMessage}</div>
+                  <div className="mt-2 text-center text-md text-gray-300">{positioningLayoutSaveMessage}</div>
                 ) : null}
               </div>
             </div>
@@ -8988,11 +9104,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Product search keyboard modal */}
       {showProductSearchKeyboard && subNavId === 'Products' && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="relative bg-pos-bg rounded-t-xl shadow-2xl w-full max-w-[1415px] overflow-hidden flex flex-col max-h-[70vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative bg-pos-bg rounded-t-xl shadow-2xl w-[90%] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-1 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-4 shrink-0 pt-20">
+            <div className="p-2 shrink-0 pt-10 flex w-full justify-center">
               <KeyboardWithNumpad value={productSearch} onChange={setProductSearch} />
             </div>
           </div>
@@ -9101,123 +9217,121 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* New / Edit subproduct modal */}
       {showSubproductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex-1 overflow-hidden p-6 pb-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 mt-20">
-                <div className="md:col-span-1 flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Name:</label>
+            <div className="flex-1 min-h-0 overflow-auto w-full">
+              <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
+                <div className="w-full flex flex-col justify-center items-center gap-10">
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md min-w-[100px] font-medium text-gray-200 mb-2">Name : </label>
                     <input
                       type="text"
                       value={subproductName}
                       onChange={(e) => handleSubproductNameChange(e.target.value)}
                       onFocus={() => setSubproductActiveField('name')}
                       placeholder=""
-                      className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Key name:</label>
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Key name : </label>
                     <input
                       type="text"
                       value={subproductKeyName}
                       onChange={(e) => setSubproductKeyName(e.target.value)}
                       onFocus={() => setSubproductActiveField('keyName')}
                       placeholder=""
-                      className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Production name:</label>
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Production name : </label>
                     <input
                       type="text"
                       value={subproductProductionName}
                       onChange={(e) => setSubproductProductionName(e.target.value)}
                       onFocus={() => setSubproductActiveField('productionName')}
                       placeholder=""
-                      className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <label className="block text-pos-text text-xl font-medium w-36 shrink-0">Price:</label>
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Price : </label>
                     <input
                       type="text"
                       value={subproductPrice}
                       onChange={(e) => setSubproductPrice(e.target.value)}
                       onFocus={() => setSubproductActiveField('price')}
                       placeholder=""
-                      className="w-32 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl"
+                      className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <label className="block text-pos-text text-xl font-medium w-36 shrink-0">VAT Take out:</label>
-                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatTakeOut} onChange={setSubproductVatTakeOut} placeholder="--" className="flex-1 min-w-[120px] text-xl" />
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">VAT Take out : </label>
+                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatTakeOut} onChange={setSubproductVatTakeOut} placeholder="--" className="text-md min-w-[200px]" />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <label className="block text-pos-text text-xl font-medium w-36 shrink-0">VAT Eat in:</label>
-                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatEatIn} onChange={setSubproductVatEatIn} placeholder="--" className="flex-1 min-w-[120px] text-xl" />
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">VAT Eat in : </label>
+                    <Dropdown options={SUBPRODUCT_VAT_OPTIONS} value={subproductVatEatIn} onChange={setSubproductVatEatIn} placeholder="--" className="text-md min-w-[200px]" />
                   </div>
-                </div>
-                <div className="md:col-span-1 flex flex-col gap-4">
-                  <div className="flex items-center gap-3 w-full">
-                    <label className="block text-pos-text text-xl font-medium w-28 shrink-0">Group:</label>
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Group : </label>
                     <Dropdown
                       options={subproductGroups.map((g) => ({ value: g.id, label: g.name }))}
                       value={subproductModalGroupId}
                       onChange={setSubproductModalGroupId}
                       placeholder="--"
-                      className="flex-1 text-xl min-w-[300px]"
+                      className="text-md min-w-[200px]"
                     />
                   </div>
-                  <div className="flex items-center w-full gap-3">
-                    <label className="block text-pos-text text-xl font-medium shrink-0">Kiosk picture:</label>
-                    {!subproductKioskPicture ? (
-                      <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-xl">
-                        Select
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file && file.type.startsWith('image/')) {
-                              const dataUrl = await new Promise((resolve, reject) => {
-                                const reader = new FileReader();
-                                reader.onload = () => resolve(String(reader.result || ''));
-                                reader.onerror = () => reject(reader.error);
-                                reader.readAsDataURL(file);
-                              }).catch(() => '');
-                              if (dataUrl) setSubproductKioskPicture(dataUrl);
-                            }
-                            e.target.value = '';
-                          }}
-                        />
-                      </label>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <img src={subproductKioskPicture} alt="Kiosk" className="w-[76px] h-[76px] object-cover rounded border border-pos-border" />
-                        <button
-                          type="button"
-                          className="px-3 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 text-xl"
-                          onClick={() => setSubproductKioskPicture('')}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex gap-2 w-full items-center justify-center">
+                    <label className="block min-w-[200px] text-md pr-[50px] font-medium text-gray-200 mb-2">Kiosk picture : </label>
+                    <div className="w-[200px] flex items-center justify-start flex-wrap gap-2">
+                      {!subproductKioskPicture ? (
+                        <label className="px-4 py-2 border border-gray-300 rounded-lg text-gray-200 hover:bg-pos-panel cursor-pointer shrink-0 text-md">
+                          Select
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file && file.type.startsWith('image/')) {
+                                const dataUrl = await new Promise((resolve, reject) => {
+                                  const reader = new FileReader();
+                                  reader.onload = () => resolve(String(reader.result || ''));
+                                  reader.onerror = () => reject(reader.error);
+                                  reader.readAsDataURL(file);
+                                }).catch(() => '');
+                                if (dataUrl) setSubproductKioskPicture(dataUrl);
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      ) : (
+                        <>
+                          <img src={subproductKioskPicture} alt="Kiosk" className="w-16 h-16 object-cover rounded-lg border border-gray-300 shrink-0" />
+                          <button
+                            type="button"
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-gray-200 hover:bg-rose-500/30 text-md shrink-0"
+                            onClick={() => setSubproductKioskPicture('')}
+                          >
+                            Remove
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-pos-text text-xl flex w-full justify-center font-medium mb-5">Attach To</label>
-                    <div className="border border-pos-border rounded-lg bg-white/5 h-[350px] overflow-y-auto">
+                  <div className="flex flex-col w-full max-w-md items-center gap-3">
+                    <label className="block text-md font-medium text-gray-200 mb-1">Attach To</label>
+                    <div className="border border-gray-300 rounded-lg bg-pos-panel/30 w-full h-[220px] overflow-y-auto">
                       <ul className="p-2">
                         {categories.length === 0 ? (
-                          <li className="text-pos-muted text-lg py-2">No categories available</li>
+                          <li className="text-pos-muted text-md py-2 px-2">No categories available</li>
                         ) : (
                           categories.map((c) => {
                             const attached = subproductAttachToCategoryIds.includes(c.id);
@@ -9227,7 +9341,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 key={c.id}
                                 role="button"
                                 tabIndex={0}
-                                className={`text-xl py-1.5 px-2 flex items-center gap-2 cursor-pointer rounded select-none ${attached ? 'text-pos-text font-medium bg-pos-panel' : 'text-pos-muted'} hover:bg-pos-panel/70`}
+                                className={`text-md py-1.5 px-2 flex items-center gap-2 cursor-pointer rounded select-none ${attached ? 'text-gray-200 font-medium bg-pos-panel' : 'text-pos-muted'} hover:bg-pos-panel/70`}
                                 onClick={toggle}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
                                 aria-label={attached ? `Attached to ${c.name}. Click to detach.` : `Click to attach to ${c.name}`}
@@ -9238,7 +9352,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                   checked={attached}
                                   onChange={() => { }}
                                   onClick={(e) => { e.stopPropagation(); toggle(); }}
-                                  className="w-6 h-6 rounded border-2 border-pos-border bg-pos-bg text-green-600 focus:ring-green-500 cursor-pointer shrink-0"
+                                  className="w-5 h-5 rounded border-gray-300 cursor-pointer shrink-0"
                                   aria-label={attached ? `Detach from ${c.name}` : `Attach to ${c.name}`}
                                 />
                               </li>
@@ -9247,21 +9361,32 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         )}
                       </ul>
                     </div>
-                    <div className="flex w-full flex justify-around gap-2 items-center mt-10">
-                      <button type="button" className="p-2 rounded bg-pos-bg border border-pos-border text-pos-text hover:bg-pos-panel" aria-label="Move attached list up" onClick={() => setSubproductAttachToCategoryIds((prev) => prev.length < 2 ? prev : [prev[prev.length - 1], ...prev.slice(0, -1)])}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg></button>
-                      <button type="button" className="p-2 rounded bg-pos-bg border border-pos-border text-pos-text hover:bg-pos-panel" aria-label="Move attached list down" onClick={() => setSubproductAttachToCategoryIds((prev) => prev.length < 2 ? prev : [...prev.slice(1), prev[0]])}><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
+                    <div className="flex w-full justify-around gap-2 items-center pt-2">
+                      <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Move attached list up" onClick={() => setSubproductAttachToCategoryIds((prev) => prev.length < 2 ? prev : [prev[prev.length - 1], ...prev.slice(0, -1)])}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                      </button>
+                      <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Move attached list down" onClick={() => setSubproductAttachToCategoryIds((prev) => prev.length < 2 ? prev : [...prev.slice(1), prev[0]])}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="flex justify-center absolute top-[50%] left-0 right-0">
-                <button type="button" className="flex text-2xl items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingSubproduct} onClick={handleSaveSubproduct}>
-                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                  Save
-                </button>
-              </div>
             </div>
-            <div className="shrink-0 pt-4 px-4 pb-4">
+            <div className="flex justify-center pt-5 pb-5 shrink-0">
+              <button
+                type="button"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                disabled={savingSubproduct}
+                onClick={handleSaveSubproduct}
+              >
+                <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
+                </svg>
+                {tr('control.save', 'Save')}
+              </button>
+            </div>
+            <div className="shrink-0">
               <KeyboardWithNumpad value={subproductKeyboardValue} onChange={subproductKeyboardOnChange} />
             </div>
           </div>
@@ -9271,80 +9396,134 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Manage Groups modal */}
       {showManageGroupsModal && (() => {
         const sortedGroups = [...subproductGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-        const selectedIdx = selectedManageGroupId ? sortedGroups.findIndex((g) => g.id === selectedManageGroupId) : -1;
-        const canMoveUp = selectedIdx > 0;
-        const canMoveDown = selectedIdx >= 0 && selectedIdx < sortedGroups.length - 1;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] w-full h-[1000px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
               <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowManageGroupsModal(false); setSelectedManageGroupId(null); }} aria-label="Close">
-                <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-              <div className="w-full flex items-center justify-around mt-10 px-[300px] gap-3 py-4 shrink-0 pr-14">
-                <input
-                  type="text"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="New group name"
-                  className="flex-1 max-w-[350px] px-4 py-3 rounded-lg bg-pos-panel text-pos-text placeholder-pos-muted text-xl focus:outline-none focus:border-green-500"
-                />
-                <button type="button" className="px-5 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl shrink-0" disabled={savingGroup} onClick={handleAddGroup}>Add</button>
-              </div>
-              <div className="flex-1 overflow-auto m-10 p-5 py-1 px-20">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    {sortedGroups.map((grp) => (
-                      <tr
-                        key={grp.id}
-                        className={`border-b w-full items-center h-[50px] flex justify-between border-gray-300 ${selectedManageGroupId === grp.id ? 'bg-pos-panel/70' : ''} hover:bg-pos-panel/50`}
-                        onClick={(e) => { if (!e.target.closest('button')) setSelectedManageGroupId(grp.id); }}
+              <div className="flex-1 min-h-0 overflow-auto w-full">
+                <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-14">
+                  <div className="w-full flex flex-col justify-center items-center gap-5 max-w-xl">
+                    <div className="flex gap-2 w-full items-center justify-center flex-wrap">
+                      <label className="block text-md pr-[20px] font-medium text-gray-200 mb-2">New group : </label>
+                      <input
+                        type="text"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        placeholder="New group name"
+                        className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200 placeholder:text-gray-500"
+                      />
+                      <button type="button" className="flex ml-20 items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={handleAddGroup}>
+                        {tr('add', 'Add')}
+                      </button>
+                    </div>
+                    <div
+                      ref={manageGroupsListRef}
+                      className="w-full border border-gray-300 max-h-[250px] overflow-y-auto rounded-lg overflow-hidden bg-pos-panel/30 cursor-grab active:cursor-grabbing"
+                      onScroll={updateManageGroupsPaginationState}
+                      onPointerDown={(e) => {
+                        if (e.pointerType === 'mouse' && e.button !== 0) return;
+                        const el = manageGroupsListRef.current;
+                        if (!el) return;
+                        manageGroupsDragRef.current = {
+                          active: true,
+                          startY: e.clientY,
+                          startScrollTop: el.scrollTop,
+                          pointerId: e.pointerId,
+                        };
+                        e.currentTarget.setPointerCapture?.(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        const drag = manageGroupsDragRef.current;
+                        if (!drag.active) return;
+                        const el = manageGroupsListRef.current;
+                        if (!el) return;
+                        const deltaY = e.clientY - drag.startY;
+                        el.scrollTop = drag.startScrollTop - deltaY;
+                      }}
+                      onPointerUp={(e) => {
+                        const drag = manageGroupsDragRef.current;
+                        if (!drag.active) return;
+                        manageGroupsDragRef.current = { active: false, startY: 0, startScrollTop: 0, pointerId: null };
+                        e.currentTarget.releasePointerCapture?.(e.pointerId);
+                        updateManageGroupsPaginationState();
+                      }}
+                      onPointerCancel={(e) => {
+                        const drag = manageGroupsDragRef.current;
+                        if (!drag.active) return;
+                        manageGroupsDragRef.current = { active: false, startY: 0, startScrollTop: 0, pointerId: null };
+                        e.currentTarget.releasePointerCapture?.(e.pointerId);
+                        updateManageGroupsPaginationState();
+                      }}
+                    >
+                      <table className="w-full border-collapse">
+                        <tbody>
+                          {sortedGroups.map((grp) => (
+                            <tr
+                              key={grp.id}
+                              className={`border-b border-gray-300 w-full items-center min-h-[40px] flex justify-between ${selectedManageGroupId === grp.id ? 'bg-pos-panel/70' : ''} hover:bg-pos-panel/50`}
+                              onClick={(e) => { if (!e.target.closest('button')) setSelectedManageGroupId(grp.id); }}
+                            >
+                              <td className="w-full py-2 px-3">
+                                {editingGroupId === grp.id ? (
+                                  <div className="flex items-center w-full justify-between gap-2 flex-wrap">
+                                    <input
+                                      type="text"
+                                      value={editingGroupName}
+                                      onChange={(e) => setEditingGroupName(e.target.value)}
+                                      className="flex min-w-[200px] max-w-[200px] px-4 h-[40px] py-3 bg-pos-panel border border-gray-300 rounded-lg text-gray-200 text-md"
+                                      autoFocus
+                                      onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button type="button" className="flex items-center text-md gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={(e) => { e.stopPropagation(); handleSaveEditGroup(); }}>{tr('control.save', 'Save')}</button>
+                                      <button type="button" className="flex items-center text-md gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 font-medium hover:bg-pos-bg shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroupId(null); setEditingGroupName(''); }}>{tr('cancel', 'Cancel')}</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="font-medium text-md text-gray-200">{grp.name}</span>
+                                )}
+                              </td>
+                              {editingGroupId !== grp.id && (
+                                <td className="py-2 px-3 text-right flex items-center gap-1 shrink-0">
+                                  <button type="button" className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); setEditingGroupName(grp.name || ''); }} aria-label="Edit">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                  </button>
+                                  <button type="button" className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setDeleteConfirmGroupId(grp.id); }} aria-label="Delete">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="flex w-full justify-around gap-4 items-center pt-2">
+                      <button
+                        type="button"
+                        className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                        disabled={savingGroup || !canManageGroupsPageUp}
+                        onClick={() => pageManageGroups('up')}
+                        aria-label="Previous page"
                       >
-                        <td className="w-full">
-                          {editingGroupId === grp.id ? (
-                            <div className="flex items-center w-full justify-between gap-2 h-[50px] flex-wrap">
-                              <input
-                                type="text"
-                                value={editingGroupName}
-                                onChange={(e) => setEditingGroupName(e.target.value)}
-                                className="flex min-w-[200px] px-3 py-2 bg-pos-bg border border-gray-300 rounded-lg text-pos-text text-xl"
-                                autoFocus
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button type="button" className="px-3 py-2 mr-5 rounded-lg bg-green-600 text-white text-xl font-medium disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={(e) => { e.stopPropagation(); handleSaveEditGroup(); }}>Save</button>
-                                <button type="button" className="px-3 py-2 rounded-lg bg-pos-bg border border-gray-300 text-pos-text text-xl shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroupId(null); setEditingGroupName(''); }}>Cancel</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="font-medium text-xl">{grp.name}</span>
-                          )}
-                        </td>
-                        {editingGroupId !== grp.id && (
-                          <td className="py-3 px-4 text-right flex">
-                            <>
-                              <button type="button" className="p-2 pr-20 rounded text-pos-text hover:bg-pos-bg inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); setEditingGroupName(grp.name || ''); }} aria-label="Edit">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                              </button>
-                              <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setDeleteConfirmGroupId(grp.id); }} aria-label="Delete">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                              </button>
-                            </>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        <img src="/arrow-up.svg" alt="" className="w-5 h-5 invert opacity-90" />
+                      </button>
+                      <button
+                        type="button"
+                        className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                        disabled={savingGroup || !canManageGroupsPageDown}
+                        onClick={() => pageManageGroups('down')}
+                        aria-label="Next page"
+                      >
+                        <img src="/arrow-down.svg" alt="" className="w-5 h-5 invert opacity-90" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-center w-full justify-around px-[200px] gap-3 pt-4">
-                <button type="button" className="p-3 rounded-lg bg-pos-bg border border-pos-border text-pos-text hover:bg-pos-panel disabled:opacity-40 disabled:pointer-events-none" disabled={!selectedManageGroupId || savingGroup || !canMoveUp} onClick={() => selectedManageGroupId && handleMoveGroup(selectedManageGroupId, 'up')} aria-label="Move up">
-                  <img src="/arrow-up.svg" alt="" className="w-6 h-6 invert opacity-90" />
-                </button>
-                <button type="button" className="p-3 rounded-lg bg-pos-bg border border-pos-border text-pos-text hover:bg-pos-panel disabled:opacity-40 disabled:pointer-events-none" disabled={!selectedManageGroupId || savingGroup || !canMoveDown} onClick={() => selectedManageGroupId && handleMoveGroup(selectedManageGroupId, 'down')} aria-label="Move down">
-                  <img src="/arrow-down.svg" alt="" className="w-6 h-6 invert opacity-90" />
-                </button>
-              </div>
-              <div className="shrink-0 pt-4 px-4 pb-4">
+              <div className="shrink-0">
                 <KeyboardWithNumpad
                   value={editingGroupId ? editingGroupName : newGroupName}
                   onChange={editingGroupId ? setEditingGroupName : setNewGroupName}
