@@ -5470,7 +5470,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   return <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl py-4">{tr('control.priceGroups.loading', 'Loading price groups...')}</li></ul>;
                 }
                 if (priceGroups.length === 0) {
-                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-3xl py-4">{tr('control.priceGroups.empty', 'No price groups yet.')}</li></ul>;
+                  return <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl font-medium text-center py-4">{tr('control.priceGroups.empty', 'No price groups yet.')}</li></ul>;
                 }
                 return (
                   <>
@@ -5538,7 +5538,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </ul>
                 ) : sortedCategories.length === 0 ? (
                   <ul className="w-full flex flex-col">
-                    <li className="text-pos-muted text-3xl py-4">{tr('control.categories.empty', 'No categories yet.')}</li>
+                    <li className="text-pos-muted text-xl font-medium text-center py-4">{tr('control.categories.empty', 'No categories yet.')}</li>
                   </ul>
                 ) : (
                   <>
@@ -6018,7 +6018,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         const canNext = page < totalPages - 1;
                         return sorted.length === 0 ? (
                           <ul className="w-full flex flex-col">
-                            <li className="text-pos-muted text-3xl py-4">No printers yet.</li>
+                            <li className="text-pos-muted text-xl font-medium text-center py-4">No printers yet.</li>
                           </ul>
                         ) : (
                           <>
@@ -6078,7 +6078,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   )}
                   {printerTab === 'Final tickets' && (
-                    <div className="flex flex-col min-h-[400px] max-h-[750px] items-center justify-between">
+                    <div className="flex flex-col min-h-[580px] max-h-[580px] items-center justify-between">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 mb-6">
                         <div className="flex flex-col gap-4">
                           <div className='flex items-start gap-2'>
@@ -6208,35 +6208,58 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     const canPrev = page > 0;
                     const canNext = page < totalLabelsPages - 1;
                     return (
-                      <div className="relative flex flex-col min-h-[750px] max-h-[750px] pb-24">
-                        <div className="flex flex-wrap items-center justify-around w-full gap-4 mb-6">
-                          <Dropdown options={LABELS_TYPE_OPTIONS} value={labelsType} onChange={(v) => saveLabelsSettings({ type: v })} placeholder="Select" className="text-xl min-w-[250px]" />
-                          <Dropdown options={labelsPrinterOptions} value={labelsPrinter} onChange={(v) => saveLabelsSettings({ printer: v })} placeholder="Select printer" className="text-xl min-w-[250px]" />
-                          <button type="button" className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors" onClick={openNewLabelModal}>
+                      <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                        <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-2">
+                          <Dropdown options={LABELS_TYPE_OPTIONS} value={labelsType} onChange={(v) => saveLabelsSettings({ type: v })} placeholder="Select" className="text-sm min-w-[200px]" />
+                          <Dropdown options={labelsPrinterOptions} value={labelsPrinter} onChange={(v) => saveLabelsSettings({ printer: v })} placeholder="Select printer" className="text-sm min-w-[200px]" />
+                          <button type="button" className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50" onClick={openNewLabelModal}>
                             New label
                           </button>
                         </div>
-                        <ul className="w-full flex flex-col border-y border-gray-400 overflow-hidden bg-pos-panel">
-                          {paginatedLabels.map((item) => (
-                            <li key={item.id} className="flex items-center w-full px-6 py-4 border-b border-gray-400 last:border-b-0 bg-pos-panel/30">
-                              <span className="flex-1 text-pos-text text-xl font-medium">{item.sizeLabel || item.name || ''}</span>
-                              <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg" onClick={() => openEditLabelModal(item)} aria-label="Edit">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                              </button>
-                              <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-bg ml-2" onClick={() => setDeleteConfirmLabelId(item.id)} aria-label="Delete">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className='fixed z-50 top-[97%] ml-[750px]'>
-                          <PaginationArrows
-                            canPrev={canPrev}
-                            canNext={canNext}
-                            onPrev={() => setLabelsListPage((p) => Math.max(0, p - 1))}
-                            onNext={() => setLabelsListPage((p) => Math.min(totalLabelsPages - 1, p + 1))}
-                          />
-                        </div>
+                        {sortedLabels.length === 0 ? (
+                          <ul className="w-full flex flex-col">
+                            <li className="text-pos-muted text-xl font-medium text-center py-4">No labels yet.</li>
+                          </ul>
+                        ) : (
+                          <>
+                            <div className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                              <ul className="w-full flex flex-col">
+                                {paginatedLabels.map((item) => (
+                                  <li
+                                    key={item.id}
+                                    className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
+                                  >
+                                    <span className="flex-1 text-left font-medium">{item.sizeLabel || item.name || ''}</span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                        type="button"
+                                        className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
+                                        onClick={() => openEditLabelModal(item)}
+                                        aria-label="Edit"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                        onClick={() => setDeleteConfirmLabelId(item.id)}
+                                        aria-label="Delete"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                      </button>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <PaginationArrows
+                              canPrev={canPrev}
+                              canNext={canNext}
+                              onPrev={() => setLabelsListPage((p) => Math.max(0, p - 1))}
+                              onNext={() => setLabelsListPage((p) => Math.min(totalLabelsPages - 1, p + 1))}
+                            />
+                          </>
+                        )}
                       </div>
                     );
                   })()}
@@ -8264,62 +8287,58 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* New / Edit label modal */}
       {showLabelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative flex flex-col bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1000px] justify-center items-between items-center overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeLabelModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeLabelModal} aria-label="Close">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 overflow-auto flex-1 mt-[100px]">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-4">
-                <div className="flex flex-col gap-6">
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Name:</span>
-                    <input type="text" value={labelName} onChange={(e) => setLabelName(e.target.value)} placeholder="e.g. 5.6cm x 3.5cm" className="flex-1 min-w-0 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Hoogte:</span>
-                    <input type="text" value={labelHeight} onChange={(e) => setLabelHeight(e.target.value)} className="w-32 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Breedte:</span>
-                    <input type="text" value={labelWidth} onChange={(e) => setLabelWidth(e.target.value)} className="w-32 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
+            <div className="p-6 flex w-full pt-14 overflow-auto text-sm">
+              <div className='flex flex-col gap-3 w-1/3'>
+                <div className="flex gap-2 w-full items-center">
+                  <label className="block min-w-[80px] max-w-[80px] font-medium text-gray-200">{tr('name', 'Name')} : </label>
+                  <input type="text" value={labelName} onChange={(e) => setLabelName(e.target.value)} placeholder={tr('control.labelModal.placeholder', 'e.g. 5.6cm x 3.5cm')} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
                 </div>
-                <div className="flex flex-col gap-6">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Standard:</span>
-                    <input type="checkbox" checked={labelStandard} onChange={(e) => setLabelStandard(e.target.checked)} className="w-8 h-8 rounded border-gray-400" />
-                  </label>
+                <div className="flex gap-2 w-full items-center">
+                  <label className="block min-w-[80px] max-w-[80px] font-medium text-gray-200">{tr('control.labelModal.height', 'Height')} : </label>
+                  <input type="text" value={labelHeight} onChange={(e) => setLabelHeight(e.target.value)} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
                 </div>
-                <div className="flex flex-col gap-6">
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Marge links:</span>
-                    <input type="text" inputMode="numeric" value={labelMarginLeft} onChange={(e) => setLabelMarginLeft(e.target.value)} className="w-24 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Marge rechts:</span>
-                    <input type="text" inputMode="numeric" value={labelMarginRight} onChange={(e) => setLabelMarginRight(e.target.value)} className="w-24 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Marge onder:</span>
-                    <input type="text" inputMode="numeric" value={labelMarginBottom} onChange={(e) => setLabelMarginBottom(e.target.value)} className="w-24 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-pos-text text-xl shrink-0 w-[140px]">Marge boven:</span>
-                    <input type="text" inputMode="numeric" value={labelMarginTop} onChange={(e) => setLabelMarginTop(e.target.value)} className="w-24 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                  </div>
+                <div className="flex gap-2 w-full items-center">
+                  <label className="block min-w-[80px] max-w-[80px] font-medium text-gray-200">{tr('control.labelModal.width', 'Width')} : </label>
+                  <input type="text" value={labelWidth} onChange={(e) => setLabelWidth(e.target.value)} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
                 </div>
               </div>
-              <div className="flex justify-center mt-16">
-                <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={!(labelName || '').trim()} onClick={handleSaveLabel}>
-                  <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                  Save
-                </button>
+              <div className="flex gap-2 w-1/3 justify-center">
+                <div className='flex gap-2 w-full h-[40px] justify-center items-center'>
+                  <label className="block min-w-[120px] max-w-[120px] font-medium text-gray-200">{tr('control.labelModal.standard', 'Standard')} : </label>
+                  <input type="checkbox" checked={labelStandard} onChange={(e) => setLabelStandard(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
+                </div>
+              </div>
+              <div className='flex flex-col gap-3 w-1/4'>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[120px] max-w-[120px] font-medium text-gray-200">{tr('control.labelModal.marginLeft', 'Margin left')} : </label>
+                  <input type="text" inputMode="numeric" value={labelMarginLeft} onChange={(e) => setLabelMarginLeft(e.target.value)} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
+                </div>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[120px] max-w-[120px] font-medium text-gray-200 mb-2">{tr('control.labelModal.marginRight', 'Margin right')} : </label>
+                  <input type="text" inputMode="numeric" value={labelMarginRight} onChange={(e) => setLabelMarginRight(e.target.value)} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
+                </div>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[120px] max-w-[120px] font-medium text-gray-200 mb-2">{tr('control.labelModal.marginBottom', 'Margin bottom')} : </label>
+                  <input type="text" inputMode="numeric" value={labelMarginBottom} onChange={(e) => setLabelMarginBottom(e.target.value)} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
+                </div>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block min-w-[120px] max-w-[120px] font-medium text-gray-200 mb-2">{tr('control.labelModal.marginTop', 'Margin top')} : </label>
+                  <input type="text" inputMode="numeric" value={labelMarginTop} onChange={(e) => setLabelMarginTop(e.target.value)} className="px-4 w-[150px] bg-pos-panel h-[40px] py-3 border border-gray-300 rounded-lg text-gray-200" />
+                </div>
               </div>
             </div>
-            <div className="shrink-0">
-              <KeyboardWithNumpad value={labelName} onChange={setLabelName} />
+            <div className="flex justify-center pt-5 pb-5">
+              <button type="button" className="flex items-center text-md gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={!(labelName || '').trim()} onClick={handleSaveLabel}>
+                <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                {tr('control.save', 'Save')}
+              </button>
             </div>
+            <KeyboardWithNumpad value={labelName} onChange={setLabelName} />
           </div>
         </div>
       )}

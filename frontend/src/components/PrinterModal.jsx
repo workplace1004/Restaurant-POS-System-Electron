@@ -276,7 +276,7 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
             </button>
           ))}
         </div>
-        <div className="p-6 overflow-hidden flex-1 flex flex-col py-0">
+        <div className="p-6 overflow-hidden flex-1 flex flex-col py-2">
           {tab === 'general' && (
             <div className="grid grid-cols-3 w-full gap-6 text-sm">
               <div className="flex flex-col gap-6">
@@ -396,16 +396,16 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
             </div>
           )}
           {tab === 'production' && (
-            <div className="grid grid-cols-3 w-full gap-6">
+            <div className="grid grid-cols-3 w-full gap-6 text-sm mb-10 mt-5">
               <div className="flex flex-col gap-6">
                 <div className="flex gap-2 items-center justify-start">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.standard', 'Standard')} :</label>
+                  <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.standard', 'Standard')} :</label>
                   <div className="w-[200px] flex items-center justify-start">
                     <input type="checkbox" checked={standard} onChange={(e) => setStandard(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.numberOfPrints', 'Number of prints')} :</label>
+                  <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.numberOfPrints', 'Number of prints')} :</label>
                   <div className="flex items-center gap-2">
                     <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg font-medium" onClick={() => setNumberOfPrints((n) => Math.max(1, n - 1))}>−</button>
                     <input type="number" min={1} value={numberOfPrints} onChange={(e) => setNumberOfPrints(Math.max(1, Number(e.target.value) || 1))} className="w-16 px-2 py-2 bg-pos-panel border border-gray-300 rounded text-gray-200 text-center h-[40px]" />
@@ -415,31 +415,31 @@ export function PrinterModal({ open, initialPrinter, onClose, onSave, onNotify }
               </div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.textSizeProduction', 'Text size Production ticket')} :</label>
+                  <label className="block min-w-[140px] max-w-[140px] font-medium text-gray-200">{tr('printerModal.textSizeProduction', 'Text size Production ticket')} :</label>
                   <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={productionTicketSize} onChange={setProductionTicketSize} placeholder="Normal" className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.vatTicketSize', 'Total amount of VAT ticket size')} :</label>
+                  <label className="block min-w-[140px] max-w-[140px] font-medium text-gray-200">{tr('printerModal.vatTicketSize', 'Total amount of VAT ticket size')} :</label>
                   <Dropdown options={PRINTER_FORM_TICKET_SIZE_OPTIONS} value={vatTicketSize} onChange={setVatTicketSize} placeholder="Normal" className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.spaceBetweenProducts', 'Space between products')} :</label>
+                  <label className="block min-w-[140px] max-w-[140px] font-medium text-gray-200">{tr('printerModal.spaceBetweenProducts', 'Space between products')} :</label>
                   <Dropdown options={PRINTER_FORM_SPACE_OPTIONS} value={spaceBetweenProducts} onChange={setSpaceBetweenProducts} placeholder="None" className="text-md min-w-[120px]" />
                 </div>
               </div>
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-3">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.logo', 'Logo')} :</label>
+                  <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.logo', 'Logo')} :</label>
                   <Dropdown options={PRINTER_FORM_LOGO_OPTIONS} value={logo} onChange={setLogo} placeholder="Disable" className="text-md min-w-[120px]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="block min-w-[140px] font-medium text-gray-200 mb-2">{tr('printerModal.printerType', 'Printer type')} :</label>
+                  <label className="block min-w-[100px] max-w-[100px] font-medium text-gray-200">{tr('printerModal.printerType', 'Printer type')} :</label>
                   <Dropdown options={PRINTER_FORM_PRINTER_TYPE_OPTIONS} value={printerType} onChange={setPrinterType} placeholder="Esc" className="text-md min-w-[120px]" />
                 </div>
               </div>
             </div>
           )}
-          <div className="flex justify-center gap-4 text-md">
+          <div className="flex justify-center gap-4 text-md pt-5">
             <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg disabled:opacity-60" onClick={handleTestPrint} disabled={testLoading}>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
               {testLoading ? tr('printerModal.testing', 'Testing...') : tr('printerModal.testPrint', 'Test print')}
