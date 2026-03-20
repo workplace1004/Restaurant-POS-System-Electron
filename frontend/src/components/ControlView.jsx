@@ -5251,18 +5251,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             const canPrev = page > 0;
             const canNext = page < totalCategoriesPages - 1;
             return (
-              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[880px] pb-24">
-                <div className="flex items-center w-full justify-center mb-6">
+              <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                <div className="flex items-center w-full justify-center mb-2">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                     disabled={categoriesLoading}
                     onClick={openCategoryModal}
                   >
                     {tr('control.categories.new', 'New category')}
                   </button>
                 </div>
-                <ul className="w-full flex flex-col justify-center items-center">
+                <ul className="w-full flex flex-col">
                   {categoriesLoading ? (
                     <li className="text-pos-muted text-xl py-4">{tr('control.categories.loading', 'Loading categories...')}</li>
                   ) : sortedCategories.length === 0 ? (
@@ -5273,9 +5273,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       return (
                         <li
                           key={cat.id}
-                          className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
+                          className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
                         >
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
                             <button
                               type="button"
                               className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
@@ -5283,27 +5283,27 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               disabled={globalIndex >= sortedCategories.length - 1}
                               aria-label="Move down"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
                             </button>
                             <button
                               type="button"
-                              className="p-2 ml-10 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
+                              className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
                               onClick={() => handleMoveCategory(cat.id, 'up')}
                               disabled={globalIndex <= 0}
                               aria-label="Move up"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v14" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v14" /></svg>
                             </button>
                           </div>
                           <span className="flex-1 text-center font-medium">{cat.name}</span>
                           <div className="flex items-center gap-2 shrink-0">
                             <button
                               type="button"
-                              className="p-2 mr-20 rounded text-pos-text hover:bg-pos-panel"
+                              className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
                               onClick={() => openEditCategoryModal(cat)}
                               aria-label="Edit"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
                             <button
                               type="button"
@@ -5311,7 +5311,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               onClick={() => setDeleteConfirmCategoryId(cat.id)}
                               aria-label="Delete"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </li>
@@ -5320,14 +5320,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   )}
                 </ul>
                 {sortedCategories.length > 0 && (
-                  <div className='fixed z-50 top-[97%] ml-[750px]'>
-                    <PaginationArrows
-                      canPrev={canPrev}
-                      canNext={canNext}
-                      onPrev={() => setCategoriesPage((p) => Math.max(0, p - 1))}
-                      onNext={() => setCategoriesPage((p) => Math.min(totalCategoriesPages - 1, p + 1))}
-                    />
-                  </div>
+                  <PaginationArrows
+                    canPrev={canPrev}
+                    canNext={canNext}
+                    onPrev={() => setCategoriesPage((p) => Math.max(0, p - 1))}
+                    onNext={() => setCategoriesPage((p) => Math.min(totalCategoriesPages - 1, p + 1))}
+                  />
                 )}
               </div>
             );
