@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Optimized for 15-inch screen (1366×768 typical) */
+/* Optimized for 1024×768 resolution */
 @layer base {
   * {
     @apply box-border;
@@ -13,14 +13,18 @@
   body {
     @apply m-0 font-sans bg-pos-bg text-pos-text overflow-hidden;
     width: 100vw;
-    min-width: 1366px;
+    min-width: 1024px;
+    max-width: 1024px;
     min-height: 768px;
+    max-height: 768px;
     height: 100vh;
   }
   #root {
     @apply h-full w-full;
-    min-width: 1366px;
+    min-width: 1024px;
+    max-width: 1024px;
     min-height: 768px;
+    max-height: 768px;
   }
   button {
     @apply cursor-pointer;

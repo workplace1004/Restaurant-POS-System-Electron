@@ -264,7 +264,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         onLogout={handleLogout}
         onControlClick={() => setViewAndPersist('control')}
       />
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex flex-col flex-1 min-h-0 w-2/4">
         <Header
           time={time}
           webordersCount={webordersCount}

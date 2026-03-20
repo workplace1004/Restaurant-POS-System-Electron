@@ -164,7 +164,7 @@ export function ProductArea({
           ›
         </button>
       </div>
-      <div className="max-h-[660px] min-h-[240px] p-1 overflow-auto">
+      <div className="p-1 overflow-auto">
         {!layoutForCategory ? (
           <div className="col-span-full flex items-center justify-center text-pos-surface text-lg min-h-[100px] max-h-[100px]">
             {t('selectCategoryToSeeProducts')}
@@ -182,7 +182,7 @@ export function ProductArea({
                 return (
                   <div
                     key={`empty-${idx}`}
-                    className="min-h-[120px] rounded-lg bg-transparent"
+                    className="min-h-[70px] rounded-lg bg-transparent"
                   />
                 );
               }
@@ -191,7 +191,7 @@ export function ProductArea({
                   type="button"
                   key={`${product.id}-${idx}`}
                   style={tileStyle}
-                  className={`flex flex-row items-center gap-5 justify-center px-3 border-none rounded-lg text-xl min-h-[120px] max-h-[120px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                  className={`flex flex-row items-center gap-5 justify-center px-3 border-none rounded-lg text-xl min-h-[70px] max-h-[70px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                     }`}
                   onClick={() => handleProductPress(product)}
                 >
@@ -199,7 +199,7 @@ export function ProductArea({
                     <img
                       src={product.kassaPhotoPath}
                       alt={product.name}
-                      className="max-w-[100px] min-w-[100px] max-h-[80px] min-h-[80px] object-cover rounded"
+                      className="max-w-[50px] min-w-[50px] max-h-[50px] min-h-[50px] object-cover rounded"
                     />
                   ) : null}
                   <div className="flex flex-col items-start justify-center">
@@ -212,7 +212,7 @@ export function ProductArea({
           </div>
         )}
       </div>
-      <div className="mt-3 min-h-[120px] max-h-[220px] overflow-auto">
+      <div className="mt-3 min-h-[70px] max-h-[70px] overflow-auto">
         {selectedProduct && loadingSubproducts ? (
           <div className="h-full flex items-center justify-center text-pos-surface text-lg">
             {t('loadingSubproducts')}

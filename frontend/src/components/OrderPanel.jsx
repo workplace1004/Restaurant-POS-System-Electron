@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const KEYPAD = [
-  ['C', '7', '8', '9'],
-  [',', '4', '5', '6'],
-  ['0', '1', '2', '3']
+  ['7', '8', '9'],
+  ['4', '5', '6'],
+  ['1', '2', '3'],
+  ['C', '0', '.']
 ];
 
 const formatSubtotalPrice = (n) => `€ ${Number(n).toFixed(2).replace('.', ',')}`;
@@ -23,7 +24,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
-  const [paymentAmounts, setPaymentAmounts] = useState({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+  const [paymentAmounts, setPaymentAmounts] = useState({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showPayworldStatusModal, setShowPayworldStatusModal] = useState(false);
   const [payworldStatus, setPayworldStatus] = useState({ state: 'IDLE', message: '', details: null });
@@ -101,18 +102,18 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const payableTotal = showSettlementActions ? settlementOrdersTotal : currentOrderTotal;
   const latestOpenNoTableOrder = !hasSelectedTable
     ? (orders || [])
-        .filter((o) => o?.status === 'open' && !o?.tableId)
-        .reduce((latest, candidate) => {
-          if (!latest) return candidate;
-          const latestTime = new Date(latest?.createdAt || 0).getTime();
-          const candidateTime = new Date(candidate?.createdAt || 0).getTime();
-          return candidateTime >= latestTime ? candidate : latest;
-        }, null)
+      .filter((o) => o?.status === 'open' && !o?.tableId)
+      .reduce((latest, candidate) => {
+        if (!latest) return candidate;
+        const latestTime = new Date(latest?.createdAt || 0).getTime();
+        const candidateTime = new Date(candidate?.createdAt || 0).getTime();
+        return candidateTime >= latestTime ? candidate : latest;
+      }, null)
     : null;
   const fallbackNoTableTotal = latestOpenNoTableOrder
     ? (Array.isArray(latestOpenNoTableOrder.items) && latestOpenNoTableOrder.items.length > 0
-        ? computeOrderTotal(latestOpenNoTableOrder)
-        : roundCurrency(Number(latestOpenNoTableOrder?.total) || 0))
+      ? computeOrderTotal(latestOpenNoTableOrder)
+      : roundCurrency(Number(latestOpenNoTableOrder?.total) || 0))
     : 0;
   const payableTotalForPaymentModal =
     !hasSelectedTable && payableTotal <= 0.009 && fallbackNoTableTotal > 0.009
@@ -229,13 +230,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     const targetTotal = roundCurrency(overrideTotal ?? payableTotalForPaymentModal);
     if (targetTotal <= 0) return;
     setShowPayDifferentlyModal(true);
-    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+    setPaymentAmounts({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setSelectedPayment(null);
     setPayModalTargetTotal(targetTotal);
     setPayModalKeypadInput(targetTotal.toFixed(2));
   };
 
-  const payModalTotalAssigned = paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa + paymentAmounts.payworld;
+  const payModalTotalAssigned = (paymentAmounts.manualCash || 0) + paymentAmounts.cash + paymentAmounts.bancontact + paymentAmounts.visa + paymentAmounts.payworld;
   const payModalRemaining = Math.max(0, payModalTargetTotal - payModalTotalAssigned);
   const payModalKeypadValue = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
   /** Block assigning if keypad value would push assigned total over order total. */
@@ -258,14 +259,24 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     });
   };
 
-  const handleCashImageClick = () => {
+  const handleCashManualClick = () => {
+    if (payModalSplitComplete || payModalWouldExceedTotal) return;
+    const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
+    if (value > 0) {
+      setPaymentAmounts((prev) => ({ ...prev, manualCash: (prev.manualCash || 0) + value }));
+      setPayModalKeypadInput('');
+    } else {
+      setSelectedPayment('manualCash');
+    }
+  };
+  const handleCashmaticImageClick = () => {
     if (payModalSplitComplete || payModalWouldExceedTotal) return;
     const value = parseFloat(String(payModalKeypadInput || '').replace(',', '.')) || 0;
     if (value > 0) {
       setPaymentAmounts((prev) => ({ ...prev, cash: prev.cash + value }));
       setPayModalKeypadInput('');
     } else {
-      setSelectedPayment('cash');
+      setSelectedPayment('cashmatic');
     }
   };
   const handlePayworldImageClick = () => {
@@ -290,7 +301,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setPayModalKeypadInput(remaining.toFixed(2));
   };
   const handlePayReset = () => {
-    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+    setPaymentAmounts({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setPayModalKeypadInput(payModalTargetTotal.toFixed(2));
     setSelectedPayment(null);
   };
@@ -318,7 +329,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
     for (let i = 0; i < 90; i += 1) {
       if (cancelCashmaticRequestedRef.current) {
-        await fetch(`/api/cashmatic/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+        await fetch(`/api/cashmatic/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => { });
         throw new Error('Cashmatic payment cancelled.');
       }
       await sleep(1000);
@@ -378,7 +389,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
     for (let i = 0; i < 150; i += 1) {
       if (cancelPayworldRequestedRef.current) {
-        await fetch(`/api/payworld/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+        await fetch(`/api/payworld/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => { });
         setPayworldStatus({
           state: 'CANCELLED',
           message: tr('orderPanel.paymentCancelled', 'Payment cancelled.'),
@@ -418,7 +429,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       }
     }
 
-    await fetch(`/api/payworld/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => {});
+    await fetch(`/api/payworld/cancel/${encodeURIComponent(sessionId)}`, { method: 'POST' }).catch(() => { });
     setPayworldStatus({
       state: 'ERROR',
       message: tr('orderPanel.payworldTimeout', 'Payworld payment timeout. Please try again.'),
@@ -447,7 +458,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       details: null,
     });
 
-    await fetch(`/api/payworld/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => {});
+    await fetch(`/api/payworld/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => { });
   };
 
   const payworldStatusTitle = (() => {
@@ -474,11 +485,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       cancelPayworldRequestedRef.current = true;
       const activeSessionId = activeCashmaticSessionIdRef.current;
       if (activeSessionId) {
-        await fetch(`/api/cashmatic/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => {});
+        await fetch(`/api/cashmatic/cancel/${encodeURIComponent(activeSessionId)}`, { method: 'POST' }).catch(() => { });
       }
       const activePayworldSessionId = activePayworldSessionIdRef.current;
       if (activePayworldSessionId) {
-        await fetch(`/api/payworld/cancel/${encodeURIComponent(activePayworldSessionId)}`, { method: 'POST' }).catch(() => {});
+        await fetch(`/api/payworld/cancel/${encodeURIComponent(activePayworldSessionId)}`, { method: 'POST' }).catch(() => { });
       }
       setShowPayworldStatusModal(false);
       setPaymentErrorMessage(tr('orderPanel.paymentCancelled', 'Payment cancelled.'));
@@ -601,7 +612,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   const resetAfterSuccessfulPayment = () => {
     setShowPayDifferentlyModal(false);
-    setPaymentAmounts({ cash: 0, bancontact: 0, visa: 0, payworld: 0 });
+    setPaymentAmounts({ manualCash: 0, cash: 0, bancontact: 0, visa: 0, payworld: 0 });
     setSelectedPayment(null);
     setPayModalTargetTotal(0);
     setPayModalKeypadInput('');
@@ -695,7 +706,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       let printResult = null;
       try {
         if (targetOrderIds.length === 1) {
-          printResult = await printTicketAutomatically(targetOrderIds[0], paymentAmounts);
+          const breakdown = {
+            cash: (paymentAmounts.manualCash || 0) + paymentAmounts.cash,
+            bancontact: paymentAmounts.bancontact,
+            visa: paymentAmounts.visa,
+            payworld: paymentAmounts.payworld,
+          };
+          printResult = await printTicketAutomatically(targetOrderIds[0], breakdown);
         } else {
           for (const targetId of targetOrderIds) {
             // Print each settled order ticket separately; backend computes each order total.
@@ -708,6 +725,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       }
       if (printedSuccessfully) {
         const methodLines = [
+          (paymentAmounts.manualCash || 0) > 0 ? `Cash: ${formatPaymentAmount(paymentAmounts.manualCash)}` : null,
           paymentAmounts.cash > 0 ? `Cashmatic: ${formatPaymentAmount(paymentAmounts.cash)}` : null,
           paymentAmounts.bancontact > 0 ? `Bancontact: ${formatPaymentAmount(paymentAmounts.bancontact)}` : null,
           paymentAmounts.visa > 0 ? `Visa: ${formatPaymentAmount(paymentAmounts.visa)}` : null,
@@ -735,10 +753,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
 
   return (
-    <aside className="w-[500px] shrink-0 flex flex-col gap-3 p-4 bg-pos-bg border-l border-pos-border">
-      <div className="min-h-[600px] flex flex-col bg-pos-surface rounded-lg overflow-hidden">
+    <aside className="w-1/4 shrink-0 flex flex-col gap-3 p-4 bg-pos-bg border-l border-pos-border">
+      <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden h-[55%]">
         {showSubtotalView ? (
-          <div className="flex-1 overflow-auto p-4 text-pos-bg">
+          <div className="flex-1 overflow-auto p-4 text-pos-bg text-lg">
             {(() => {
               let start = 0;
               const result = [];
@@ -748,13 +766,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 const groupTotal = group.reduce((s, it) => s + it.price * it.quantity, 0);
                 group.forEach((item) => (
                   result.push(
-                    <div key={item.id} className="py-1.5 text-2xl">
+                    <div key={item.id} className="py-1.5">
                       <div className="flex justify-between items-baseline">
                         <span className="font-medium">{item.quantity}x {getItemLabel(item)}</span>
                         <span className="font-medium">{formatSubtotalPrice(getItemBaseLinePrice(item))}</span>
                       </div>
                       {getItemNotes(item).map((note, noteIdx) => (
-                        <div key={`${item.id}-note-${noteIdx}`} className="flex justify-between items-baseline pl-6 text-xl text-pos-bg/80">
+                        <div key={`${item.id}-note-${noteIdx}`} className="flex justify-between items-baseline pl-6 text-pos-bg/80">
                           <span>{note.label}</span>
                           <span>{formatSubtotalPrice(getItemNoteLinePrice(item, note))}</span>
                         </div>
@@ -764,7 +782,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 ));
                 result.push(
                   <div key={`sub-${i}`} className="border-b border-gray-800 mb-2 pb-2 mb-3">
-                    <div className="flex justify-center items-baseline text-3xl font-medium relative">
+                    <div className="flex justify-center items-baseline text-xl font-medium relative">
                       <span className='font-bold'>{t('subtotal')}:</span>
                       <span className='flex font-bold absolute w-full justify-end'>{formatSubtotalPrice(groupTotal)}</span>
                     </div>
@@ -836,7 +854,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             {items.map((item) => (
               <div
                 key={item.id}
-                className={`flex flex-wrap items-center gap-1 p-2 text-2xl text-pos-bg rounded mb-1 hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''
+                className={`flex flex-wrap items-center gap-1 p-2 text-lg text-pos-bg rounded mb-1 hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''
                   }`}
                 onClick={() => toggleItemSelection(item.id)}
               >
@@ -848,7 +866,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
                   </div>
                   {getItemNotes(item).map((note, noteIdx) => (
-                    <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-xl opacity-90">
+                    <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
                       <span>▪ {note.label}</span>
                       <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
                     </div>
@@ -858,81 +876,87 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             ))}
           </div>
         )}
-        <div className="flex items-center gap-2 py-2 px-2 border-t border-black/10 text-2xl">
-          <button
-            type="button"
-            disabled={!hasSelection}
-            className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${!hasSelection || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
-              }`}
-            onClick={() => {
-              if (isSavedTableOrder) return;
-              if (order && selectedItems.length > 0) {
-                selectedItems.forEach((item) => {
-                  onUpdateItemQuantity?.(order.id, item.id, item.quantity + 1);
-                });
-              }
-            }}
-          >
-            <svg width="30px" height="30px" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className={`flex-1 py-2 border-none rounded text-2xl ${!hasSelection || isSavedTableOrder
-              ? 'text-gray-400 cursor-not-allowed opacity-70'
-              : 'text-white hover:bg-gray-600'
-              }`}
-            onClick={() => {
-              if (isSavedTableOrder) return;
-              if (order && selectedItemIds.length > 0) {
-                selectedItemIds.forEach((id) => onRemoveItem(order.id, id));
-                setSelectedItemIds([]);
-              }
-            }}
-            disabled={!hasSelection || isSavedTableOrder}
-          >
-            {t('remove')}
-          </button>
-          <button
-            type="button"
-            disabled={isSavedTableOrder}
-            className={`flex-1 py-2 text-pos-text border-none rounded text-2xl ${isSavedTableOrder ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'
-              }`}
-            onClick={() => setShowDeleteAllModal(true)}
-          >
-            {t('clear')}
-          </button>
-          <button
-            type="button"
-            disabled={!canDecreaseAll || isSavedTableOrder}
-            className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${!canDecreaseAll || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
-              }`}
-            onClick={() => {
-              if (isSavedTableOrder) return;
-              if (order && canDecreaseAll) {
-                selectedItems.forEach((item) => {
-                  if (item.quantity > 1) {
-                    onUpdateItemQuantity?.(order.id, item.id, item.quantity - 1);
-                  }
-                });
-              }
-            }}
-          >
-            <svg width="30" height="30" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" />
-            </svg>
-          </button>
-        </div>
+      </div>
+      <div className="flex items-center gap-2 py-2 px-2 border-t border-black/10 text-xl">
+        <button
+          type="button"
+          disabled={!hasSelection}
+          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-xl ${!hasSelection || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+            }`}
+          onClick={() => {
+            if (isSavedTableOrder) return;
+            if (order && selectedItems.length > 0) {
+              selectedItems.forEach((item) => {
+                onUpdateItemQuantity?.(order.id, item.id, item.quantity + 1);
+              });
+            }
+          }}
+        >
+          <svg width="25px" height="25px" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className={`flex-1 py-2 flex items-center justify-center border-none rounded ${!hasSelection || isSavedTableOrder
+            ? 'opacity-50 cursor-not-allowed'
+            : 'hover:bg-gray-600'
+            }`}
+          onClick={() => {
+            if (isSavedTableOrder) return;
+            if (order && selectedItemIds.length > 0) {
+              selectedItemIds.forEach((id) => onRemoveItem(order.id, id));
+              setSelectedItemIds([]);
+            }
+          }}
+          disabled={!hasSelection || isSavedTableOrder}
+          aria-label={t('remove')}
+        >
+          <img src="/delete.svg" alt="" className="w-8 h-8 brightness-0 invert" />
+        </button>
+        <button
+          type="button"
+          disabled={isSavedTableOrder}
+          className={`flex-1 py-2 flex items-center justify-center border-none rounded ${isSavedTableOrder ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'
+            }`}
+          onClick={() => setShowDeleteAllModal(true)}
+          aria-label={t('clear')}
+        >
+          <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path style={{ fill: '#555555', stroke: '#333333', strokeWidth: 3 }} d="M 78,0 68,13 c 0,0 4,1 7,3 L 90,0 z" />
+            <path style={{ fill: '#C7A751', stroke: '#453A1A', strokeWidth: 3 }} d="M 61,18 C 53,18 42,22 33,31 24,40 9.7,59 8,69 c -3,17 9,23 18,24 -1,-2 -1,-5 -1,-8 4,5 6,8 15,9 -2,-4 -2,-8 -2,-8 0,0 8,9 22,9 -3,-3 -3,-8 -3,-8 0,0 8,7 18,5 -2,-2 -4,-4 -5,-6 3,1 6,3 16,1 -2,-1 -6,-3 -8,-5 7,0 10,-3 12,-6 -9,0 -17,-1 -20,-9 -3,-9 6,-22 7,-27 1,-5 3,-15 -5,-19 4,0 7,-2 3,-5 -3,-2 -7,-3 -10,-3 -3,0 -7,2 -4,5 z" />
+            <path style={{ fill: '#A3262A', stroke: '#420000', strokeWidth: 3 }} d="m 26,41 c 4,11 27,14 44,10 l 4,-7 C 74,44 58,46 47,44 35,42 33,33 33,33 z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          disabled={!canDecreaseAll || isSavedTableOrder}
+          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${!canDecreaseAll || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+            }`}
+          onClick={() => {
+            if (isSavedTableOrder) return;
+            if (order && canDecreaseAll) {
+              selectedItems.forEach((item) => {
+                if (item.quantity > 1) {
+                  onUpdateItemQuantity?.(order.id, item.id, item.quantity - 1);
+                }
+              });
+            }
+          }}
+        >
+          <svg width="30" height="30" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" />
+          </svg>
+        </button>
       </div>
 
-      <div className="flex items-center w-full px-5 justify-between text-xl font-semibold py-2">
-        <span className='text-4xl'>{t('total')}:&nbsp;€{payableTotal.toFixed(2)}</span>
+      <div className="flex items-center w-full px-2 justify-between text-xl font-semibold py-2">
+        <span className='text-lg'>{t('total')}:&nbsp;€{payableTotal.toFixed(2)}</span>
         <div>
           <input
             readOnly
             tabIndex={0}
-            className='w-[180px] h-full py-4 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover outline-none cursor-pointer'
+            className='w-[100px] h-full py-2 px-2 bg-pos-surface border-none rounded-md text-pos-text text-lg hover:bg-pos-surface-hover outline-none cursor-pointer'
             type='text'
             value={customAmount}
             aria-label={t('enterAmountKeypad')}
@@ -942,17 +966,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
       {hasSelectedTable ? (
         showSettlementActions ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2 text-xl">
             <button
               type="button"
-              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
+              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
               onClick={() => settlementOrder && onStatusChange?.(settlementOrder.id, 'in_planning')}
             >
               {t('interimAccount')}
             </button>
             <button
               type="button"
-              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
+              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
               onClick={() => setShowFinalSettlementModal(true)}
             >
               {t('finalSettlement')}
@@ -962,7 +986,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <div className="flex">
             <button
               type="button"
-              className={`w-full py-3 px-2 border-none rounded-md text-2xl ${hasOrderItems
+              className={`w-full py-3 px-2 border-none rounded-md text-xl ${hasOrderItems
                 ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                 : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
                 }`}
@@ -994,10 +1018,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </div>
         )
       ) : (
-        <div className="flex gap-2">
+        <div className="flex gap-2 text-md">
           <button
             type="button"
-            className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
+            className="flex-1 py-1 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
             onClick={() => order && onStatusChange(order.id, 'in_planning')}
           >
             {t('inPlanning')}
@@ -1005,18 +1029,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <button
             type="button"
             disabled={payableTotalForPaymentModal <= 0.009}
-            className={`flex-1 py-3 px-2 border-none rounded-md text-2xl ${
-              payableTotalForPaymentModal <= 0.009
+            className={`flex-1 py-1 border-none rounded-md ${payableTotalForPaymentModal <= 0.009
                 ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
                 : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
-            }`}
+              }`}
             onClick={() => openPayDifferentlyModal()}
           >
             {t('payDifferently')}
           </button>
           <button
             type="button"
-            className="min-w-[7rem] py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text text-5xl hover:bg-pos-surface-hover"
+            className="px-4 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
           >
             €
           </button>
@@ -1043,12 +1066,27 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <button
                       type="button"
                       disabled={payModalSplitComplete || payModalWouldExceedTotal}
-                      onClick={handleCashImageClick}
-                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'cash' || (paymentAmounts.cash || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
+                      onClick={handleCashManualClick}
+                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'manualCash' || (paymentAmounts.manualCash || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
                         }`}
                       aria-label={t('cash')}
                     >
-                      <img src="/cash.png" alt={t('cash')} className="max-h-[280px] w-auto object-contain" />
+                      <span className="flex items-center justify-center w-[180px] h-[200px] text-8xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
+                    </button>
+                    <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
+                      {formatPaymentAmount(paymentAmounts.manualCash || 0)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={payModalSplitComplete || payModalWouldExceedTotal}
+                      onClick={handleCashmaticImageClick}
+                      className={`rounded-lg border-2 p-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${(selectedPayment === 'cashmatic' || (paymentAmounts.cash || 0) > 0) ? 'bg-green-500 border-green-700' : 'bg-white border-gray-300'
+                        }`}
+                      aria-label={t('cashmatic')}
+                    >
+                      <img src="/cash.png" alt={t('cashmatic')} className="max-h-[280px] w-auto object-contain" />
                     </button>
                     <div className="text-2xl font-semibold tabular-nums" aria-live="polite">
                       {formatPaymentAmount(paymentAmounts.cash || 0)}
@@ -1296,8 +1334,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <button
                       key={line.id}
                       type="button"
-                      className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-2xl text-pos-text flex items-center justify-between ${
-                        subtotalSelectedLeftIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                      className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-2xl text-pos-text flex items-center justify-between ${subtotalSelectedLeftIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
                         }`}
                       onClick={() => {
                         setSubtotalSelectedLeftIds((prev) =>
@@ -1315,11 +1352,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   <button
                     type="button"
                     disabled={settlementSubtotalLeftLines.length === 0}
-                    className={`min-w-[200px] py-3 px-6 rounded text-pos-text text-2xl ${
-                      settlementSubtotalLeftLines.length === 0
+                    className={`min-w-[200px] py-3 px-6 rounded text-pos-text text-2xl ${settlementSubtotalLeftLines.length === 0
                         ? 'bg-pos-surface opacity-50 cursor-not-allowed'
                         : 'bg-pos-surface hover:bg-pos-surface-hover'
-                    }`}
+                      }`}
                     onClick={() => {
                       setSubtotalSelectedLeftIds(settlementSubtotalLeftLines.map((line) => line.id));
                       setSubtotalSelectedRightIds([]);
@@ -1379,11 +1415,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     {settlementSubtotalRightGroups.map((group) => (
                       <div
                         key={group.id}
-                        className={`px-4 py-3 border-b ${
-                          group.lines.length > 0 && group.lines.every((line) => subtotalSelectedRightIds.includes(line.id))
+                        className={`px-4 py-3 border-b ${group.lines.length > 0 && group.lines.every((line) => subtotalSelectedRightIds.includes(line.id))
                             ? 'border-2 border-rose-500 rounded-md'
                             : ''
-                        }`}
+                          }`}
                       >
                         <div className="text-center text-3xl font-semibold text-pos-text mb-2">
                           {group.label}
@@ -1392,9 +1427,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                           <button
                             key={line.id}
                             type="button"
-                            className={`w-full text-left px-2 py-1 text-2xl text-pos-text flex items-center justify-between ${
-                              subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
-                            }`}
+                            className={`w-full text-left px-2 py-1 text-2xl text-pos-text flex items-center justify-between ${subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                              }`}
                             onClick={() => {
                               setSubtotalSelectedRightIds((prev) =>
                                 prev.includes(line.id) ? prev.filter((id) => id !== line.id) : [...prev, line.id]
@@ -1461,11 +1495,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       <button
                         type="button"
                         disabled={!hasSplitBillSelection}
-                        className={`min-w-[200px] min-h-[80px] py-3 px-6 rounded text-2xl ${
-                          !hasSplitBillSelection
+                        className={`min-w-[200px] min-h-[80px] py-3 px-6 rounded text-2xl ${!hasSplitBillSelection
                             ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                             : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
-                        }`}
+                          }`}
                         onClick={() => {
                           if (!hasSplitBillSelection) return;
                           setShowSettlementSubtotalModal(false);
@@ -1482,11 +1515,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       <button
                         type="button"
                         disabled={!hasSplitBillSelection}
-                        className={`min-w-[220px] min-h-[80px] py-3 px-6 rounded text-2xl ${
-                          !hasSplitBillSelection
+                        className={`min-w-[220px] min-h-[80px] py-3 px-6 rounded text-2xl ${!hasSplitBillSelection
                             ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                             : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
-                        }`}
+                          }`}
                         onClick={() => {
                           if (!hasSplitBillSelection) return;
                           setShowSettlementSubtotalModal(false);
@@ -1505,11 +1537,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <button
                       type="button"
                       disabled={settlementSubtotalLeftLines.length > 0}
-                      className={`min-w-[200px] py-3 px-6 rounded text-2xl ${
-                        settlementSubtotalLeftLines.length > 0
+                      className={`min-w-[200px] py-3 px-6 rounded text-2xl ${settlementSubtotalLeftLines.length > 0
                           ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                           : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
-                      }`}
+                        }`}
                       onClick={() => {
                         if (settlementSubtotalLeftLines.length > 0) return;
                         setShowSettlementSubtotalModal(false);
@@ -1637,14 +1668,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 h-[45%]">
         {KEYPAD.map((row, ri) => (
-          <div key={ri} className="grid grid-cols-4 gap-2">
+          <div key={ri} className="grid grid-cols-3 gap-2">
             {row.map((key) => (
               <button
                 key={key}
                 type="button"
-                className="py-7 bg-pos-surface border-none rounded-md text-pos-text text-3xl hover:bg-pos-surface-hover"
+                className="py-3 bg-pos-panel border-none rounded-md text-pos-text text-xl active:bg-pos-surface-hover"
                 onClick={() => handleKeypad(key)}
               >
                 {key}

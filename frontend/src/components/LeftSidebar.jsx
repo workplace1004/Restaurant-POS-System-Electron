@@ -17,7 +17,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
   };
 
   return (
-    <aside className="w-[300px] shrink-0 flex flex-col bg-pos-bg p-4 px-2">
+    <aside className="w-1/4 shrink-0 flex flex-col bg-pos-bg p-4 px-2">
 
       <div className="flex items-center justify-center h-[80px] mb-4">
         <div className="text-5xl font-semibold text-pos-text">{t('appName')}</div>
