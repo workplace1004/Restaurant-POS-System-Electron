@@ -135,7 +135,9 @@ const BARCODE_SCANNER_PORT_OPTIONS = [
 ];
 
 const CREDIT_CARD_TYPE_OPTIONS = [
-  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' }
+  { value: 'disabled', labelKey: 'control.external.disabled', fallback: 'Disabled' },
+  { value: 'payworld', labelKey: 'control.external.creditCardType.payworld', fallback: 'Payworld' },
+  { value: 'viva_wallet', labelKey: 'control.external.creditCardType.vivaWallet', fallback: 'Viva wallet' }
 ];
 
 const SCALE_TYPE_OPTIONS = [
@@ -4284,13 +4286,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   useEffect(() => {
     if (topNavId !== 'external-devices' || subNavId !== 'Credit Card') return;
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_credit_card');
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s.type != null) setCreditCardType(s.type);
+    let cancelled = false;
+    const loadCreditCardType = async () => {
+      try {
+        const res = await fetch(`${API}/settings/credit-card-type`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || cancelled) return;
+        const v = data?.value;
+        if (v && ['disabled', 'payworld', 'viva_wallet'].includes(v)) setCreditCardType(v);
+      } catch (_) {
+        try {
+          const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_credit_card');
+          if (raw) {
+            const s = JSON.parse(raw);
+            if (s.type != null && !cancelled) setCreditCardType(s.type);
+          }
+        } catch (_) { }
       }
-    } catch (_) { }
+    };
+    loadCreditCardType();
+    return () => { cancelled = true; };
   }, [topNavId, subNavId]);
 
   useEffect(() => {
@@ -4430,10 +4445,20 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     }
   };
 
-  const handleSaveCreditCard = () => {
+  const handleSaveCreditCard = async () => {
     setSavingCreditCard(true);
     try {
+      const res = await fetch(`${API}/settings/credit-card-type`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: creditCardType })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || 'Failed to save');
       if (typeof localStorage !== 'undefined') localStorage.setItem('pos_credit_card', JSON.stringify({ type: creditCardType }));
+      showToast('success', tr('control.saved', 'Saved.'));
+    } catch (e) {
+      showToast('error', e?.message || 'Failed to save');
     } finally {
       setSavingCreditCard(false);
     }
