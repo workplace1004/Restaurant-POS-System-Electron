@@ -12,7 +12,7 @@ import React from 'react';
 export function PaginationArrows({ canPrev, canNext, onPrev, onNext, className = '' }) {
   return (
     <div
-      className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-40 py-4  z-10 ${className}`.trim()}
+      className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-40 py-2  z-10 ${className}`.trim()}
       role="navigation"
       aria-label="Pagination"
     >
@@ -23,7 +23,7 @@ export function PaginationArrows({ canPrev, canNext, onPrev, onNext, className =
         onClick={onPrev}
         aria-label="Previous page"
       >
-        <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="currentColor" />
         </svg>
       </button>
@@ -34,7 +34,7 @@ export function PaginationArrows({ canPrev, canNext, onPrev, onNext, className =
         onClick={onNext}
         aria-label="Next page"
       >
-        <svg width="40" height="40" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="currentColor" />
         </svg>
       </button>

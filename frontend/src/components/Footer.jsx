@@ -181,11 +181,11 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
   };
 
   return (
-    <footer className="flex items-center py-3 px-4 bg-pos-bg shrink-0">
-      <div ref={moreMenuAreaRef} className="flex gap-2 text-2xl w-full relative">
+    <footer className="flex items-center py-3 px-2 bg-pos-bg shrink-0">
+      <div ref={moreMenuAreaRef} className="grid grid-cols-7 gap-1 text-sm w-full relative">
         {footerRowSlotIds.map((slotId, index) => {
           if (!slotId) {
-            return <div key={`footer-empty-${index}`} className="w-[150px] h-[74px]" />;
+            return <div key={`footer-empty-${index}`}/>;
           }
           const isCustomers = slotId === 'klanten';
           const isHistory = slotId === 'historiek';
@@ -201,7 +201,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
               key={`footer-slot-${slotId}-${index}`}
               type="button"
               disabled={disabled}
-              className={`py-5 w-[150px] border-none rounded overflow-hidden ${
+              className={`py-3 border-none rounded overflow-hidden ${
                 disabled
                   ? 'bg-pos-panel text-pos-text opacity-60 cursor-not-allowed'
                   : active
@@ -217,17 +217,17 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
           );
         })}
         {showMoreMenu ? (
-          <div className="absolute right-0 bottom-[86px] rounded-md border border-pos-border bg-pos-panel shadow-xl p-2 z-20">
-            <div className="grid grid-cols-7 gap-2">
+          <div className="absolute right-0 bottom-[46px] rounded-md border border-pos-border bg-pos-panel shadow-xl p-2 z-20">
+            <div className="grid grid-cols-7 gap-2 text-sm">
               {moreGridSlotIds.map((id, idx) => {
                 if (!id) {
-                  return <div key={`more-grid-empty-${idx}`} className="w-[150px] h-[74px] rounded bg-pos-bg/40" />;
+                  return <div key={`more-grid-empty-${idx}`} className="rounded bg-pos-bg/40 min-h-[46px]" />;
                 }
                 return (
                   <button
                     key={`more-grid-${id}-${idx}`}
                     type="button"
-                    className="w-[150px] h-[74px] px-2 rounded bg-pos-bg text-pos-text hover:bg-pos-surface text-center"
+                    className="px-2 rounded bg-pos-bg text-pos-text hover:bg-pos-surface text-center min-h-[46px]"
                     onClick={() => handleFooterButtonClick(id)}
                   >
                     <span

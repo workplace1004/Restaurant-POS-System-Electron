@@ -63,7 +63,7 @@ export function Dropdown({ options = [], value, onChange, placeholder = 'Selectâ
           key={opt.value}
           role="option"
           aria-selected={opt.value === value}
-          className={`px-4 py-2 cursor-pointer text-white text-xl transition-colors ${opt.value === value ? 'bg-pos-panel font-medium' : 'text-gray-800 hover:bg-pos-panel'}`}
+          className={`px-4 py-2 cursor-pointer text-white text-lg transition-colors ${opt.value === value ? 'bg-pos-panel font-medium' : 'text-gray-800 hover:bg-pos-panel'}`}
           onClick={() => {
             onChange(opt.value);
             setOpen(false);

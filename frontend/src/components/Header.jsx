@@ -5,7 +5,7 @@ const HEADER_FUNCTION_SLOT_COUNT = 3;
 
 function IconTable() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 44.999 44.999" fill="currentColor" aria-hidden="true" className="shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 44.999 44.999" fill="currentColor" aria-hidden="true" className="shrink-0">
       <g>
         <g>
           <path d="M42.558,23.378l2.406-10.92c0.18-0.816-0.336-1.624-1.152-1.803c-0.816-0.182-1.623,0.335-1.802,1.151l-2.145,9.733 h-9.647c-0.835,0-1.512,0.677-1.512,1.513c0,0.836,0.677,1.513,1.512,1.513h0.573l-3.258,7.713 c-0.325,0.771,0.034,1.657,0.805,1.982c0.19,0.081,0.392,0.12,0.588,0.12c0.59,0,1.15-0.348,1.394-0.925l2.974-7.038l4.717,0.001 l2.971,7.037c0.327,0.77,1.215,1.127,1.982,0.805c0.77-0.325,1.13-1.212,0.805-1.982l-3.257-7.713h0.573 C41.791,24.564,42.403,24.072,42.558,23.378z" />
@@ -19,7 +19,7 @@ function IconTable() {
 
 function IconCart() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 512.001 512.001" fill="currentColor" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 512.001 512.001" fill="currentColor" aria-hidden="true">
       <path d="M485.16,331.373l26.688-200.15c1.366-10.251-6.62-19.361-16.951-19.361c-12.445,0-377.092,0-384.578,0L99.401,29.973 c-1.131-8.478-8.362-14.81-16.914-14.81H17.513c-8.76,0-16.444,6.417-17.406,15.124C-1.029,40.58,7,49.292,17.064,49.292h50.507 c0.058,0.437,46.118,345.891,47.932,359.49c1.129,8.467,8.351,14.79,16.894,14.79h47.378 c-17.13,33.366,7.242,73.266,44.813,73.266c37.51,0,61.972-39.843,44.812-73.266h76.81c-17.13,33.366,7.242,73.266,44.812,73.266 c37.51,0,61.972-39.842,44.813-73.266h36.363c8.76,0,16.444-6.417,17.406-15.124c1.135-10.293-6.893-19.005-16.958-19.005H147.407 l-5.764-43.23c16.987,0,308.554,0,326.568,0C476.781,346.213,484.029,339.869,485.16,331.373z M391.023,430.842 c21.439,0,21.439,32.446,0,32.446S369.584,430.842,391.023,430.842z M224.587,430.842c21.44,0,21.439,32.446,0,32.446 S203.147,430.842,224.587,430.842z" />
     </svg>
   );
@@ -27,7 +27,7 @@ function IconCart() {
 
 function IconCalendar() {
   return (
-    <svg width="30" height="30" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path fillRule="evenodd" clipRule="evenodd" d="M4.5 1C4.77614 1 5 1.22386 5 1.5V2H10V1.5C10 1.22386 10.2239 1 10.5 1C10.7761 1 11 1.22386 11 1.5V2H12.5C13.3284 2 14 2.67157 14 3.5V12.5C14 13.3284 13.3284 14 12.5 14H2.5C1.67157 14 1 13.3284 1 12.5V3.5C1 2.67157 1.67157 2 2.5 2H4V1.5C4 1.22386 4.22386 1 4.5 1Z" fill="currentColor" />
     </svg>
   );
@@ -92,8 +92,8 @@ export function Header({
 
   return (
     <header className="flex items-center w-full bg-pos-bg py-2 px-2 shrink-0">
-      <nav className="flex-1 grid grid-cols-[240px_repeat(3,minmax(0,1fr))] items-center gap-3 min-w-0">
-        <div className="h-[100px] rounded-md bg-pos-panel text-pos-text text-5xl flex items-center px-6 font-semibold">
+      <nav className="flex-1 grid grid-cols-4 items-center gap-1 min-w-0">
+        <div className="rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-xl flex items-center justify-center font-semibold">
           {displayTime}
         </div>
         {slots.map((slotId, idx) => {
@@ -104,7 +104,7 @@ export function Header({
                 key={`header-empty-slot-${idx}`}
                 type="button"
                 disabled
-                className="h-[100px] rounded-md bg-pos-panel text-pos-text/30 text-3xl"
+                className="rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text/30 text-xl flex items-center justify-center"
               />
             );
           }
@@ -116,7 +116,7 @@ export function Header({
               type="button"
               onClick={cfg.onClick || undefined}
               disabled={!cfg.onClick}
-              className={`h-[100px] rounded-md bg-pos-panel text-pos-text text-4xl px-5 flex items-center gap-3 min-w-0 ${
+              className={`rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-md px-5 flex items-center gap-3 min-w-0 ${
                 cfg.onClick ? 'hover:bg-pos-rowHover' : 'opacity-80 cursor-default'
               }`}
             >

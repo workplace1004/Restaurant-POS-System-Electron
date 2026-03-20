@@ -132,16 +132,16 @@ export function ProductArea({
 
   return (
     <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg py-2">
-      <div className="flex items-center justify-center gap-10 mb-1">
+      <div className="flex items-center justify-center gap-5 mb-1 text-lg">
         <button
           type="button"
-          className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
+          className="w-8 h-8 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
           onClick={goPrev}
           aria-label={t('previous')}
         >
           ‹
         </button>
-        <div className="flex gap-10">
+        <div className="flex gap-5 text-lg">
           {Array.from({ length: totalPages }, (_, i) => (
             <span
               key={i}
@@ -157,7 +157,7 @@ export function ProductArea({
         </div>
         <button
           type="button"
-          className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
+          className="w-8 h-8 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
           onClick={goNext}
           aria-label={t('next')}
         >
@@ -170,7 +170,7 @@ export function ProductArea({
             {t('selectCategoryToSeeProducts')}
           </div>
         ) : (
-          <div className="grid grid-cols-5 gap-3 content-start">
+          <div className="grid grid-cols-5 gap-3 content-start text-lg">
             {pageCells.map((entry, idx) => {
               const product = typeof entry === 'string' && entry.startsWith('p:')
                 ? productById.get(entry.slice(2))
@@ -182,7 +182,7 @@ export function ProductArea({
                 return (
                   <div
                     key={`empty-${idx}`}
-                    className="min-h-[70px] rounded-lg bg-transparent"
+                    className="min-h-[50px] rounded-lg bg-transparent"
                   />
                 );
               }

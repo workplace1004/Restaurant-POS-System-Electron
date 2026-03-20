@@ -2558,7 +2558,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     const pos = Math.min(String(tableLocationName || '').length, Math.max(0, tableLocationSelectionStart));
     try {
       input.setSelectionRange(pos, Math.min(String(tableLocationName || '').length, Math.max(0, tableLocationSelectionEnd)));
-    } catch {}
+    } catch { }
   }, [showTableLocationModal, tableLocationName, tableLocationSelectionStart, tableLocationSelectionEnd]);
 
   const handleSaveTableLocation = async () => {
@@ -4563,38 +4563,38 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   return (
     <div className="flex h-full bg-pos-bg text-pos-text">
       {/* Control left sidebar */}
-      <aside className="w-[330px] shrink-0 flex flex-col bg-pos-panel border-r border-pos-border">
+      <aside className="w-1/5 shrink-0 flex flex-col bg-pos-panel border-r border-pos-border">
         <nav className="flex flex-col gap-0.5 flex-1 p-3">
           {CONTROL_SIDEBAR_ITEMS.map((item) => (
             <button
               key={item.id}
               type="button"
-              className={`flex items-center gap-3 px-5 py-5 rounded-lg text-left text-3xl transition-colors ${controlSidebarId === item.id
+              className={`flex items-center gap-3 px-2 py-3 rounded-lg text-left text-md transition-colors ${controlSidebarId === item.id
                 ? 'bg-pos-bg text-pos-text font-medium'
                 : 'text-pos-muted hover:bg-pos-bg/50 hover:text-pos-text'
                 }`}
               onClick={() => setControlSidebarId(item.id)}
             >
-              <SidebarIcon id={item.icon} className="w-8 h-8 shrink-0" />
+              <SidebarIcon id={item.icon} className="w-6 h-6 shrink-0" />
               {tr(`control.sidebar.${item.id}`, item.label)}
             </button>
           ))}
         </nav>
-        <div className="p-4 w-full flex flex-col items-center space-y-5">
+        <div className="p-4 w-full flex flex-col items-center gap-2">
           {currentUser && (
-            <p className="text-pos-text text-3xl font-medium truncate px-1">{currentUser.label}</p>
+            <p className="text-pos-text text-xl font-medium truncate px-1">{currentUser.label}</p>
           )}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col">
             <button
               type="button"
-              className="px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
+              className="px-3 py-1 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-xl"
               onClick={() => onBack?.()}
             >
               {tr('backName', 'Back')}
             </button>
             <button
               type="button"
-              className="px-3 py-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-3xl"
+              className="px-3 py-1 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-xl"
               onClick={() => setShowLogoutModal(true)}
             >
               {tr('logOut', 'Log out')}
@@ -4607,12 +4607,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       <div className="flex flex-col flex-1 min-w-0">
         {/* Top navigation - Personalize only */}
         {controlSidebarId === 'personalize' && (
-          <div className="flex items-center gap-1 p-4 px-10 justify-around w-full bg-pos-bg/50">
+          <div className="flex items-center gap-1 py-2 px-4 justify-between w-full bg-pos-bg/50">
             {TOP_NAV_ITEMS.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`flex items-center gap-2 px-5 py-3 rounded-lg text-3xl transition-colors ${topNavId === item.id
+                className={`flex items-center gap-2 px-2 py-3 rounded-lg text-lg transition-colors ${topNavId === item.id
                   ? 'bg-pos-panel text-pos-text font-medium border border-pos-border'
                   : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50 border border-transparent'
                   }`}
@@ -4623,7 +4623,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   if (item.id === 'external-devices') setSubNavId('Printer');
                 }}
               >
-                <TopNavIcon id={item.icon} className="w-8 h-8 shrink-0" />
+                <TopNavIcon id={item.icon} className="w-6 h-6 shrink-0" />
                 {tr(`control.topNav.${item.id}`, item.label)}
               </button>
             ))}
@@ -4652,12 +4652,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
         {/* Sub-navigation - Categories and products */}
         {controlSidebarId === 'personalize' && topNavId === 'categories-products' && (
-          <div className="flex items-center w-full justify-around gap-1 px-4 py-3 bg-pos-bg">
+          <div className="flex items-center w-full justify-between gap-1 px-4 bg-pos-bg">
             {SUB_NAV_ITEMS.map((label) => (
               <button
                 key={label}
                 type="button"
-                className={`px-4 py-2 rounded-lg text-xl transition-colors ${subNavId === label
+                className={`px-4 py-2 rounded-lg text-sm transition-colors ${subNavId === label
                   ? 'bg-pos-panel text-pos-text font-medium'
                   : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50'
                   }`}
@@ -4713,7 +4713,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         )}
 
         {/* Content area */}
-        <main className="flex-1 overflow-hidden p-6">
+        <main className="flex-1 overflow-hidden px-4 pt-2">
           {controlSidebarId === 'reports' ? (
             <div className="flex flex-col h-full gap-4">
               {reportTabId === 'financial' && (
@@ -5177,11 +5177,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
             </div>
           ) : topNavId === 'categories-products' && subNavId === 'Price Groups' ? (
-            <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[880px] pb-24">
-              <div className="flex items-center w-full justify-center mb-6">
+            <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+              <div className="flex items-center w-full justify-center mb-2">
                 <button
                   type="button"
-                  className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                  className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
                   disabled={priceGroupsLoading}
                   onClick={openPriceGroupModal}
                 >
@@ -5208,17 +5208,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       {paginated.map((pg) => (
                         <li
                           key={pg.id}
-                          className="flex items-center w-full justify-between px-4 py-3 bg-pos-bg border-y border-pos-panel text-pos-text text-xl"
+                          className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
                         >
                           <span className="font-medium">{pg.name}</span>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text mr-20 hover:bg-pos-panel"
+                              className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
                               onClick={() => openEditPriceGroupModal(pg)}
                               aria-label="Edit"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
                             <button
                               type="button"
@@ -5226,7 +5226,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               onClick={() => setDeleteConfirmId(pg.id)}
                               aria-label="Delete"
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </li>
@@ -6235,41 +6235,40 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         }
                       })();
                       return (
-                      <li
-                        key={loc.id}
-                        className="flex justify-between items-center w-full px-10 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
-                      >
-                        <span className="font-medium">{loc.name}</span>
-                        <div className="flex absolute left-1/2 justify-center">
-                          <button
-                            type="button"
-                            className={`w-full text-center px-4 py-2 rounded-lg text-xl hover:bg-pos-panel ${
-                              hasSavedLayout ? 'text-white' : 'text-pos-muted hover:text-pos-text'
-                            }`}
-                            onClick={() => openSetTablesModal(loc)}
-                          >
-                            {tr('control.tables.setTables', 'Set tables')}
-                          </button>
-                        </div>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                            onClick={() => openEditTableLocationModal(loc)}
-                            aria-label="Edit"
-                          >
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="p-2 rounded text-pos-text hover:bg-pos-panel"
-                            onClick={() => setDeleteConfirmTableLocationId(loc.id)}
-                            aria-label="Delete"
-                          >
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
-                        </div>
-                      </li>
+                        <li
+                          key={loc.id}
+                          className="flex justify-between items-center w-full px-10 py-3 bg-pos-bg border-b border-pos-border text-pos-text text-xl"
+                        >
+                          <span className="font-medium">{loc.name}</span>
+                          <div className="flex absolute left-1/2 justify-center">
+                            <button
+                              type="button"
+                              className={`w-full text-center px-4 py-2 rounded-lg text-xl hover:bg-pos-panel ${hasSavedLayout ? 'text-white' : 'text-pos-muted hover:text-pos-text'
+                                }`}
+                              onClick={() => openSetTablesModal(loc)}
+                            >
+                              {tr('control.tables.setTables', 'Set tables')}
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                              onClick={() => openEditTableLocationModal(loc)}
+                              aria-label="Edit"
+                            >
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                              onClick={() => setDeleteConfirmTableLocationId(loc.id)}
+                              aria-label="Delete"
+                            >
+                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </div>
+                        </li>
                       );
                     })
                   )}
@@ -8029,24 +8028,24 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* New price group modal */}
       {showPriceGroupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[1450px] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePriceGroupModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-14">
-              <div className='w-full flex flex-col h-[400px] justify-center items-center gap-10'>
-                <div className="flex gap-2 w-full items-center justify-center h-[100px]">
-                  <label className="block text-3xl pr-[50px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
+            <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
+              <div className='w-full flex flex-col justify-center items-center gap-10'>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block text-xl pr-[50px] font-medium text-gray-200 mb-2">{tr('name', 'Name')} : </label>
                   <input
                     type="text"
                     readOnly
                     value={priceGroupName}
                     placeholder={tr('control.enterName', 'Enter name')}
-                    className="px-4 w-[300px] bg-pos-panel h-[60px] py-3 text-xl border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[300px] bg-pos-panel h-[50px] py-3 text-xl border border-gray-300 rounded-lg text-gray-200"
                   />
                 </div>
-                <div className="flex gap-2 w-full items-center justify-center h-[100px]">
-                  <label className="block text-3xl pr-[80px] font-medium text-gray-200 mb-2">{tr('control.vat', 'VAT')} : </label>
+                <div className="flex gap-2 w-full items-center justify-center">
+                  <label className="block text-xl pr-[70px] font-medium text-gray-200 mb-2">{tr('control.vat', 'VAT')} : </label>
                   <Dropdown
                     options={VAT_OPTIONS.map((o) => ({ ...o, label: tr(`vatOption.${o.value}`, o.label) }))}
                     value={priceGroupTax}
@@ -8056,19 +8055,19 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   />
                 </div>
               </div>
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  className="flex items-center text-4xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
-                  disabled={savingPriceGroup}
-                  onClick={handleSavePriceGroup}
-                >
-                  <svg fill="#ffffff" width="30px" height="30px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
-                    <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
-                  </svg>
-                  {tr('control.save', 'Save')}
-                </button>
-              </div>
+            </div>
+            <div className="flex justify-center pt-20 pb-5">
+              <button
+                type="button"
+                className="flex items-center text-xl gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                disabled={savingPriceGroup}
+                onClick={handleSavePriceGroup}
+              >
+                <svg fill="#ffffff" width="20px" height="20px" viewBox="0 0 16 16" id="save-16px" xmlns="http://www.w3.org/2000/svg">
+                  <path id="Path_42" data-name="Path 42" d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
+                </svg>
+                {tr('control.save', 'Save')}
+              </button>
             </div>
             <KeyboardWithNumpad value={priceGroupName} onChange={setPriceGroupName} />
           </div>

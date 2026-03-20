@@ -753,8 +753,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
 
   return (
-    <aside className="w-1/4 shrink-0 flex flex-col gap-3 p-4 bg-pos-bg border-l border-pos-border">
-      <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden h-[55%]">
+    <aside className="w-1/4 shrink-0 flex flex-col px-2 py-1 bg-pos-bg border-l border-pos-border">
+      <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden min-h-[50%]">
         {showSubtotalView ? (
           <div className="flex-1 overflow-auto p-4 text-pos-bg text-lg">
             {(() => {
@@ -877,7 +877,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </div>
         )}
       </div>
-      <div className="flex items-center gap-2 py-2 px-2 border-t border-black/10 text-xl">
+      <div className="flex items-center gap-2 py-1 px-2 border-t border-black/10 text-xl">
         <button
           type="button"
           disabled={!hasSelection}
@@ -892,8 +892,28 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             }
           }}
         >
-          <svg width="25px" height="25px" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" />
+          <svg width="25px" height="25px" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <path fill="#ffffff" d="M9 4h2v5h5v2h-5v5H9v-5H4V9h5V4z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          disabled={!canDecreaseAll || isSavedTableOrder}
+          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${!canDecreaseAll || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
+            }`}
+          onClick={() => {
+            if (isSavedTableOrder) return;
+            if (order && canDecreaseAll) {
+              selectedItems.forEach((item) => {
+                if (item.quantity > 1) {
+                  onUpdateItemQuantity?.(order.id, item.id, item.quantity - 1);
+                }
+              });
+            }
+          }}
+        >
+          <svg width="30" height="30" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <path fill="#ffffff" d="M4 9h12v2H4V9z" />
           </svg>
         </button>
         <button
@@ -922,35 +942,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           onClick={() => setShowDeleteAllModal(true)}
           aria-label={t('clear')}
         >
-          <svg width="32" height="32" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path style={{ fill: '#555555', stroke: '#333333', strokeWidth: 3 }} d="M 78,0 68,13 c 0,0 4,1 7,3 L 90,0 z" />
-            <path style={{ fill: '#C7A751', stroke: '#453A1A', strokeWidth: 3 }} d="M 61,18 C 53,18 42,22 33,31 24,40 9.7,59 8,69 c -3,17 9,23 18,24 -1,-2 -1,-5 -1,-8 4,5 6,8 15,9 -2,-4 -2,-8 -2,-8 0,0 8,9 22,9 -3,-3 -3,-8 -3,-8 0,0 8,7 18,5 -2,-2 -4,-4 -5,-6 3,1 6,3 16,1 -2,-1 -6,-3 -8,-5 7,0 10,-3 12,-6 -9,0 -17,-1 -20,-9 -3,-9 6,-22 7,-27 1,-5 3,-15 -5,-19 4,0 7,-2 3,-5 -3,-2 -7,-3 -10,-3 -3,0 -7,2 -4,5 z" />
-            <path style={{ fill: '#A3262A', stroke: '#420000', strokeWidth: 3 }} d="m 26,41 c 4,11 27,14 44,10 l 4,-7 C 74,44 58,46 47,44 35,42 33,33 33,33 z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          disabled={!canDecreaseAll || isSavedTableOrder}
-          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${!canDecreaseAll || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
-            }`}
-          onClick={() => {
-            if (isSavedTableOrder) return;
-            if (order && canDecreaseAll) {
-              selectedItems.forEach((item) => {
-                if (item.quantity > 1) {
-                  onUpdateItemQuantity?.(order.id, item.id, item.quantity - 1);
-                }
-              });
-            }
-          }}
-        >
-          <svg width="30" height="30" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" />
-          </svg>
+          <img src="/clear.svg" alt="" className="w-8 h-8 brightness-0 invert" />
         </button>
       </div>
 
-      <div className="flex items-center w-full px-2 justify-between text-xl font-semibold py-2">
+      <div className="flex items-center w-full px-2 justify-between text-xl font-semibold py-1">
         <span className='text-lg'>{t('total')}:&nbsp;€{payableTotal.toFixed(2)}</span>
         <div>
           <input
@@ -1018,7 +1014,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </div>
         )
       ) : (
-        <div className="flex gap-2 text-md">
+        <div className="flex gap-2 text-md py-1">
           <button
             type="button"
             className="flex-1 py-1 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
@@ -1030,8 +1026,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             type="button"
             disabled={payableTotalForPaymentModal <= 0.009}
             className={`flex-1 py-1 border-none rounded-md ${payableTotalForPaymentModal <= 0.009
-                ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
-                : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+              ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
+              : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
               }`}
             onClick={() => openPayDifferentlyModal()}
           >
@@ -1353,8 +1349,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     type="button"
                     disabled={settlementSubtotalLeftLines.length === 0}
                     className={`min-w-[200px] py-3 px-6 rounded text-pos-text text-2xl ${settlementSubtotalLeftLines.length === 0
-                        ? 'bg-pos-surface opacity-50 cursor-not-allowed'
-                        : 'bg-pos-surface hover:bg-pos-surface-hover'
+                      ? 'bg-pos-surface opacity-50 cursor-not-allowed'
+                      : 'bg-pos-surface hover:bg-pos-surface-hover'
                       }`}
                     onClick={() => {
                       setSubtotalSelectedLeftIds(settlementSubtotalLeftLines.map((line) => line.id));
@@ -1416,8 +1412,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       <div
                         key={group.id}
                         className={`px-4 py-3 border-b ${group.lines.length > 0 && group.lines.every((line) => subtotalSelectedRightIds.includes(line.id))
-                            ? 'border-2 border-rose-500 rounded-md'
-                            : ''
+                          ? 'border-2 border-rose-500 rounded-md'
+                          : ''
                           }`}
                       >
                         <div className="text-center text-3xl font-semibold text-pos-text mb-2">
@@ -1496,8 +1492,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                         type="button"
                         disabled={!hasSplitBillSelection}
                         className={`min-w-[200px] min-h-[80px] py-3 px-6 rounded text-2xl ${!hasSplitBillSelection
-                            ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                            : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                          ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                          : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                           }`}
                         onClick={() => {
                           if (!hasSplitBillSelection) return;
@@ -1516,8 +1512,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                         type="button"
                         disabled={!hasSplitBillSelection}
                         className={`min-w-[220px] min-h-[80px] py-3 px-6 rounded text-2xl ${!hasSplitBillSelection
-                            ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                            : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                          ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                          : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                           }`}
                         onClick={() => {
                           if (!hasSplitBillSelection) return;
@@ -1538,8 +1534,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       type="button"
                       disabled={settlementSubtotalLeftLines.length > 0}
                       className={`min-w-[200px] py-3 px-6 rounded text-2xl ${settlementSubtotalLeftLines.length > 0
-                          ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                          : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                        ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
+                        : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                         }`}
                       onClick={() => {
                         if (settlementSubtotalLeftLines.length > 0) return;
@@ -1595,10 +1591,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           aria-labelledby="delete-all-title"
         >
           <div
-            className="bg-pos-panel rounded-lg shadow-xl px-16 py-8 max-w-3xl w-full mx-4 border border-pos-border"
+            className="bg-pos-panel rounded-lg shadow-xl px-16 py-8 max-w-2xl w-full mx-4 border border-pos-border"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="delete-all-title" className="text-3xl mb-10 font-semibold flex justify-center w-full text-pos-text">
+            <h2 id="delete-all-title" className="text-2xl mb-10 font-semibold flex justify-center w-full text-pos-text">
               <div className='flex'>
                 {t('clearListConfirm')}
               </div>
@@ -1606,14 +1602,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex gap-3 justify-between">
               <button
                 type="button"
-                className="w-[200px] py-5 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                className="py-3 px-10 bg-pos-surface text-pos-text rounded text-xl hover:bg-pos-surface-hover"
                 onClick={() => setShowDeleteAllModal(false)}
               >
                 {t('cancel')}
               </button>
               <button
                 type="button"
-                className="w-[200px] py-5 bg-pos-danger text-white rounded text-2xl hover:bg-pos-danger/90"
+                className="py-3 px-10 bg-pos-danger text-white rounded text-xl hover:bg-pos-danger/90"
                 onClick={async () => {
                   if (isSavedTableOrder) {
                     setShowDeleteAllModal(false);

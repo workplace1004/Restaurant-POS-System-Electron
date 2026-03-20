@@ -6,7 +6,7 @@ const ROW2 = 'q s d f g h j k l m'.split(' ');
 const ROW3 = 'w x c v b n , €'.split(' ');
 const NUMPAD = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
 
-const KEY_STYLE = 'w-[100px] h-[100px] bg-pos-panel rounded text-white text-5xl hover:bg-pos-panel/80 border border-transparent transition-colors';
+const KEY_STYLE = 'w-[60px] h-[50px] bg-pos-panel rounded text-white text-2xl hover:bg-pos-panel/80 border border-transparent transition-colors';
 
 /**
  * Reusable virtual keyboard with alphanumeric keys and numpad.
@@ -142,31 +142,31 @@ export function KeyboardWithNumpad({
     >
       <div className="flex gap-4">
         <div className="flex flex-col gap-1">
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {ROW1.map((k) => (
               <button key={k} type="button" className={KEY_STYLE} onClick={() => sendLetterOrSymbol(k)}>
                 {display(k)}
               </button>
             ))}
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {ROW2.map((k) => (
               <button key={k} type="button" className={KEY_STYLE} onClick={() => sendLetterOrSymbol(k)}>
                 {display(k)}
               </button>
             ))}
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {ROW3.map((k) => (
               <button key={k} type="button" className={KEY_STYLE} onClick={() => sendLetterOrSymbol(k)}>
                 {display(k)}
               </button>
             ))}
-            <button type="button" className={`${KEY_STYLE} w-[204px]`} onClick={() => sendKey('Backspace')} aria-label="Backspace">
+            <button type="button" className={`${KEY_STYLE} w-[126px]`} onClick={() => sendKey('Backspace')} aria-label="Backspace">
               ←
             </button>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             <button
               type="button"
               className={`${KEY_STYLE} ${uppercase ? 'bg-blue-600 ring-2 ring-blue-400' : ''}`}
@@ -181,7 +181,7 @@ export function KeyboardWithNumpad({
             <button type="button" className={KEY_STYLE} onClick={() => sendKey('/')}>
               /
             </button>
-            <button type="button" className="bg-pos-panel rounded hover:bg-pos-panel/80 w-[412px] h-[100px] border border-transparent transition-colors" onClick={() => sendKey(' ')} aria-label="Space" />
+            <button type="button" className="bg-pos-panel rounded hover:bg-pos-panel/80 w-[258px] h-[50px] border border-transparent transition-colors" onClick={() => sendKey(' ')} aria-label="Space" />
             <button type="button" className={KEY_STYLE} onClick={() => sendKey('Backspace')} aria-label="Backspace">
               _
             </button>
@@ -193,7 +193,7 @@ export function KeyboardWithNumpad({
             </button>
           </div>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           {NUMPAD.map((row, i) => (
             <div key={i} className="flex gap-1">
               {row.map((k) => (
