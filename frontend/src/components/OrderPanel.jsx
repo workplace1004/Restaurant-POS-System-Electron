@@ -20,6 +20,28 @@ function sumAmountsByIntegration(methods, amounts, integration) {
     .reduce((sum, m) => sum + (Number(amounts[m.id]) || 0), 0);
 }
 
+/** Build payment breakdown { amounts: { methodId: amount } } from methods and amounts */
+function buildPaymentBreakdown(methods, amounts) {
+  const result = {};
+  for (const m of methods) {
+    const v = Number(amounts[m.id]) || 0;
+    if (v > 0.0001) result[m.id] = roundCurrency(v);
+  }
+  return Object.keys(result).length > 0 ? { amounts: result } : null;
+}
+
+/** Allocate payment breakdown proportionally across orders. totalOfAllOrders = sum of order totals. */
+function allocatePaymentBreakdown(paymentBreakdown, orderTotal, totalOfAllOrders) {
+  if (!paymentBreakdown?.amounts || totalOfAllOrders <= 0) return paymentBreakdown;
+  const ratio = orderTotal / totalOfAllOrders;
+  const allocated = {};
+  for (const [methodId, amt] of Object.entries(paymentBreakdown.amounts)) {
+    const allocatedAmt = roundCurrency(amt * ratio);
+    if (allocatedAmt > 0.0001) allocated[methodId] = allocatedAmt;
+  }
+  return Object.keys(allocated).length > 0 ? { amounts: allocated } : null;
+}
+
 export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '' }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
@@ -572,7 +594,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     }
   };
 
-  const createPaidSplitOrder = async (sourceItems) => {
+  const createPaidSplitOrder = async (sourceItems, paymentBreakdown = null) => {
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -585,11 +607,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     if (!res.ok || !data?.id) {
       throw new Error(data?.error || 'Failed to create split checkout order.');
     }
-    await onStatusChange?.(data.id, 'paid');
+    await onStatusChange?.(data.id, 'paid', paymentBreakdown ? { paymentBreakdown } : {});
     return data.id;
   };
 
-  const settleSplitBillSelection = async (selectedLineIds) => {
+  const settleSplitBillSelection = async (selectedLineIds, paymentBreakdown = null) => {
     const selectedByOrderId = new Map();
     for (const lineId of selectedLineIds) {
       const [orderId, itemId] = String(lineId || '').split(':');
@@ -602,21 +624,33 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     const paidOrderIds = [];
     const fullySettledSourceOrderIds = [];
 
+    const ordersToPay = [];
     for (const sourceOrder of savedOrdersForSelectedTable) {
-      const selectedItemIds = selectedByOrderId.get(sourceOrder?.id);
-      if (!selectedItemIds || selectedItemIds.size === 0) continue;
+      const selectedItemIdsForOrder = selectedByOrderId.get(sourceOrder?.id);
+      if (!selectedItemIdsForOrder || selectedItemIdsForOrder.size === 0) continue;
 
       const sourceItems = Array.isArray(sourceOrder?.items) ? sourceOrder.items : [];
-      const selectedItems = sourceItems.filter((item) => selectedItemIds.has(item?.id));
-      const remainingItems = sourceItems.filter((item) => !selectedItemIds.has(item?.id));
+      const selectedItems = sourceItems.filter((item) => selectedItemIdsForOrder.has(item?.id));
+      const remainingItems = sourceItems.filter((item) => !selectedItemIdsForOrder.has(item?.id));
       if (selectedItems.length === 0) continue;
 
+      const orderTotal = roundCurrency(selectedItems.reduce((sum, item) => sum + (Number(item?.price) || 0) * Math.max(1, Number(item?.quantity) || 1), 0));
+      ordersToPay.push({ sourceOrder, selectedItems, remainingItems, orderTotal });
+    }
+
+    const totalPaid = roundCurrency(ordersToPay.reduce((sum, o) => sum + o.orderTotal, 0));
+
+    for (const { sourceOrder, selectedItems, remainingItems, orderTotal } of ordersToPay) {
+      const orderPaymentBreakdown = paymentBreakdown && totalPaid > 0
+        ? allocatePaymentBreakdown(paymentBreakdown, orderTotal, totalPaid)
+        : null;
+
       if (remainingItems.length === 0) {
-        await onStatusChange?.(sourceOrder.id, 'paid');
+        await onStatusChange?.(sourceOrder.id, 'paid', orderPaymentBreakdown ? { paymentBreakdown: orderPaymentBreakdown } : {});
         paidOrderIds.push(sourceOrder.id);
         fullySettledSourceOrderIds.push(sourceOrder.id);
       } else {
-        const paidSplitOrderId = await createPaidSplitOrder(selectedItems);
+        const paidSplitOrderId = await createPaidSplitOrder(selectedItems, orderPaymentBreakdown);
         await patchOrderItems(sourceOrder.id, remainingItems);
         paidOrderIds.push(paidSplitOrderId);
       }
@@ -682,7 +716,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         await runPayworldPayment(payworldTotal);
       }
       if (pendingSplitCheckout?.type === 'splitBill') {
-        const paidOrderIds = await settleSplitBillSelection(pendingSplitCheckout.lineIds || []);
+        const paymentBreakdown = buildPaymentBreakdown(activePaymentMethods, paymentAmounts);
+        const paidOrderIds = await settleSplitBillSelection(pendingSplitCheckout.lineIds || [], paymentBreakdown);
         if (paidOrderIds.length === 0) {
           throw new Error('No split bill order available for checkout.');
         }
@@ -726,8 +761,22 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       if (remainingSavedIds.length !== savedTableOrders.length) {
         await persistSavedTableOrders(remainingSavedIds);
       }
+
+      const paymentBreakdown = buildPaymentBreakdown(activePaymentMethods, paymentAmounts);
+      const settlementTotal = roundCurrency(targetOrderIds.reduce((sum, id) => {
+        const o = (showSettlementActions ? savedOrdersForSelectedTable : [order]).find((x) => x?.id === id);
+        return sum + (o ? computeOrderTotal(o) : 0);
+      }, 0));
+
       for (const paidOrderId of targetOrderIds) {
-        await onStatusChange?.(paidOrderId, 'paid');
+        const paidOrder = showSettlementActions
+          ? savedOrdersForSelectedTable.find((o) => o?.id === paidOrderId)
+          : (order?.id === paidOrderId ? order : null);
+        const orderTotal = paidOrder ? computeOrderTotal(paidOrder) : 0;
+        const orderPaymentBreakdown = paymentBreakdown && settlementTotal > 0
+          ? allocatePaymentBreakdown(paymentBreakdown, orderTotal, settlementTotal)
+          : paymentBreakdown;
+        await onStatusChange?.(paidOrderId, 'paid', orderPaymentBreakdown ? { paymentBreakdown: orderPaymentBreakdown } : {});
       }
       await onPaymentCompleted?.(targetOrderIds);
       markSelectedTablePaid();

@@ -320,11 +320,15 @@ export function usePos(API, socket, selectedTableId = null) {
   );
 
   const setOrderStatus = useCallback(
-    async (orderId, status) => {
+    async (orderId, status, options = {}) => {
+      const body = { status };
+      if (status === 'paid' && options?.paymentBreakdown && typeof options.paymentBreakdown === 'object') {
+        body.paymentBreakdown = options.paymentBreakdown;
+      }
       await fetch(`${API}/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify(body)
       });
       if (status === 'in_planning' || status === 'paid') {
         fetchInPlanningCount();
