@@ -1084,7 +1084,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex items-center justify-center">
               <div className="p-6 min-w-[46%] w-full h-full flex flex-col">
                 <div className="text-lg font-semibold mb-3 flex w-full justify-center items-center">{t('total')}: €{payModalTargetTotal.toFixed(2)}</div>
-                <div className="flex flex-wrap gap-4 w-full mb-4 h-full items-start justify-center">
+                <div className="grid grid-cols-2 gap-4 w-full mb-4 h-full items-start justify-center">
                   {paymentMethodsLoading ? (
                     <div className="text-sm text-gray-600 py-6">
                       {tr('orderPanel.loadingPaymentMethods', 'Loading payment methods...')}
@@ -1112,11 +1112,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                             aria-label={m.name}
                           >
                             {integ === 'manual_cash' ? (
-                              <span className="flex items-center justify-center w-[70px] h-[70px] text-4xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
+                              <span className="flex items-center justify-center w-[105px] h-[70px] text-4xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
                             ) : integ === 'cashmatic' ? (
                               <img src="/cash.png" alt={m.name} className="max-h-[70px] w-auto object-contain" />
                             ) : integ === 'payworld' ? (
                               <img src="/payworld.png" alt={m.name} className="max-h-[70px] w-auto object-contain" />
+                            ) : integ === 'generic' ? (
+                              <img src="/card.svg" alt={m.name} className="max-h-[70px] w-[105px] w-auto object-contain" />
                             ) : (
                               <span className="flex items-center justify-center w-[70px] min-h-[70px] px-2 py-3 text-base font-semibold text-center text-blue-900 bg-blue-50/80 rounded leading-tight">
                                 {m.name}
