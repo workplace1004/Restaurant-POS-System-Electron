@@ -881,7 +881,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             {items.map((item) => (
               <div
                 key={item.id}
-                className={`flex flex-wrap items-center gap-1 p-2 text-lg text-pos-bg rounded mb-1 hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''
+                className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''
                   }`}
                 onClick={() => toggleItemSelection(item.id)}
               >

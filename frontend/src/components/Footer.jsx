@@ -181,7 +181,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
   };
 
   return (
-    <footer className="flex items-center py-3 px-2 bg-pos-bg shrink-0">
+    <footer className="flex items-center pb-2 px-2 bg-pos-bg shrink-0">
       <div ref={moreMenuAreaRef} className="grid grid-cols-7 gap-1 text-sm w-full relative">
         {footerRowSlotIds.map((slotId, index) => {
           if (!slotId) {

@@ -88,30 +88,30 @@ const GROUPING_RECEIPT_OPTIONS = [
 ];
 
 const SCHEDULED_ORDERS_PRODUCTION_FLOW_OPTIONS = [
-  { value: 'scheduled-orders-print', label: 'Scheduled orders…' },
-  { value: 'default', label: 'Default' }
+  { value: 'scheduled-orders-print', labelKey: 'control.device.scheduledOrders.scheduledOrdersPrint', fallback: 'Scheduled orders…' },
+  { value: 'default', labelKey: 'control.device.scheduledOrders.default', fallback: 'Default' }
 ];
 
 const SCHEDULED_ORDERS_LOADING_OPTIONS = [
-  { value: '0', label: '0 days ago' },
-  { value: '1', label: '1 day ago' },
-  { value: '7', label: '7 days ago' },
-  { value: '30', label: '30 days ago' }
+  { value: '0', labelKey: 'control.device.scheduledOrders.daysAgo0', fallback: '0 days ago' },
+  { value: '1', labelKey: 'control.device.scheduledOrders.daysAgo1', fallback: '1 day ago' },
+  { value: '7', labelKey: 'control.device.scheduledOrders.daysAgo7', fallback: '7 days ago' },
+  { value: '30', labelKey: 'control.device.scheduledOrders.daysAgo30', fallback: '30 days ago' }
 ];
 
 const SCHEDULED_ORDERS_MODE_OPTIONS = [
-  { value: 'labels', label: 'Labels' },
-  { value: 'list', label: 'List' }
+  { value: 'labels', labelKey: 'control.device.scheduledOrders.labels', fallback: 'Labels' },
+  { value: 'list', labelKey: 'control.device.scheduledOrders.list', fallback: 'List' }
 ];
 
 const SCHEDULED_ORDERS_INVOICE_LAYOUT_OPTIONS = [
-  { value: 'standard', label: 'Standard' },
-  { value: 'compact', label: 'Compact' }
+  { value: 'standard', labelKey: 'control.device.scheduledOrders.standard', fallback: 'Standard' },
+  { value: 'compact', labelKey: 'control.device.scheduledOrders.compact', fallback: 'Compact' }
 ];
 
 const SCHEDULED_ORDERS_CHECKOUT_AT_OPTIONS = [
-  { value: 'delivery-note', label: 'Delivery note' },
-  { value: 'order-date', label: 'Order date' }
+  { value: 'delivery-note', labelKey: 'control.device.scheduledOrders.deliveryNote', fallback: 'Delivery note' },
+  { value: 'order-date', labelKey: 'control.device.scheduledOrders.orderDate', fallback: 'Order date' }
 ];
 
 const PRICE_DISPLAY_TYPE_OPTIONS = [
@@ -252,9 +252,9 @@ const DEFAULT_PRINTERS = [
 ];
 
 const VAT_OPTIONS = [
-  { value: 'standard', label: 'Standard' },
-  { value: 'take-out', label: 'Take-out' },
-  { value: 'eat-in', label: 'Eat-in' }
+  { value: 'standard', labelKey: 'control.external.standard', fallback: 'Standard' },
+  { value: 'take-out', labelKey: 'control.external.takeOut', fallback: 'Take-out' },
+  { value: 'eat-in', labelKey: 'control.external.eatIn', fallback: 'Eat-in' }
 ];
 
 const DEVICE_SETTINGS_TABS = [
@@ -374,35 +374,35 @@ const SYSTEM_SETTINGS_TAB_LABEL_KEYS = {
 };
 
 const LEEGGOED_OPTIONS = [
-  { value: 'by-customers-name', label: 'By customers name' },
-  { value: 'other', label: 'Other' }
+  { value: 'by-customers-name', labelKey: 'control.sys.deposit.byCustomersName', fallback: 'By customers name' },
+  { value: 'other', labelKey: 'control.sys.deposit.other', fallback: 'Other' }
 ];
 
 const SAVINGS_DISCOUNT_OPTIONS = [
-  { value: '', label: 'Disabled' },
-  { value: 'percentage', label: 'Percentage' },
-  { value: 'amount', label: 'Amount' }
+  { value: '', labelKey: 'control.external.disabled', fallback: 'Disabled' },
+  { value: 'percentage', labelKey: 'control.sys.savings.percentage', fallback: 'Percentage' },
+  { value: 'amount', labelKey: 'control.sys.savings.amount', fallback: 'Amount' }
 ];
 
 const TICKET_VOUCHER_VALIDITY_OPTIONS = [
-  { value: '1', label: '1 month' },
-  { value: '3', label: '3 months' },
-  { value: '6', label: '6 months' },
-  { value: '12', label: '12 months' }
+  { value: '1', labelKey: 'control.sys.voucher.month1', fallback: '1 month' },
+  { value: '3', labelKey: 'control.sys.voucher.month3', fallback: '3 months' },
+  { value: '6', labelKey: 'control.sys.voucher.month6', fallback: '6 months' },
+  { value: '12', labelKey: 'control.sys.voucher.month12', fallback: '12 months' }
 ];
 
 const TICKET_SCHEDULED_PRINT_MODE_OPTIONS = [
-  { value: 'Production ticket', label: 'Production ticket' },
-  { value: 'label-small', label: 'Small label' },
-  { value: 'label-large', label: 'Large label' },
-  { value: 'label-Production ticket + Small label', label: 'Production ticket + Small label label' },
-  { value: 'Production ticket + Large label', label: 'Production ticket + Large label' },
+  { value: 'Production ticket', labelKey: 'control.sys.scheduledPrint.productionTicket', fallback: 'Production ticket' },
+  { value: 'label-small', labelKey: 'control.sys.scheduledPrint.smallLabel', fallback: 'Small label' },
+  { value: 'label-large', labelKey: 'control.sys.scheduledPrint.largeLabel', fallback: 'Large label' },
+  { value: 'label-Production ticket + Small label', labelKey: 'control.sys.scheduledPrint.prodPlusSmall', fallback: 'Production ticket + Small label' },
+  { value: 'Production ticket + Large label', labelKey: 'control.sys.scheduledPrint.prodPlusLarge', fallback: 'Production ticket + Large label' }
 ];
 
 const TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS = [
-  { value: 'as-registered', label: 'As Registered' },
-  { value: 'Alphabetical first name', label: 'Alphabetical first name' },
-  { value: 'Alphabetical last name', label: 'Alphabetical last name' }
+  { value: 'as-registered', labelKey: 'control.external.asRegistered', fallback: 'As Registered' },
+  { value: 'Alphabetical first name', labelKey: 'control.sys.customerSort.alphabeticalFirstName', fallback: 'Alphabetical first name' },
+  { value: 'Alphabetical last name', labelKey: 'control.sys.customerSort.alphabeticalLastName', fallback: 'Alphabetical last name' }
 ];
 
 const BARCODE_TYPE_OPTIONS = [
@@ -820,6 +820,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [productSubproductsByGroup, setProductSubproductsByGroup] = useState({});
   const [productSubproductsSelectedId, setProductSubproductsSelectedId] = useState('');
   const [productSubproductsLinked, setProductSubproductsLinked] = useState([]);
+  const productSubproductsListRef = useRef(null);
   const [loadingProductSubproductsLinked, setLoadingProductSubproductsLinked] = useState(false);
   const [savingProductSubproducts, setSavingProductSubproducts] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -1941,21 +1942,19 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (added) setProductSubproductsSelectedId('');
   }, [productSubproductsSelectedId, productSubproductsOptions, subproductGroups, productSubproductsGroupId]);
 
-  const moveProductSubproductLink = useCallback((index, direction) => {
-    setProductSubproductsLinked((prev) => {
-      const next = [...prev];
-      const target = index + direction;
-      if (index < 0 || index >= next.length || target < 0 || target >= next.length) return prev;
-      const tmp = next[index];
-      next[index] = next[target];
-      next[target] = tmp;
-      return next;
-    });
-  }, []);
-
   const removeProductSubproductLink = useCallback((subproductId) => {
     setProductSubproductsLinked((prev) => prev.filter((x) => x.subproductId !== subproductId));
   }, []);
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    onLogout?.();
+  };
+
+  const tr = useCallback((key, fallback) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  }, [t]);
 
   const handleSaveProductSubproducts = useCallback(async () => {
     if (!productSubproductsProduct?.id) return;
@@ -1972,26 +1971,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.error || 'Failed to save product subproducts');
+        throw new Error(err?.error || tr('control.productSubproducts.saveFailed', 'Failed to save product subproducts'));
       }
-      showToast('success', 'Product subproducts saved.');
+      showToast('success', tr('control.productSubproducts.saved', 'Product subproducts saved.'));
       closeProductSubproductsModal();
     } catch (err) {
-      showToast('error', err?.message || 'Failed to save product subproducts.');
+      showToast('error', err?.message || tr('control.productSubproducts.saveFailed', 'Failed to save product subproducts.'));
     } finally {
       setSavingProductSubproducts(false);
     }
-  }, [closeProductSubproductsModal, productSubproductsLinked, productSubproductsProduct, showToast]);
+  }, [closeProductSubproductsModal, productSubproductsLinked, productSubproductsProduct, showToast, tr]);
 
-  const handleLogoutConfirm = () => {
-    setShowLogoutModal(false);
-    onLogout?.();
-  };
-
-  const tr = useCallback((key, fallback) => {
-    const translated = t(key);
-    return translated === key ? fallback : translated;
-  }, [t]);
   const mapTranslatedOptions = useCallback((opts) =>
     opts.map((o) => ({ value: o.value, label: o.labelKey ? tr(o.labelKey, o.fallback) : o.label }))
   , [tr]);
@@ -5190,7 +5180,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                   <th className="py-1">MvH NS</th>
                                   <th className="py-1">MvH NR</th>
                                   <th className="py-1">Btw</th>
-                                  <th className="py-1">Totaal</th>
+                                  <th className="py-1">{tr('total', 'Total')}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -5201,7 +5191,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                   <td className="py-1">350.75</td>
                                 </tr>
                                 <tr className="font-medium">
-                                  <td className="py-1">Totaal</td>
+                                  <td className="py-1">{tr('total', 'Total')}</td>
                                   <td className="py-1">333.73</td>
                                   <td className="py-1">2.83</td>
                                   <td className="py-1">350.75</td>
@@ -5212,13 +5202,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div>Cash — 174.75</div>
                             <div>Credit Card — 117.00</div>
                             <div>Visa — 59.00</div>
-                            <div className="font-medium">Totaal 350.75</div>
+                            <div className="font-medium">{tr('total', 'Total')} 350.75</div>
                             <div className="mt-4 font-medium">Eat-in / Take-out</div>
                             <div>10 Take-Out — 350.75</div>
-                            <div className="font-medium">Totaal 350.75</div>
+                            <div className="font-medium">{tr('total', 'Total')} 350.75</div>
                             <div className="mt-4 font-medium">Ticket types</div>
                             <div>11 Counter Sales — 350.75</div>
-                            <div className="font-medium">Total 350.75</div>
+                            <div className="font-medium">{tr('total', 'Total')} 350.75</div>
                             <div className="mt-4 font-medium">Issued VAT tickets:</div>
                             <div>NS: 10</div>
                             <div>NR: 1</div>
@@ -5552,7 +5542,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
                       <path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
                     </svg>
-                    Save
+                    {tr('control.save', 'Save')}
                   </button>
                   </div>
                 </div>
@@ -7271,34 +7261,34 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {showSetTablesModal && topNavId === 'tables' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1600px] w-full h-[1040px] overflow-hidden flex">
+          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl w-full overflow-hidden flex">
             <button
               type="button"
               className="absolute top-4 right-4 z-20 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
               onClick={closeSetTablesModal}
               aria-label="Close"
             >
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <div className="w-[420px] shrink-0 border-r border-pos-border bg-black px-6 py-8 overflow-auto">
-              <h3 className="text-pos-text text-2xl font-semibold mb-6">
+            <div className="w-[420px] shrink-0 border-r border-pos-border bg-black px-6 py-6 overflow-auto text-sm">
+              <h3 className="text-pos-text text-lg font-semibold mb-4">
                 {tr('control.tables.setTables', 'Set tables')} - {setTablesLocationName || 'Restaurant'}
               </h3>
 
-              <div className="space-y-4 text-pos-text text-xl">
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <button type="button" className="px-3 py-3 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={addSetTable}>
+              <div className="space-y-3 text-pos-text">
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm" onClick={addSetTable}>
                     + {tr('control.tables.table', 'table')}
                   </button>
-                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg" onClick={removeSetTable}>
+                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm" onClick={removeSetTable}>
                     - {tr('control.tables.table', 'table')}
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
                     onClick={handleAddBoard}
                     disabled={!setTablesSelectedTableId}
                   >
@@ -7306,7 +7296,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
                     onClick={handleRemoveBoard}
                     disabled={!setTablesSelectedTableId || boards.length === 0}
                   >
@@ -7314,7 +7304,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
                     onClick={handleAddFlowerPot}
                     disabled={!setTablesSelectedTableId}
                   >
@@ -7322,14 +7312,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
                     onClick={handleRemoveFlowerPot}
                     disabled={!setTablesSelectedTableId || flowerPots.length === 0}
                   >
                     - flower pot
                   </button>
                 </div>
-                <div className="h-px bg-pos-border my-3" />
+                <div className="h-px bg-pos-border my-2" />
 
                 {!selectedSetBoard && !selectedSetFlowerPot ? (
                   <>
@@ -7426,12 +7416,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       />
                     </label>
 
-                    <div className="h-px bg-pos-border my-3" />
+                    <div className="h-px bg-pos-border my-2" />
                   </>
                 ) : null}
 
                 {selectedSetBoard ? (
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-2 pt-1">
                     {[
                       { key: 'x', label: 'board x' },
                       { key: 'y', label: 'board y' },
@@ -7507,7 +7497,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 ) : null}
 
                 {selectedSetFlowerPot ? (
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-2 pt-1">
                     <div className="text-pos-text font-medium">{tr('control.tables.flowerPot', 'Flower pot')}</div>
                     {[
                       { key: 'x', label: 'flower pot x' },
@@ -7583,17 +7573,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                 ) : null}
 
-                <div className="pt-4 flex gap-3 w-full justify-center">
+                <div className="pt-3 flex gap-3 w-full justify-center">
                   <button
                     type="button"
-                    className="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                    className="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm"
                     onClick={saveSetTablesLayout}
                   >
                     {tr('control.save', 'Save')}
                   </button>
                   <button
                     type="button"
-                    className="px-5 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg"
+                    className="px-5 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm"
                     onClick={closeSetTablesModal}
                   >
                     {tr('cancel', 'Cancel')}
@@ -7706,8 +7696,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {showSetTableTypeModal && showSetTablesModal && topNavId === 'tables' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[900px] w-full p-8">
-            <div className="grid grid-cols-3 gap-6">
+          <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[900px] w-full p-6 text-sm">
+            <div className="grid grid-cols-3 gap-4">
               {TABLE_TEMPLATE_OPTIONS.map((template) => (
                 <button
                   key={template.id}
@@ -7719,10 +7709,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </button>
               ))}
             </div>
-            <div className="flex justify-center mt-8">
+            <div className="flex justify-center mt-6">
               <button
                 type="button"
-                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl"
+                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm"
                 onClick={() => setShowSetTableTypeModal(false)}
               >
                 {tr('cancel', 'Cancel')}
@@ -7734,8 +7724,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {showSetBoardColorModal && showSetTablesModal && topNavId === 'tables' && (
         <div className="fixed inset-0 z-[61] flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[640px] w-full p-8">
-            <h3 className="text-pos-text text-3xl font-semibold text-center mb-8">
+          <div className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[640px] w-full p-6 text-sm">
+            <h3 className="text-pos-text text-lg font-semibold text-center mb-6">
               {tr('control.tables.chooseBoardColor', 'Choose board color')}
             </h3>
             <div className="grid grid-cols-3 gap-4">
@@ -7750,10 +7740,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 />
               ))}
             </div>
-            <div className="flex justify-center mt-8 gap-3">
+            <div className="flex justify-center mt-6 gap-3">
               <button
                 type="button"
-                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl"
+                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm"
                 onClick={() => setShowSetBoardColorModal(false)}
               >
                 {tr('cancel', 'Cancel')}
@@ -7770,7 +7760,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowDeviceSettingsModal(false)} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex mt-6 mb-4 px-6 w-full justify-around text-sm shrink-0 overflow-x-auto">
+            <div className="flex mt-16 mb-4 px-6 w-full justify-around text-sm shrink-0 overflow-x-auto">
               {DEVICE_SETTINGS_TABS.map((tab) => (
                 <button
                   key={tab}
@@ -7787,49 +7777,49 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="grid grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4">
                   <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Use of subproducts:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.general.useSubproducts', 'Use of subproducts:')}</span>
                       <input type="checkbox" checked={deviceUseSubproducts} onChange={(e) => setDeviceUseSubproducts(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Automatically log out after transaction:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.general.autoLogoutAfterTransaction', 'Automatically log out after transaction:')}</span>
                       <input type="checkbox" checked={deviceAutoLogoutAfterTransaction} onChange={(e) => setDeviceAutoLogoutAfterTransaction(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Automatically return to table plan:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.general.autoReturnToTablePlan', 'Automatically return to table plan:')}</span>
                       <input type="checkbox" checked={deviceAutoReturnToTablePlan} onChange={(e) => setDeviceAutoReturnToTablePlan(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Disable cash button in payment popup:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.general.disableCashButton', 'Disable cash button in payment popup:')}</span>
                       <input type="checkbox" checked={deviceDisableCashButtonInPayment} onChange={(e) => setDeviceDisableCashButtonInPayment(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Open price without popup and without comma:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.general.openPriceWithoutPopup', 'Open price without popup and without comma:')}</span>
                       <input type="checkbox" checked={deviceOpenPriceWithoutPopup} onChange={(e) => setDeviceOpenPriceWithoutPopup(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
                   <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px] shrink-0">Open cash drawer after order:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.general.openCashDrawerAfterOrder', 'Open cash drawer after order:')}</span>
                       <input type="checkbox" checked={deviceOpenCashDrawerAfterOrder} onChange={(e) => setDeviceOpenCashDrawerAfterOrder(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Automatically return to counter sale:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.general.autoReturnToCounterSale', 'Automatically return to counter sale:')}</span>
                       <input type="checkbox" checked={deviceAutoReturnToCounterSale} onChange={(e) => setDeviceAutoReturnToCounterSale(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Ask to send to the kitchen screen:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.general.askSendToKitchen', 'Ask to send to the kitchen screen:')}</span>
                       <input type="checkbox" checked={deviceAskSendToKitchen} onChange={(e) => setDeviceAskSendToKitchen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Toogverkoop btw:</span>
-                      <Dropdown options={VAT_OPTIONS} value={deviceCounterSaleVat} onChange={setDeviceCounterSaleVat} placeholder="Select" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.general.counterSaleVat', 'Counter sale VAT:')}</span>
+                      <Dropdown options={mapTranslatedOptions(VAT_OPTIONS)} value={deviceCounterSaleVat} onChange={setDeviceCounterSaleVat} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Tafelverkoop btw:</span>
-                      <Dropdown options={VAT_OPTIONS} value={deviceTableSaleVat} onChange={setDeviceTableSaleVat} placeholder="Select" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.general.tableSaleVat', 'Table sale VAT:')}</span>
+                      <Dropdown options={mapTranslatedOptions(VAT_OPTIONS)} value={deviceTableSaleVat} onChange={setDeviceTableSaleVat} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Timeout log out:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.general.timeoutLogout', 'Timeout log out:')}</span>
                       <div className="flex items-center gap-2">
                         <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => Math.max(0, n - 1))}>−</button>
                         <input type="number" min={0} value={deviceTimeoutLogout} onChange={(e) => setDeviceTimeoutLogout(Number(e.target.value) || 0)} className="w-16 px-2 py-2 bg-pos-panel border border-gray-300 rounded text-pos-text text-sm text-center h-[40px]" />
@@ -7837,16 +7827,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                     </div>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Fixed edge: (Windows)</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.general.fixedBorder', 'Fixed edge: (Windows)')}</span>
                       <input type="checkbox" checked={deviceFixedBorder} onChange={(e) => setDeviceFixedBorder(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Always in the foreground: (Windows)</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.general.alwaysOnTop', 'Always in the foreground: (Windows)')}</span>
                       <input type="checkbox" checked={deviceAlwaysOnTop} onChange={(e) => setDeviceAlwaysOnTop(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
                       <label className="flex items-center gap-3 cursor-pointer shrink-0">
-                        <span className="text-pos-text w-[400px]">Ask a question about an invoice or ticket</span>
+                        <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.general.askInvoiceOrTicket', 'Ask a question about an invoice or ticket')}</span>
                         <input type="checkbox" checked={deviceAskInvoiceOrTicket} onChange={(e) => setDeviceAskInvoiceOrTicket(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                       </label>
                       <Dropdown options={[{ value: '-', label: '-' }]} value="-" onChange={() => { }} placeholder="-" className="text-sm min-w-[120px] opacity-60 pointer-events-none" disabled />
@@ -7858,47 +7848,47 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="grid grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4">
                   <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Grouping products on the ticket:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.printer.groupingProducts', 'Grouping products on the ticket:')}</span>
                       <input type="checkbox" checked={devicePrinterGroupingProducts} onChange={(e) => setDevicePrinterGroupingProducts(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Display error screen on printer error:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.printer.displayErrorScreen', 'Display error screen on printer error:')}</span>
                       <input type="checkbox" checked={devicePrinterShowErrorScreen} onChange={(e) => setDevicePrinterShowErrorScreen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Print production message on VAT ticket:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.device.printer.printProductionOnVat', 'Print production message on VAT ticket:')}</span>
                       <input type="checkbox" checked={devicePrinterProductionMessageOnVat} onChange={(e) => setDevicePrinterProductionMessageOnVat(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[500px] shrink-0">Next course order:</span>
-                      <Dropdown options={mapTranslatedOptions(PRINTING_ORDER_OPTIONS)} value={devicePrinterNextCourseOrder} onChange={setDevicePrinterNextCourseOrder} placeholder="Print order" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.printer.nextCourseOrder', 'Next course order:')}</span>
+                      <Dropdown options={mapTranslatedOptions(PRINTING_ORDER_OPTIONS)} value={devicePrinterNextCourseOrder} onChange={setDevicePrinterNextCourseOrder} placeholder={tr('control.external.asRegistered', 'As Registered')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[500px] shrink-0">Standard mode ticket printing:</span>
-                      <Dropdown options={mapTranslatedOptions(GROUPING_RECEIPT_OPTIONS)} value={devicePrinterStandardMode} onChange={setDevicePrinterStandardMode} placeholder="Enable" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.printer.standardModeTicket', 'Standard mode ticket printing:')}</span>
+                      <Dropdown options={mapTranslatedOptions(GROUPING_RECEIPT_OPTIONS)} value={devicePrinterStandardMode} onChange={setDevicePrinterStandardMode} placeholder={tr('control.external.enable', 'Enable')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[500px] shrink-0">QR order printer:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.printer.qrOrderPrinter', 'QR order printer:')}</span>
                       <Dropdown
-                        options={[{ value: '', label: 'Disabled' }, ...printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }))]}
+                        options={[{ value: '', label: tr('control.external.disabled', 'Disabled') }, ...printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }))]}
                         value={devicePrinterQROrderPrinter}
                         onChange={setDevicePrinterQROrderPrinter}
-                        placeholder="Select printer"
-                        className="text-sm min-w-[150px]"
+                        placeholder={tr('control.external.selectPrinter', 'Select printer')}
+                        className="text-sm min-w-[150px] max-w-[150px]"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Reprint products with next course:</span>
+                      <span className="text-pos-text  min-w-[300px] max-w-[300px]">{tr('control.device.printer.reprintWithNextCourse', 'Reprint products with next course:')}</span>
                       <input type="checkbox" checked={devicePrinterReprintWithNextCourse} onChange={(e) => setDevicePrinterReprintWithNextCourse(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Print 0 euro tickets:</span>
+                      <span className="text-pos-text  min-w-[300px] max-w-[300px]">{tr('control.device.printer.printZeroTickets', 'Print 0 euro tickets:')}</span>
                       <input type="checkbox" checked={devicePrinterPrintZeroTickets} onChange={(e) => setDevicePrinterPrintZeroTickets(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Print gift voucher at minimum amount:</span>
+                      <span className="text-pos-text  min-w-[300px] max-w-[300px]">{tr('control.device.printer.printGiftVoucherAtMin', 'Print gift voucher at minimum amount:')}</span>
                       <input type="checkbox" checked={devicePrinterGiftVoucherAtMin} onChange={(e) => setDevicePrinterGiftVoucherAtMin(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
@@ -7907,7 +7897,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               {deviceSettingsTab === 'Category display' && (
                 <div className="grid grid-cols-1 text-sm px-4 md:grid-cols-3 lg:grid-cols-4 gap-x-10 gap-4">
                   {categoriesLoading ? (
-                    <p className="text-pos-muted text-xl col-span-full">Loading categories…</p>
+                    <p className="text-pos-muted text-xl col-span-full">{tr('control.device.category.loading', 'Loading categories…')}</p>
                   ) : (
                     categories.map((cat) => {
                       const isChecked = deviceCategoryDisplayIds.length === 0 || deviceCategoryDisplayIds.includes(cat.id);
@@ -7926,7 +7916,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             }}
                             className="w-5 h-5 rounded border-gray-300"
                           />
-                          <span className="text-pos-text w-[280px] truncate">{cat.name || cat.id}</span>
+                          <span className="text-pos-text  min-w-[150px] max-w-[150px] truncate">{cat.name || cat.id}</span>
                         </label>
                       );
                     })
@@ -7937,25 +7927,25 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="grid px-4 grid-cols-1 text-sm md:grid-cols-2 gap-x-10 gap-y-4">
                   <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Confirm on hold orders:</span>
+                      <span className="text-pos-text min-w-[300px] max-w-[300px]">{tr('control.device.orders.confirmOnHold', 'Confirm on hold orders:')}</span>
                       <input type="checkbox" checked={deviceOrdersConfirmOnHold} onChange={(e) => setDeviceOrdersConfirmOnHold(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Print barcode ticket after order creation:</span>
+                      <span className="text-pos-text min-w-[300px] max-w-[300px]">{tr('control.device.orders.printBarcodeAfterCreate', 'Print barcode ticket after order creation:')}</span>
                       <input type="checkbox" checked={deviceOrdersPrintBarcodeAfterCreate} onChange={(e) => setDeviceOrdersPrintBarcodeAfterCreate(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
                   <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px] shrink-0">Customer on hold order can be modified:</span>
+                      <span className="text-pos-text min-w-[330px] max-w-[330px] shrink-0">{tr('control.device.orders.customerCanBeModified', 'Customer on hold order can be modified:')}</span>
                       <input type="checkbox" checked={deviceOrdersCustomerCanBeModified} onChange={(e) => setDeviceOrdersCustomerCanBeModified(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Book table to waiting order:</span>
+                      <span className="text-pos-text min-w-[330px] max-w-[330px]">{tr('control.device.orders.bookTableToWaiting', 'Book table to waiting order:')}</span>
                       <input type="checkbox" checked={deviceOrdersBookTableToWaiting} onChange={(e) => setDeviceOrdersBookTableToWaiting(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[500px]">Fast customer name on hold orders:</span>
+                      <span className="text-pos-text min-w-[330px] max-w-[330px]">{tr('control.device.orders.fastCustomerName', 'Fast customer name on hold orders:')}</span>
                       <input type="checkbox" checked={deviceOrdersFastCustomerName} onChange={(e) => setDeviceOrdersFastCustomerName(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
@@ -7965,55 +7955,55 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="grid grid-cols-1 text-sm md:grid-cols-2 px-4 gap-x-10 gap-y-4">
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-5">
-                      <span className="text-pos-text w-[350px] shrink-0">Scheduled orders printer:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.scheduled.printer', 'Scheduled orders printer:')}</span>
                       <Dropdown
-                        options={[{ value: '', label: 'Disabled' }, ...printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }))]}
+                        options={[{ value: '', label: tr('control.external.disabled', 'Disabled') }, ...printers.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((p) => ({ value: p.id, label: p.name }))]}
                         value={deviceScheduledPrinter}
                         onChange={setDeviceScheduledPrinter}
-                        placeholder="Select printer"
-                        className="text-xl min-w-[200px] max-w-[200px]"
+                        placeholder={tr('control.external.selectPrinter', 'Select printer')}
+                        className="text-sm min-w-[150px] max-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-5">
-                      <span className="text-pos-text w-[350px] shrink-0">Scheduled orders production ticket flow:</span>
-                      <Dropdown options={SCHEDULED_ORDERS_PRODUCTION_FLOW_OPTIONS} value={deviceScheduledProductionFlow} onChange={setDeviceScheduledProductionFlow} placeholder="Select" className="text-xl min-w-[200px] max-w-[200px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.scheduled.productionFlow', 'Scheduled orders production ticket flow:')}</span>
+                      <Dropdown options={mapTranslatedOptions(SCHEDULED_ORDERS_PRODUCTION_FLOW_OPTIONS)} value={deviceScheduledProductionFlow} onChange={setDeviceScheduledProductionFlow} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-5">
-                      <span className="text-pos-text w-[350px] shrink-0">Scheduled orders loading:</span>
-                      <Dropdown options={SCHEDULED_ORDERS_LOADING_OPTIONS} value={deviceScheduledLoading} onChange={setDeviceScheduledLoading} placeholder="Select" className="text-xl min-w-[200px] max-w-[200px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.scheduled.loading', 'Scheduled orders loading:')}</span>
+                      <Dropdown options={mapTranslatedOptions(SCHEDULED_ORDERS_LOADING_OPTIONS)} value={deviceScheduledLoading} onChange={setDeviceScheduledLoading} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-5">
-                      <span className="text-pos-text w-[350px] shrink-0">Scheduled order mode:</span>
-                      <Dropdown options={SCHEDULED_ORDERS_MODE_OPTIONS} value={deviceScheduledMode} onChange={setDeviceScheduledMode} placeholder="Select" className="text-xl min-w-[200px] max-w-[200px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.scheduled.mode', 'Scheduled order mode:')}</span>
+                      <Dropdown options={mapTranslatedOptions(SCHEDULED_ORDERS_MODE_OPTIONS)} value={deviceScheduledMode} onChange={setDeviceScheduledMode} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-5">
-                      <span className="text-pos-text w-[350px] shrink-0">Scheduled order invoice layout:</span>
-                      <Dropdown options={SCHEDULED_ORDERS_INVOICE_LAYOUT_OPTIONS} value={deviceScheduledInvoiceLayout} onChange={setDeviceScheduledInvoiceLayout} placeholder="Select" className="text-xl min-w-[200px] max-w-[200px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.scheduled.invoiceLayout', 'Scheduled order invoice layout:')}</span>
+                      <Dropdown options={mapTranslatedOptions(SCHEDULED_ORDERS_INVOICE_LAYOUT_OPTIONS)} value={deviceScheduledInvoiceLayout} onChange={setDeviceScheduledInvoiceLayout} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-5">
-                      <span className="text-pos-text w-[350px] shrink-0">Scheduled order checkout at:</span>
-                      <Dropdown options={SCHEDULED_ORDERS_CHECKOUT_AT_OPTIONS} value={deviceScheduledCheckoutAt} onChange={setDeviceScheduledCheckoutAt} placeholder="Select" className="text-xl min-w-[200px] max-w-[200px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.scheduled.checkoutAt', 'Scheduled order checkout at:')}</span>
+                        <Dropdown options={mapTranslatedOptions(SCHEDULED_ORDERS_CHECKOUT_AT_OPTIONS)} value={deviceScheduledCheckoutAt} onChange={setDeviceScheduledCheckoutAt} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px] max-w-[150px]" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px] shrink-0">Print barcode label:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px] shrink-0">{tr('control.device.scheduled.printLabel', 'Print barcode label:')}</span>
                       <input type="checkbox" checked={deviceScheduledPrintBarcodeLabel} onChange={(e) => setDeviceScheduledPrintBarcodeLabel(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Add delivery note to turnover when printing:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.scheduled.deliveryNoteToTurnover', 'Add delivery note to turnover when printing:')}</span>
                       <input type="checkbox" checked={deviceScheduledDeliveryNoteToTurnover} onChange={(e) => setDeviceScheduledDeliveryNoteToTurnover(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">When new planning order print production receipt:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.scheduled.printProductionReceipt', 'When new planning order print production receipt:')}</span>
                       <input type="checkbox" checked={deviceScheduledPrintProductionReceipt} onChange={(e) => setDeviceScheduledPrintProductionReceipt(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">When new planning order print customer production receipt:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.scheduled.printCustomerProductionReceipt', 'When new planning order print customer production receipt:')}</span>
                       <input type="checkbox" checked={deviceScheduledPrintCustomerProductionReceipt} onChange={(e) => setDeviceScheduledPrintCustomerProductionReceipt(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Automatically print scheduled web order production slip:</span>
+                      <span className="text-pos-text min-w-[350px] max-w-[350px]">{tr('control.device.scheduled.webOrderAutoPrint', 'Automatically print scheduled web order production slip:')}</span>
                       <input type="checkbox" checked={deviceScheduledWebOrderAutoPrint} onChange={(e) => setDeviceScheduledWebOrderAutoPrint(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
@@ -8021,7 +8011,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
               {deviceSettingsTab === 'Option buttons' && (
                 <div className="px-4 py-2">
-                  <div className="mx-auto max-w-[1320px] flex gap-8">
+                  <div className="mx-auto max-w-[1000px] flex gap-8">
                     <div className="flex-1 border border-[#aeb3bf] bg-[#d7d8de] px-3 py-5">
                       <div className="grid grid-cols-7 gap-3">
                         {Array.from({ length: OPTION_BUTTON_SLOT_COUNT }).map((_, slotIndex) => {
@@ -8037,7 +8027,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               onClick={() => setSelectedOptionButtonSlotIndex(slotIndex)}
                               onDragOver={(event) => event.preventDefault()}
                               onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
-                              className={`h-[74px] max-w-[120px] min-w-[120px] border px-2 text-center text-[18px] leading-[1.2] whitespace-pre-line transition-colors ${assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
+                              className={`h-[74px] max-w-[70px] min-w-[70px] border px-2 text-center text-[12px] leading-[1.2] whitespace-pre-line transition-colors ${assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
                                 } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} hover:brightness-95`}
                             >
                               {assignedLabel || ' '}
@@ -8067,16 +8057,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             type="button"
                             draggable
                             onDragStart={(event) => handleOptionButtonDragStart(event, item.id)}
-                            className="w-full text-[16px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] hover:text-[#2e333c] cursor-grab active:cursor-grabbing"
+                            className="w-full text-[14px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] hover:text-[#2e333c] cursor-grab active:cursor-grabbing"
                           >
                             {tr(item.labelKey, item.fallbackLabel)}
                           </button>
                         ))}
                         {unassignedOptionButtons.length === 0 ? (
-                          <div className="text-[32px] text-[#8a919e]">-</div>
+                          <div className="text-[20px] text-[#8a919e]">-</div>
                         ) : null}
                       </div>
-                      <div className="pt-4 flex items-center justify-around text-[24px] text-[#596170]">
+                      <div className="pt-4 flex items-center justify-around text-[18px] text-[#596170]">
                         <span aria-hidden>↑</span>
                         <span aria-hidden>↓</span>
                       </div>
@@ -8105,7 +8095,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             onClick={() => setSelectedFunctionButtonSlotIndex(slotIndex)}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => handleFunctionButtonDropOnSlot(event, slotIndex)}
-                            className={`h-[62px] border bg-transparent text-3xl text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
+                            className={`h-[62px] border bg-transparent text-xl text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
                               } hover:bg-white/10`}
                           >
                             {assignedLabel}
@@ -8120,7 +8110,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         type="button"
                         onClick={handleRemoveFunctionButtonFromSlot}
                         disabled={!hasSelectedFunctionButton}
-                        className={`text-[30px] ${hasSelectedFunctionButton
+                        className={`text-xl ${hasSelectedFunctionButton
                           ? 'text-[#8e959d] hover:text-[#b2b8be]'
                           : 'text-[#646d76] opacity-50 cursor-not-allowed'
                           }`}
@@ -8135,13 +8125,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           type="button"
                           draggable
                           onDragStart={(event) => handleFunctionButtonDragStart(event, item.id)}
-                          className="text-[30px] text-gray hover:text-[#4b5d68] cursor-grab active:cursor-grabbing"
+                          className="text-xl text-gray hover:text-[#4b5d68] cursor-grab active:cursor-grabbing"
                         >
                           {tr(item.labelKey, item.fallbackLabel)}
                         </button>
                       ))}
                       {FUNCTION_BUTTON_ITEMS.filter((item) => !assignedFunctionButtonIds.has(item.id)).length === 0 ? (
-                        <div className="text-[28px] text-[#54616b]">-</div>
+                        <div className="text-xl text-[#54616b]">-</div>
                       ) : null}
                     </div>
                   </div>
@@ -8169,98 +8159,98 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* System Settings modal */}
       {showSystemSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative px-20 text-2xl bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] h-[1000px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowSystemSettingsModal(false)} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative px-10 text-xl bg-pos-bg rounded-xl shadow-2xl w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowSystemSettingsModal(false)} aria-label="Close">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex mt-[70px] mb-14 px-28 w-full justify-around text-2xl shrink-0 overflow-x-auto">
+            <div className="flex mt-10 mb-2 px-10 w-full justify-around text-xl shrink-0 overflow-x-auto">
               {SYSTEM_SETTINGS_TABS.map((tab) => (
                 <button
                   key={tab}
                   type="button"
-                  className={`px-4 py-3 font-medium whitespace-nowrap border-b-2 transition-colors ${systemSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                  className={`px-4 pb-2 font-medium whitespace-nowrap border-b-2 transition-colors ${systemSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
                   onClick={() => setSystemSettingsTab(tab)}
                 >
                   {tr(SYSTEM_SETTINGS_TAB_LABEL_KEYS[tab], tab)}
                 </button>
               ))}
             </div>
-            <div className="p-6 overflow-auto flex-1">
+            <div className="p-6 overflow-auto flex-1 text-sm">
               {systemSettingsTab === 'General' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                  <div className="flex flex-col gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+                  <div className="flex flex-col gap-3">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">Use of stock management:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.useStockManagement', 'Use of stock management:')}</span>
                       <input type="checkbox" checked={sysUseStockManagement} onChange={(e) => setSysUseStockManagement(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">Use of price groups:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.usePriceGroups', 'Use of price groups:')}</span>
                       <input type="checkbox" checked={sysUsePriceGroups} onChange={(e) => setSysUsePriceGroups(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">Log in without code:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.loginWithoutCode', 'Log in without code:')}</span>
                       <input type="checkbox" checked={sysLoginWithoutCode} onChange={(e) => setSysLoginWithoutCode(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">Categories per register:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.categoriesPerRegister', 'Categories per register:')}</span>
                       <input type="checkbox" checked={sysCategorieenPerKassa} onChange={(e) => setSysCategorieenPerKassa(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">Automatically accept QR orders:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.autoAcceptQROrders', 'Automatically accept QR orders:')}</span>
                       <input type="checkbox" checked={sysAutoAcceptQROrders} onChange={(e) => setSysAutoAcceptQROrders(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">QR orders auto checkout:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.qrOrdersAutoCheckout', 'QR orders auto checkout:')}</span>
                       <input type="checkbox" checked={sysQrOrdersAutomatischAfrekenen} onChange={(e) => setSysQrOrdersAutomatischAfrekenen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">Send only QR orders to kitchen screen:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.sendOnlyQROrdersToKitchen', 'Send only QR orders to kitchen screen:')}</span>
                       <input type="checkbox" checked={sysEnkelQROrdersKeukenscherm} onChange={(e) => setSysEnkelQROrdersKeukenscherm(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[420px]">16:9 aspect (Windows):</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.aspect169Windows', '16:9 aspect (Windows):')}</span>
                       <input type="checkbox" checked={sysAspect169Windows} onChange={(e) => setSysAspect169Windows(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[420px] shrink-0">VAT rate of various products:</span>
-                      <Dropdown options={VAT_PERCENT_OPTIONS.filter((o) => o.value !== '')} value={sysVatRateVariousProducts} onChange={setSysVatRateVariousProducts} placeholder="Select" className="text-xl min-w-[130px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.sys.general.vatRateVariousProducts', 'VAT rate of various products:')}</span>
+                      <Dropdown options={VAT_PERCENT_OPTIONS.filter((o) => o.value !== '')} value={sysVatRateVariousProducts} onChange={setSysVatRateVariousProducts} placeholder={tr('control.external.select', 'Select')} className="text-am min-w-[150px]" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Arrange products manually:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.arrangeProductsManually', 'Arrange products manually:')}</span>
                       <input type="checkbox" checked={sysArrangeProductsManually} onChange={(e) => setSysArrangeProductsManually(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Limit one user per table:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.limitOneUserPerTable', 'Limit one user per table:')}</span>
                       <input type="checkbox" checked={sysLimitOneUserPerTable} onChange={(e) => setSysLimitOneUserPerTable(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">One waiting order per customer:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.oneWaitingOrderPerCustomer', 'One waiting order per customer:')}</span>
                       <input type="checkbox" checked={sysOneWachtorderPerKlant} onChange={(e) => setSysOneWachtorderPerKlant(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Cash button visible with multiple payment options:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.cashButtonVisibleMultiplePayment', 'Cash button visible with multiple payment options:')}</span>
                       <input type="checkbox" checked={sysCashButtonVisibleMultiplePayment} onChange={(e) => setSysCashButtonVisibleMultiplePayment(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Use of place settings:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.usePlaceSettings', 'Use of place settings:')}</span>
                       <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Auto load credit:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.autoLoadCredit', 'Auto load credit:')}</span>
                       <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Use latest price:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.useLatestPrice', 'Use latest price:')}</span>
                       <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Deposit return:</span>
-                      <Dropdown options={LEEGGOED_OPTIONS} value={sysLeeggoedTerugname} onChange={setSysLeeggoedTerugname} placeholder="Select" className="text-xl min-w-[130px] max-w-[200px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.sys.general.depositReturn', 'Deposit return:')}</span>
+                      <Dropdown options={mapTranslatedOptions(LEEGGOED_OPTIONS)} value={sysLeeggoedTerugname} onChange={setSysLeeggoedTerugname} placeholder={tr('control.external.select', 'Select')} className="min-w-[150px] max-w-[150px]" />
                     </div>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Print customer details on QR:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.general.printCustomerDetailsOnQR', 'Print customer details on QR:')}</span>
                       <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                   </div>
@@ -8269,52 +8259,52 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               {systemSettingsTab === 'Prices' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
                   <div className="flex flex-col border border-gray-400 rounded-lg p-6 gap-8">
-                    <p className="text-pos-text font-medium text-2xl flex justify-center items-center mb-5">Standard price group</p>
+                    <p className="text-pos-text font-medium text-2xl flex justify-center items-center mb-5">{tr('control.sys.prices.standardPriceGroup', 'Standard price group')}</p>
                     <div className="flex items-center gap-10">
-                      <span className="text-pos-text w-[300px] shrink-0">Take-away meals of selected customer:</span>
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.takeAwayMeals', 'Take-away meals of selected customer:')}</span>
                       <Dropdown
                         options={[{ value: '', label: '—' }, ...(priceGroups || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((pg) => ({ value: pg.id, label: pg.name || pg.id }))]}
                         value={sysPriceTakeAway}
                         onChange={setSysPriceTakeAway}
-                        placeholder="Select"
+                        placeholder={tr('control.external.select', 'Select')}
                         className="text-sm min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-10">
-                      <span className="text-pos-text w-[300px] shrink-0">Delivery of selected customer:</span>
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.deliveryOfCustomer', 'Delivery of selected customer:')}</span>
                       <Dropdown
                         options={[{ value: '', label: '—' }, ...(priceGroups || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((pg) => ({ value: pg.id, label: pg.name || pg.id }))]}
                         value={sysPriceDelivery}
                         onChange={setSysPriceDelivery}
-                        placeholder="Select"
+                        placeholder={tr('control.external.select', 'Select')}
                         className="text-sm min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-10">
-                      <span className="text-pos-text w-[300px] shrink-0">Counter sale:</span>
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.counterSale', 'Counter sale:')}</span>
                       <Dropdown
                         options={[{ value: '', label: '—' }, ...(priceGroups || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((pg) => ({ value: pg.id, label: pg.name || pg.id }))]}
                         value={sysPriceCounterSale}
                         onChange={setSysPriceCounterSale}
-                        placeholder="Select"
+                        placeholder={tr('control.external.select', 'Select')}
                         className="text-sm min-w-[150px]"
                       />
                     </div>
                     <div className="flex items-center gap-10">
-                      <span className="text-pos-text w-[300px] shrink-0">Table sale:</span>
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.tableSale', 'Table sale:')}</span>
                       <Dropdown
                         options={[{ value: '', label: '—' }, ...(priceGroups || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((pg) => ({ value: pg.id, label: pg.name || pg.id }))]}
                         value={sysPriceTableSale}
                         onChange={setSysPriceTableSale}
-                        placeholder="Select"
+                        placeholder={tr('control.external.select', 'Select')}
                         className="text-sm min-w-[150px]"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col border border-gray-400 rounded-lg p-6 gap-8">
-                    <p className="text-pos-text font-medium text-2xl flex justify-center items-center mb-5">Customer savings card settings</p>
+                    <p className="text-pos-text font-medium text-2xl flex justify-center items-center mb-5">{tr('control.sys.prices.customerSavingsCard', 'Customer savings card settings')}</p>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[300px] shrink-0">Points / euro:</span>
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.pointsPerEuro', 'Points / euro:')}</span>
                       <div className="flex items-center gap-2">
                         <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setSysSavingsPointsPerEuro((n) => Math.max(0, n - 1))}>−</button>
                         <input type="number" min={0} value={sysSavingsPointsPerEuro} onChange={(e) => setSysSavingsPointsPerEuro(Number(e.target.value) || 0)} className="w-20 px-3 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
@@ -8322,7 +8312,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[300px] shrink-0">Points / discount:</span>
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.pointsPerDiscount', 'Points / discount:')}</span>
                       <div className="flex items-center gap-2">
                         <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setSysSavingsPointsPerDiscount((n) => Math.max(0, n - 1))}>−</button>
                         <input type="number" min={0} value={sysSavingsPointsPerDiscount} onChange={(e) => setSysSavingsPointsPerDiscount(Number(e.target.value) || 0)} className="w-20 px-3 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
@@ -8330,8 +8320,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[300px] shrink-0">Discount:</span>
-                      <Dropdown options={SAVINGS_DISCOUNT_OPTIONS} value={sysSavingsDiscount} onChange={setSysSavingsDiscount} placeholder="Disabled" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.discount', 'Discount:')}</span>
+                      <Dropdown options={mapTranslatedOptions(SAVINGS_DISCOUNT_OPTIONS)} value={sysSavingsDiscount} onChange={setSysSavingsDiscount} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[150px]" />
                     </div>
                   </div>
                 </div>
@@ -8340,42 +8330,42 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
                   <div className="flex flex-col gap-8">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Ask for VAT ticket printer:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.ticket.askVatPrinter', 'Ask for VAT ticket printer:')}</span>
                       <input type="checkbox" checked={sysUsePlaceSettings} onChange={(e) => setSysUsePlaceSettings(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Production printer cascade:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.ticket.productionPrinterCascade', 'Production printer cascade:')}</span>
                       <input type="checkbox" checked={sysTegoedAutomatischInladen} onChange={(e) => setSysTegoedAutomatischInladen(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Display sub-products without price on VAT ticket:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.ticket.displaySubproductsWithoutPrice', 'Display sub-products without price on VAT ticket:')}</span>
                       <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Price per kilo prints:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.ticket.pricePerKiloPrints', 'Price per kilo prints:')}</span>
                       <input type="checkbox" checked={sysNieuwstePrijsGebruiken} onChange={(e) => setSysNieuwstePrijsGebruiken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <span className="text-pos-text w-[400px]">Print unit price:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px]">{tr('control.sys.ticket.printUnitPrice', 'Print unit price:')}</span>
                       <input type="checkbox" checked={sysKlantgegevensQRAfdrukken} onChange={(e) => setSysKlantgegevensQRAfdrukken(e.target.checked)} className="w-5 h-5 rounded border-gray-300" />
                     </label>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Type barcode of generated barcode:</span>
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.sys.ticket.typeBarcodeGenerated', 'Type barcode of generated barcode:')}</span>
                       <Dropdown options={BARCODE_TYPE_OPTIONS} value={sysBarcodeType} onChange={setSysBarcodeType} placeholder="Code39" className="text-sm min-w-[150px]" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-8">
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Validity period voucher:</span>
-                      <Dropdown options={TICKET_VOUCHER_VALIDITY_OPTIONS} value={sysTicketVoucherValidity} onChange={setSysTicketVoucherValidity} placeholder="Select" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.sys.ticket.validityPeriodVoucher', 'Validity period voucher:')}</span>
+                      <Dropdown options={mapTranslatedOptions(TICKET_VOUCHER_VALIDITY_OPTIONS)} value={sysTicketVoucherValidity} onChange={setSysTicketVoucherValidity} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Scheduled orders print mode:</span>
-                      <Dropdown options={TICKET_SCHEDULED_PRINT_MODE_OPTIONS} value={sysTicketScheduledPrintMode} onChange={setSysTicketScheduledPrintMode} placeholder="Select" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.sys.ticket.scheduledOrdersPrintMode', 'Scheduled orders print mode:')}</span>
+                      <Dropdown options={mapTranslatedOptions(TICKET_SCHEDULED_PRINT_MODE_OPTIONS)} value={sysTicketScheduledPrintMode} onChange={setSysTicketScheduledPrintMode} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px]" />
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-pos-text w-[400px] shrink-0">Scheduled orders customer sort:</span>
-                      <Dropdown options={TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS} value={sysTicketScheduledCustomerSort} onChange={setSysTicketScheduledCustomerSort} placeholder="Select" className="text-sm min-w-[150px]" />
+                      <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.sys.ticket.scheduledOrdersCustomerSort', 'Scheduled orders customer sort:')}</span>
+                      <Dropdown options={mapTranslatedOptions(TICKET_SCHEDULED_CUSTOMER_SORT_OPTIONS)} value={sysTicketScheduledCustomerSort} onChange={setSysTicketScheduledCustomerSort} placeholder={tr('control.external.select', 'Select')} className="text-sm min-w-[150px]" />
                     </div>
                   </div>
                 </div>
@@ -8392,7 +8382,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 onClick={handleSaveSystemSettings}
               >
                 <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                Save
+                {tr('control.save', 'Save')}
               </button>
             </div>
           </div>
@@ -9590,97 +9580,106 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Product row -> Subproducts modal */}
       {showProductSubproductsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl min-w-[1200px] max-w-[1200px] min-h-[820px] p-10" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 p-2 rounded text-gray-600 hover:bg-gray-200 hover:text-gray-900" onClick={closeProductSubproductsModal} aria-label="Close">
-              <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl p-6 text-sm max-h-[90vh] overflow-auto [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductSubproductsModal} aria-label="Close">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <div className="grid grid-cols-[360px_1fr] gap-10 mt-10">
-              <div className="space-y-5">
+            <div className="grid grid-cols-[260px_1fr] gap-6 mt-6">
+              <div className="space-y-4">
                 <Dropdown
                   options={[
-                    { value: '', label: 'Zonder groep' },
+                    { value: '', label: tr('control.productSubproducts.withoutGroup', 'Without group') },
                     ...subproductGroups.map((g) => ({ value: g.id, label: g.name }))
                   ]}
                   value={productSubproductsGroupId}
                   onChange={setProductSubproductsGroupId}
-                  className="w-full text-xl"
+                  className="w-full"
                 />
                 <Dropdown
                   options={[
-                    { value: '', label: '---' },
+                    { value: '', label: tr('control.productSubproducts.selectSubproduct', '---') },
                     ...productSubproductsOptions
                       .filter((sp) => !productSubproductsLinked.some((link) => link.subproductId === sp.id))
                       .map((sp) => ({ value: sp.id, label: sp.name }))
                   ]}
                   value={productSubproductsSelectedId}
                   onChange={setProductSubproductsSelectedId}
-                  className="w-full text-xl"
+                  className="w-full"
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 text-gray-500 w-full justify-center hover:text-gray-700 disabled:opacity-50"
+                  className={`inline-flex items-center gap-2 w-full justify-center disabled:opacity-50 ${productSubproductsSelectedId ? 'text-white hover:text-white' : 'text-pos-muted hover:text-pos-text'}`}
                   onClick={handleAddProductSubproductLink}
                   disabled={!productSubproductsSelectedId}
                 >
-                  <svg className="w-10 h-10 border border-gray-500 rounded-full p-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                  <span className="text-2xl">Add</span>
+                  <svg className={`w-8 h-8 rounded-full p-1 ${productSubproductsSelectedId ? 'border-white' : 'border-pos-border'} border`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <span>{tr('control.productSubproducts.add', 'Add')}</span>
                 </button>
               </div>
 
-              <div className="rounded-lg border border-pos-border bg-pos-panel/30 min-h-[560px] p-3 overflow-y-auto">
-                {loadingProductSubproductsLinked ? (
-                  <div className="text-pos-muted text-xl px-3 py-2">Loading...</div>
-                ) : productSubproductsLinked.length === 0 ? (
-                  <div className="text-pos-muted text-xl px-3 py-2">No subproducts linked yet.</div>
-                ) : (
-                  <ul className="space-y-2">
-                    {productSubproductsLinked.map((link, idx) => (
-                      <li key={link.subproductId} className="flex items-center justify-between px-4 py-2 rounded bg-pos-bg text-pos-text text-3xl">
-                        <span className="truncate pr-4">{link.subproductName}</span>
-                        <div className="flex items-center gap-4 shrink-0">
+              <div className="flex flex-col gap-2">
+                <div
+                  ref={productSubproductsListRef}
+                  className="rounded-lg border min-w-[300px] border-pos-border bg-pos-panel/30 p-3 overflow-y-auto max-h-[300px] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {loadingProductSubproductsLinked ? (
+                    <div className="text-pos-muted px-3 py-2">{tr('control.productSubproducts.loading', 'Loading...')}</div>
+                  ) : productSubproductsLinked.length === 0 ? (
+                    <div className="text-pos-muted px-3 py-2">{tr('control.productSubproducts.noLinkedYet', 'No subproducts linked yet.')}</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {productSubproductsLinked.map((link) => (
+                        <li key={link.subproductId} className="flex items-center justify-between px-4 py-2 rounded bg-pos-bg text-pos-text">
+                          <span className="truncate pr-4">{link.subproductName}</span>
                           <button
                             type="button"
-                            className="p-1 rounded hover:bg-pos-panel disabled:opacity-40"
-                            onClick={() => moveProductSubproductLink(idx, 1)}
-                            disabled={idx >= productSubproductsLinked.length - 1}
-                            aria-label="Move down"
-                          >
-                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m0 0l-6-6m6 6l6-6" /></svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 rounded hover:bg-pos-panel disabled:opacity-40"
-                            onClick={() => moveProductSubproductLink(idx, -1)}
-                            disabled={idx <= 0}
-                            aria-label="Move up"
-                          >
-                            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l6 6m-6-6l-6 6" /></svg>
-                          </button>
-                          <button
-                            type="button"
-                            className="p-1 rounded hover:bg-pos-panel"
+                            className="p-1 rounded hover:bg-pos-panel shrink-0"
                             onClick={() => removeProductSubproductLink(link.subproductId)}
-                            aria-label="Delete"
+                            aria-label={tr('delete', 'Delete')}
                           >
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    type="button"
+                    className="p-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-pos-text"
+                    onClick={() => {
+                      const el = productSubproductsListRef.current;
+                      if (el) el.scrollBy({ top: -80, behavior: 'smooth' });
+                    }}
+                    aria-label={tr('scrollUp', 'Scroll up')}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="p-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-pos-text"
+                    onClick={() => {
+                      const el = productSubproductsListRef.current;
+                      if (el) el.scrollBy({ top: 80, behavior: 'smooth' });
+                    }}
+                    aria-label={tr('scrollDown', 'Scroll down')}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-center shrink-0">
               <button
                 type="button"
-                className="px-8 py-3 rounded-lg bg-green-600 text-white text-2xl font-medium hover:bg-green-700 disabled:opacity-50"
+                className="px-6 py-3 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50"
                 onClick={handleSaveProductSubproducts}
                 disabled={savingProductSubproducts || !productSubproductsProduct}
               >
-                {savingProductSubproducts ? 'Saving...' : 'Save'}
+                {savingProductSubproducts ? tr('control.saving', 'Saving...') : tr('control.save', 'Save')}
               </button>
             </div>
           </div>
@@ -9689,9 +9688,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* New / Edit subproduct modal */}
       {showSubproductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh] text-sm" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex-1 min-h-0 overflow-auto w-full">

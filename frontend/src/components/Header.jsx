@@ -116,7 +116,7 @@ export function Header({
               type="button"
               onClick={cfg.onClick || undefined}
               disabled={!cfg.onClick}
-              className={`rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-md px-5 flex items-center gap-3 min-w-0 ${
+              className={`rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-md px-2 flex items-center gap-3 min-w-0 ${
                 cfg.onClick ? 'hover:bg-pos-rowHover' : 'opacity-80 cursor-default'
               }`}
             >

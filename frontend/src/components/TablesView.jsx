@@ -88,9 +88,14 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
   const layoutTables = layout?.tables && Array.isArray(layout.tables) ? layout.tables : [];
   const useLayoutMode = layoutTables.length > 0;
 
+  const tablesForCurrentRoom = useMemo(() => {
+    if (!locationId) return [];
+    return tables.filter((table) => table && table.id != null && String(table?.roomId || '') === String(locationId));
+  }, [tables, locationId]);
+
   const tableIds = useMemo(
-    () => tables.filter((table) => table && table.id != null).map((table) => String(table.id)),
-    [tables]
+    () => (useLayoutMode ? [] : tablesForCurrentRoom.map((table) => String(table.id))),
+    [useLayoutMode, tablesForCurrentRoom]
   );
 
   useEffect(() => {
@@ -171,7 +176,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
   if (showLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-pos-bg">
-        <LoadingSpinner label="Loading tables..." />
+        <LoadingSpinner label={t('loadingTables')} />
       </div>
     );
   }
@@ -201,7 +206,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
         {time != null ? <span className="text-3xl">{time}</span> : null}
       </div>
 
-      <div className="flex-1 overflow-auto p-6 bg-pos-bg">
+      <div className="flex-1 overflow-hidden p-6 bg-pos-bg">
         <div
           style={{
             transform: `scale(${zoom / 100})`,
@@ -306,7 +311,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
               )}
             </>
           ) : (
-            tables.map((table) => {
+            tablesForCurrentRoom.map((table) => {
               if (!table || table.id == null) return null;
               const id = String(table?.id);
               const isSelected = selectedTableId != null && String(selectedTableId) === id;
@@ -342,7 +347,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
         </div>
       </div>
 
-      <div className="flex items-center justify-around text-3xl px-4 py-3 bg-pos-panel">
+      <div className="flex items-center justify-around text-md px-4 py-2 bg-pos-panel">
         <button type="button" className="py-2 px-3 hover:bg-pos-rowHover" onClick={onBack}>
           {t('backName')}
         </button>
@@ -367,7 +372,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-pos-text text-2xl font-semibold mb-4">{t('room1')}</h3>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[300px] overflow-auto [scrollbar-width:none]">
               {rooms.map((room, idx) => (
                 <button
                   key={room?.id ?? idx}
@@ -376,7 +381,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
                     setSelectedRoomIndex(idx);
                     setShowRoomsModal(false);
                   }}
-                  className={`w-full py-3 px-4 rounded-lg text-left text-xl ${
+                  className={`w-full py-3 px-4 rounded-lg text-left text-sm ${
                     selectedRoomIndex === idx ? 'bg-pos-rowHover border-2 border-pos-border' : 'bg-pos-panel hover:bg-pos-rowHover border border-transparent'
                   }`}
                 >

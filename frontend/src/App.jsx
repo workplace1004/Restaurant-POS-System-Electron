@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { useLanguage } from './contexts/LanguageContext';
 import { Header } from './components/Header';
 import { LeftSidebar } from './components/LeftSidebar';
 import { ProductArea } from './components/ProductArea';
@@ -43,6 +44,7 @@ function loadStoredView() {
 const socket = io(window.location.origin, { path: '/socket.io' });
 
 export default function App() {
+  const { t } = useLanguage();
   const [user, setUser] = useState(loadStoredUser);
   const [view, setView] = useState(loadStoredView);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -224,7 +226,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     if (isOpeningTables) {
       return (
         <div className="h-full w-full flex items-center justify-center bg-pos-bg">
-          <LoadingSpinner label="Loading tables..." />
+          <LoadingSpinner label={t('loadingTables')} />
         </div>
       );
     }

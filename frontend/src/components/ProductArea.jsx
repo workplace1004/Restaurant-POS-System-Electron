@@ -170,7 +170,7 @@ export function ProductArea({
             {t('selectCategoryToSeeProducts')}
           </div>
         ) : (
-          <div className="grid grid-cols-5 gap-3 content-start text-lg">
+          <div className="grid grid-cols-5 gap-1 content-start text-lg">
             {pageCells.map((entry, idx) => {
               const product = typeof entry === 'string' && entry.startsWith('p:')
                 ? productById.get(entry.slice(2))
@@ -182,7 +182,7 @@ export function ProductArea({
                 return (
                   <div
                     key={`empty-${idx}`}
-                    className="min-h-[50px] rounded-lg bg-transparent"
+                    className="min-h-[92px] max-h-[92px] rounded-lg bg-transparent"
                   />
                 );
               }
@@ -191,7 +191,7 @@ export function ProductArea({
                   type="button"
                   key={`${product.id}-${idx}`}
                   style={tileStyle}
-                  className={`flex flex-row items-center gap-5 justify-center px-3 border-none rounded-lg text-xl min-h-[70px] max-h-[70px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                  className={`flex flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[92px] max-h-[92px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                     }`}
                   onClick={() => handleProductPress(product)}
                 >
@@ -203,8 +203,8 @@ export function ProductArea({
                     />
                   ) : null}
                   <div className="flex flex-col items-start justify-center">
-                    <span className="text-xl">{product.name}</span>
-                    <span className="font-semibold text-2xl">€{Number(product.price).toFixed(2)}</span>
+                    <span className="text-sm">{product.name}</span>
+                    <span className="font-semibold text-sm">€{Number(product.price).toFixed(2)}</span>
                   </div>
                 </button>
               );
@@ -212,31 +212,31 @@ export function ProductArea({
           </div>
         )}
       </div>
-      <div className="mt-3 min-h-[70px] max-h-[70px] overflow-auto">
+      <div className="mt-1 min-h-[125px] max-h-[125px] overflow-auto">
         {selectedProduct && loadingSubproducts ? (
           <div className="h-full flex items-center justify-center text-pos-surface text-lg">
             {t('loadingSubproducts')}
           </div>
         ) : null}
         {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
-          <div className="grid grid-cols-5 gap-3 content-start max-h-[120px]">
+          <div className="grid grid-cols-5 gap-1 content-start">
             {paginatedSubproducts.map((subproduct) => (
               <button
                 type="button"
                 key={subproduct.id}
-                className="flex items-center justify-center p-4 bg-pos-surface border-none rounded-lg text-pos-text text-xl min-h-[110px] hover:bg-pos-rowHover"
+                className="flex items-center justify-center p-4 bg-pos-surface border-none rounded-lg text-pos-text text-sm min-h-[90px] max-h-[90px] hover:bg-pos-rowHover"
                 onClick={() => handleSubproductPress(subproduct)}
               >
                 {subproduct?.kioskPicture ? (
                   <img
                     src={subproduct.kioskPicture}
                     alt={subproduct.name}
-                    className="max-w-[100px] min-w-[100px] max-h-[80px] min-h-[80px] object-cover rounded"
+                    className="max-w-[50px] min-w-[50px] min-h-[50px] max-h-[50px] object-cover rounded"
                   />
                 ) : null}
                 <div className="flex flex-col w-full items-center justify-center">
                   <span>{subproduct.name}</span>
-                  <span className="font-semibold text-pos-text text-xl">
+                  <span className="font-semibold text-pos-text text-sm">
                     €{Number(subproduct?.price != null ? subproduct.price : selectedProduct?.price ?? 0).toFixed(2)}
                   </span>
                 </div>
@@ -248,7 +248,7 @@ export function ProductArea({
           <div className="flex items-center justify-center gap-10 mt-2">
             <button
               type="button"
-              className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
+              className="w-6 h-6 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
               onClick={goSubPrev}
               aria-label={t('previousSubproducts')}
             >
@@ -258,7 +258,7 @@ export function ProductArea({
               {Array.from({ length: subTotalPages }, (_, i) => (
                 <span
                   key={`sub-page-${i}`}
-                  className={`w-3 h-3 rounded-full cursor-pointer ${i === subPage ? 'bg-pos-text' : 'bg-pos-surface'}`}
+                  className={`w-2.5 h-2.5 rounded-full cursor-pointer ${i === subPage ? 'bg-pos-text' : 'bg-pos-surface'}`}
                   onClick={() => setSubPage(i)}
                   role="button"
                   tabIndex={0}
@@ -269,7 +269,7 @@ export function ProductArea({
             </div>
             <button
               type="button"
-              className="w-10 h-10 flex items-center justify-center bg-pos-panel border-none text-pos-text text-2xl rounded hover:bg-pos-surface"
+              className="w-6 h-6 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
               onClick={goSubNext}
               aria-label={t('nextSubproducts')}
             >
