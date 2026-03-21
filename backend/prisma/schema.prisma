@@ -131,17 +131,29 @@ model Customer {
 }
 
 model Order {
-  id         String      @id @default(cuid())
+  id         String         @id @default(cuid())
   tableId    String?
-  table      Table?      @relation(fields: [tableId], references: [id])
+  table      Table?         @relation(fields: [tableId], references: [id])
   customerId String?
-  customer   Customer?   @relation(fields: [customerId], references: [id])
-  status     String      @default("open") // open, in_planning, paid
-  total      Float       @default(0)
-  source     String      @default("pos") // pos, weborder
+  customer   Customer?      @relation(fields: [customerId], references: [id])
+  status     String         @default("open") // open, in_planning, paid
+  total      Float          @default(0)
+  source     String         @default("pos") // pos, weborder
   items      OrderItem[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  payments   OrderPayment[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+// Payment breakdown per order – for reports (manual cash, manual card, Cashmatic, Payworld, etc.)
+model OrderPayment {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentMethodId String
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  amount          Float
+  createdAt       DateTime @default(now())
 }
 
 model OrderItem {

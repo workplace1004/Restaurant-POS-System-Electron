@@ -999,7 +999,7 @@ app.post('/api/orders', async (req, res) => {
 
 // REST: update order (add/remove items, set table, status)
 app.patch('/api/orders/:id', async (req, res) => {
-  const { tableId, status, items } = req.body;
+  const { tableId, status, items, paymentBreakdown } = req.body;
   const updates = {};
   if (tableId !== undefined) updates.tableId = tableId;
   if (status !== undefined) updates.status = status;
@@ -1027,6 +1027,27 @@ app.patch('/api/orders/:id', async (req, res) => {
     data: updates,
     include: { items: { include: { product: true } }, table: true }
   });
+
+  // Save payment breakdown to OrderPayment for reports when order is marked paid
+  if (status === 'paid' && paymentBreakdown?.amounts && typeof paymentBreakdown.amounts === 'object') {
+    const amounts = paymentBreakdown.amounts;
+    const methodIds = Object.keys(amounts).filter((id) => Math.max(0, Number(amounts[id]) || 0) > 0.0001);
+    if (methodIds.length > 0) {
+      const methods = await prisma.paymentMethod.findMany({ where: { id: { in: methodIds } } });
+      const validMethodIds = new Set(methods.map((m) => m.id));
+      await prisma.orderPayment.deleteMany({ where: { orderId: req.params.id } });
+      await prisma.orderPayment.createMany({
+        data: methodIds
+          .filter((id) => validMethodIds.has(id))
+          .map((id) => ({
+            orderId: req.params.id,
+            paymentMethodId: id,
+            amount: Math.round(Math.max(0, Number(amounts[id]) || 0) * 100) / 100
+          }))
+      });
+    }
+  }
+
   io.emit('order:updated', order);
   res.json(order);
 });
