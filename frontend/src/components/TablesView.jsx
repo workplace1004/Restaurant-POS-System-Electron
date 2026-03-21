@@ -70,19 +70,35 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
     };
   }, [api]);
 
+  const sortedRooms = useMemo(() => {
+    if (!rooms.length) return [];
+    const roomHasOpenOrders = (room) => {
+      const roomId = room?.id != null ? String(room.id) : null;
+      if (!roomId) return false;
+      return tables.some((t) => t && String(t?.roomId || '') === roomId && Array.isArray(t?.orders) && t.orders.length > 0);
+    };
+    return [...rooms].sort((a, b) => {
+      const aHas = roomHasOpenOrders(a);
+      const bHas = roomHasOpenOrders(b);
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      return 0;
+    });
+  }, [rooms, tables]);
+
   useEffect(() => {
-    if (rooms.length === 0) {
+    if (sortedRooms.length === 0) {
       setSelectedRoomIndex(0);
       return;
     }
     setSelectedRoomIndex((prev) => {
       if (prev < 0) return 0;
-      if (prev >= rooms.length) return 0;
+      if (prev >= sortedRooms.length) return 0;
       return prev;
     });
-  }, [rooms]);
+  }, [sortedRooms]);
 
-  const currentRoom = rooms?.length > 0 ? rooms[selectedRoomIndex % rooms.length] : null;
+  const currentRoom = sortedRooms?.length > 0 ? sortedRooms[selectedRoomIndex % sortedRooms.length] : null;
   const locationId = currentRoom?.id != null ? String(currentRoom.id) : null;
   const layout = locationId && tableLayouts?.[locationId] && typeof tableLayouts[locationId] === 'object' ? tableLayouts[locationId] : null;
   const layoutTables = layout?.tables && Array.isArray(layout.tables) ? layout.tables : [];
@@ -167,8 +183,8 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
   const layoutCanvasWidth = layout?.floorWidth ? Math.max(400, Number(layout.floorWidth)) : 2048;
 
   const handleNextRoom = () => {
-    if (rooms.length === 0) return;
-    setSelectedRoomIndex((prev) => (prev + 1) % rooms.length);
+    if (sortedRooms.length === 0) return;
+    setSelectedRoomIndex((prev) => (prev + 1) % sortedRooms.length);
   };
 
   const showLoading = roomsLoading || layoutsLoading;
@@ -373,7 +389,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
           >
             <h3 className="text-pos-text text-2xl font-semibold mb-4">{t('room1')}</h3>
             <div className="space-y-2 max-h-[300px] overflow-auto [scrollbar-width:none]">
-              {rooms.map((room, idx) => (
+              {sortedRooms.map((room, idx) => (
                 <button
                   key={room?.id ?? idx}
                   type="button"
@@ -389,7 +405,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
                 </button>
               ))}
             </div>
-            {rooms.length === 0 && (
+            {sortedRooms.length === 0 && (
               <p className="text-pos-muted py-4">{t('noTable')}</p>
             )}
             <div className="mt-4 flex justify-end">

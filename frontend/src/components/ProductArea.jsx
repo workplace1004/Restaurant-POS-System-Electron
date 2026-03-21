@@ -141,6 +141,7 @@ export function ProductArea({
   };
 
   return (
+    <>
     <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg py-2">
       <div className="flex items-center justify-center gap-5 mb-1 text-lg">
         <button
@@ -221,5 +222,54 @@ export function ProductArea({
         )}
       </div>
     </main>
+
+    {showSubproductModal && selectedProduct && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeSubproductModal}>
+        <div
+          className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl p-6 max-w-[90vw] max-h-[85vh] overflow-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-pos-text">
+              {selectedProduct.name} — {t('subproducts', 'Subproducts')}
+            </h3>
+            <button
+              type="button"
+              className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+              onClick={closeSubproductModal}
+              aria-label={t('close', 'Close')}
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {subproducts.map((sp) => (
+              <button
+                type="button"
+                key={sp.id}
+                className="flex flex-col items-center justify-center p-4 bg-pos-panel rounded-lg text-pos-text hover:bg-pos-surface transition-colors min-h-[80px]"
+                onClick={() => handleSubproductPress(sp)}
+              >
+                {sp.kioskPicture ? (
+                  <img src={sp.kioskPicture} alt={sp.name} className="w-12 h-12 object-cover rounded mb-1" />
+                ) : null}
+                <span className="text-sm font-medium truncate w-full text-center">{sp.name}</span>
+                <span className="text-xs text-pos-muted">€{Number(sp.price ?? 0).toFixed(2)}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+              onClick={closeSubproductModal}
+            >
+              {t('done', 'Done')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

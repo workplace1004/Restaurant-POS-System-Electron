@@ -990,10 +990,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     Array(FUNCTION_BUTTON_SLOT_COUNT).fill('')
   );
   const [selectedFunctionButtonSlotIndex, setSelectedFunctionButtonSlotIndex] = useState(null);
+  const [selectedFunctionButtonPoolItemId, setSelectedFunctionButtonPoolItemId] = useState(null);
   const [optionButtonSlots, setOptionButtonSlots] = useState(() =>
     normalizeOptionButtonSlots(null)
   );
   const [selectedOptionButtonSlotIndex, setSelectedOptionButtonSlotIndex] = useState(null);
+  const [selectedOptionButtonPoolItemId, setSelectedOptionButtonPoolItemId] = useState(null);
 
   const [showSystemSettingsModal, setShowSystemSettingsModal] = useState(false);
   const [systemSettingsTab, setSystemSettingsTab] = useState('General');
@@ -1782,13 +1784,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         const colorErr = colorRes.ok ? null : await colorRes.json().catch(() => null);
         throw new Error(layoutErr?.error || colorErr?.error || 'Failed to save positioning layout');
       }
-      setPositioningLayoutSaveMessage('Layout and colors saved');
+      showToast('success', 'Layout and colors saved.');
+      closeProductPositioningModal();
     } catch (err) {
-      setPositioningLayoutSaveMessage(err?.message || 'Failed to save layout');
+      showToast('error', err?.message || 'Failed to save layout');
     } finally {
       setSavingPositioningLayout(false);
     }
-  }, [positioningLayoutByCategory, positioningColorByCategory]);
+  }, [positioningLayoutByCategory, positioningColorByCategory, showToast, closeProductPositioningModal]);
 
   const fetchSubproductGroups = useCallback(async () => {
     setSubproductGroupsLoading(true);
@@ -3400,6 +3403,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       next[selectedFunctionButtonSlotIndex] = '';
       return next;
     });
+    setSelectedFunctionButtonPoolItemId(null);
   };
 
   const hasSelectedFunctionButton = Number.isInteger(selectedFunctionButtonSlotIndex)
@@ -3448,6 +3452,76 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       next[selectedOptionButtonSlotIndex] = '';
       return next;
     });
+    setSelectedOptionButtonPoolItemId(null);
+  };
+
+  const handleOptionButtonSlotClick = (slotIndex) => {
+    const assignedId = optionButtonSlots[slotIndex];
+    const hasPoolSelection = selectedOptionButtonPoolItemId && OPTION_BUTTON_ITEM_IDS.includes(selectedOptionButtonPoolItemId);
+    const hasGridSelection = Number.isInteger(selectedOptionButtonSlotIndex) && optionButtonSlots[selectedOptionButtonSlotIndex];
+
+    if (hasPoolSelection && !assignedId) {
+      setOptionButtonSlots((prev) => {
+        const next = [...prev];
+        next[slotIndex] = selectedOptionButtonPoolItemId;
+        return next;
+      });
+      setSelectedOptionButtonPoolItemId(null);
+      setSelectedOptionButtonSlotIndex(null);
+      return;
+    }
+    if (hasGridSelection && selectedOptionButtonSlotIndex !== slotIndex && optionButtonSlots[selectedOptionButtonSlotIndex] !== OPTION_BUTTON_LOCKED_ID) {
+      const sourceId = optionButtonSlots[selectedOptionButtonSlotIndex];
+      if (optionButtonSlots[slotIndex] === OPTION_BUTTON_LOCKED_ID && sourceId !== OPTION_BUTTON_LOCKED_ID) return;
+      setOptionButtonSlots((prev) => {
+        const next = [...prev];
+        const targetId = next[slotIndex];
+        next[selectedOptionButtonSlotIndex] = targetId || '';
+        next[slotIndex] = sourceId;
+        return next;
+      });
+      setSelectedOptionButtonSlotIndex(null);
+      setSelectedOptionButtonPoolItemId(null);
+      return;
+    }
+    if (assignedId) {
+      setSelectedOptionButtonSlotIndex(slotIndex);
+      setSelectedOptionButtonPoolItemId(null);
+    }
+  };
+
+  const handleFunctionButtonSlotClick = (slotIndex) => {
+    const assignedId = functionButtonSlots[slotIndex];
+    const hasPoolSelection = selectedFunctionButtonPoolItemId && FUNCTION_BUTTON_ITEM_IDS.includes(selectedFunctionButtonPoolItemId);
+    const hasGridSelection = Number.isInteger(selectedFunctionButtonSlotIndex) && functionButtonSlots[selectedFunctionButtonSlotIndex];
+
+    if (hasPoolSelection && !assignedId) {
+      setFunctionButtonSlots((prev) => {
+        const next = [...prev];
+        next[slotIndex] = selectedFunctionButtonPoolItemId;
+        return next;
+      });
+      setSelectedFunctionButtonPoolItemId(null);
+      setSelectedFunctionButtonSlotIndex(null);
+      return;
+    }
+    if (hasGridSelection && selectedFunctionButtonSlotIndex !== slotIndex) {
+      const sourceId = functionButtonSlots[selectedFunctionButtonSlotIndex];
+      setFunctionButtonSlots((prev) => {
+        const next = [...prev];
+        const targetId = next[slotIndex];
+        next[selectedFunctionButtonSlotIndex] = targetId || '';
+        next[slotIndex] = sourceId;
+        return next;
+      });
+      setSelectedFunctionButtonSlotIndex(null);
+      setSelectedFunctionButtonPoolItemId(null);
+      return;
+    }
+    if (assignedId) {
+      setSelectedFunctionButtonSlotIndex(slotIndex);
+      setSelectedFunctionButtonPoolItemId(null);
+    }
   };
 
   const hasSelectedOptionButton = Number.isInteger(selectedOptionButtonSlotIndex)
@@ -7794,7 +7868,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   key={tab}
                   type="button"
                   className={`px-4 py-2 font-medium whitespace-nowrap border-b-2 transition-colors ${deviceSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
-                  onClick={() => setDeviceSettingsTab(tab)}
+                  onClick={() => {
+                    setDeviceSettingsTab(tab);
+                    setSelectedOptionButtonPoolItemId(null);
+                    setSelectedFunctionButtonPoolItemId(null);
+                  }}
                 >
                   {tr(DEVICE_SETTINGS_TAB_LABEL_KEYS[tab], tab)}
                 </button>
@@ -8052,7 +8130,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               type="button"
                               draggable={!!assignedId && assignedId !== OPTION_BUTTON_LOCKED_ID}
                               onDragStart={(event) => handleOptionButtonDragStartFromSlot(event, slotIndex)}
-                              onClick={() => setSelectedOptionButtonSlotIndex(slotIndex)}
+                              onClick={() => handleOptionButtonSlotClick(slotIndex)}
                               onDragOver={(event) => event.preventDefault()}
                               onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
                               className={`h-[74px] max-w-[70px] min-w-[70px] border px-2 text-center text-[12px] leading-[1.2] whitespace-pre-line transition-colors ${assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
@@ -8085,7 +8163,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             type="button"
                             draggable
                             onDragStart={(event) => handleOptionButtonDragStart(event, item.id)}
-                            className="w-full text-[14px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] hover:text-[#2e333c] cursor-grab active:cursor-grabbing"
+                            onClick={() => {
+                              setSelectedOptionButtonPoolItemId(item.id);
+                              setSelectedOptionButtonSlotIndex(null);
+                            }}
+                            className={`w-full text-[14px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] hover:text-[#2e333c] cursor-grab active:cursor-grabbing ${selectedOptionButtonPoolItemId === item.id ? 'text-rose-500' : ''}`}
                           >
                             {tr(item.labelKey, item.fallbackLabel)}
                           </button>
@@ -8120,7 +8202,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           <button
                             key={`function-slot-${slotIndex}`}
                             type="button"
-                            onClick={() => setSelectedFunctionButtonSlotIndex(slotIndex)}
+                            onClick={() => handleFunctionButtonSlotClick(slotIndex)}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => handleFunctionButtonDropOnSlot(event, slotIndex)}
                             className={`h-[62px] border bg-transparent text-xl text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
@@ -8153,7 +8235,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           type="button"
                           draggable
                           onDragStart={(event) => handleFunctionButtonDragStart(event, item.id)}
-                          className="text-xl text-gray hover:text-[#4b5d68] cursor-grab active:cursor-grabbing"
+                          onClick={() => {
+                            setSelectedFunctionButtonPoolItemId(item.id);
+                            setSelectedFunctionButtonSlotIndex(null);
+                          }}
+                          className={`text-xl text-gray hover:text-[#4b5d68] cursor-grab active:cursor-grabbing ${selectedFunctionButtonPoolItemId === item.id ? 'text-rose-500' : ''}`}
                         >
                           {tr(item.labelKey, item.fallbackLabel)}
                         </button>
@@ -9646,9 +9732,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     {savingPositioningLayout ? tr('control.saving', 'Saving...') : tr('control.save', 'Save')}
                   </button>
                 </div>
-                {positioningLayoutSaveMessage ? (
-                  <div className="mt-2 text-center text-md text-gray-300">{positioningLayoutSaveMessage}</div>
-                ) : null}
               </div>
             </div>
           </div>
