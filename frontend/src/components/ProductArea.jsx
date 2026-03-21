@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function ProductArea({
@@ -36,7 +36,7 @@ export function ProductArea({
     ? positioningLayoutByCategory[selectedCategoryId]
     : null;
   const colorForCategory = positioningColorByCategory?.[selectedCategoryId] || {};
-  const PAGE_SIZE = 40; // 5 x 8, same as positioning modal
+  const PAGE_SIZE = 48; // 6 x 8, same as positioning modal
   const totalPages = Math.max(1, Math.ceil((layoutForCategory?.length || PAGE_SIZE) / PAGE_SIZE));
   const pageStart = page * PAGE_SIZE;
   const pageCells = Array.from({ length: PAGE_SIZE }, (_, i) => layoutForCategory?.[pageStart + i] || null);
@@ -131,6 +131,20 @@ export function ProductArea({
     setSelectedOrderItemId(null);
   }, []);
 
+  const subproductsByGroup = useMemo(() => {
+    if (!subproducts.length) return [];
+    const byGroup = new Map();
+    for (const sp of subproducts) {
+      const gid = sp?.groupId || sp?.group?.id || '';
+      const gname = sp?.group?.name || '';
+      if (!byGroup.has(gid)) byGroup.set(gid, { groupName: gname, sortOrder: sp?.group?.sortOrder ?? 0, items: [] });
+      byGroup.get(gid).items.push(sp);
+    }
+    return Array.from(byGroup.entries())
+      .sort((a, b) => (a[1].sortOrder ?? 0) - (b[1].sortOrder ?? 0) || (a[1].groupName || '').localeCompare(b[1].groupName || ''))
+      .map(([gid, data]) => ({ groupId: gid, groupName: data.groupName, items: data.items }));
+  }, [subproducts]);
+
   const colorStyleById = {
     green: { backgroundColor: '#22c55e', color: '#ffffff' },
     blue: { backgroundColor: '#1d4ed8', color: '#ffffff' },
@@ -142,134 +156,118 @@ export function ProductArea({
 
   return (
     <>
-    <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg py-2">
-      <div className="flex items-center justify-center gap-5 mb-1 text-lg">
-        <button
-          type="button"
-          className="w-8 h-8 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
-          onClick={goPrev}
-          aria-label={t('previous')}
-        >
-          ‹
-        </button>
-        <div className="flex gap-5 text-lg">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <span
-              key={i}
-              className={`w-3 h-3 rounded-full cursor-pointer ${i === page ? 'bg-pos-text' : 'bg-pos-surface'
-                }`}
-              onClick={() => setPage(i)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && setPage(i)}
-              aria-label={`${t('page')} ${i + 1}`}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          className="w-8 h-8 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
-          onClick={goNext}
-          aria-label={t('next')}
-        >
-          ›
-        </button>
-      </div>
-      <div className="p-1 overflow-auto">
-        {!layoutForCategory ? (
-          <div className="col-span-full flex items-center justify-center text-pos-surface text-lg min-h-[100px] max-h-[100px]">
-            {t('selectCategoryToSeeProducts')}
-          </div>
-        ) : (
-          <div className="grid grid-cols-5 gap-1 content-start text-lg">
-            {pageCells.map((entry, idx) => {
-              const product = typeof entry === 'string' && entry.startsWith('p:')
-                ? productById.get(entry.slice(2))
-                : null;
-              const absoluteIdx = pageStart + idx;
-              const colorId = colorForCategory[String(absoluteIdx)];
-              const tileStyle = colorStyleById[colorId] || undefined;
-              if (!product) {
-                return (
-                  <div
-                    key={`empty-${idx}`}
-                    className="min-h-[70px] max-h-[70px] rounded-lg bg-transparent"
-                  />
-                );
-              }
-              return (
-                <button
-                  type="button"
-                  key={`${product.id}-${idx}`}
-                  style={tileStyle}
-                  className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
-                    }`}
-                  onClick={() => handleProductPress(product)}
-                >
-                  {product.kassaPhotoPath ? (
-                    <img
-                      src={product.kassaPhotoPath}
-                      alt={product.name}
-                      className="max-w-[45px] absolute top-0 left-0 mt-1 ml-1 min-w-[45px] max-h-[45px] min-h-[45px] object-cover rounded"
+      <main className="flex-1 flex flex-col min-w-0 p-4 bg-pos-bg py-2">
+        <div className="p-1 overflow-auto flex-1">
+          {!layoutForCategory ? (
+            <div className="col-span-full flex items-center justify-center text-pos-surface text-lg min-h-[100px] max-h-[100px]">
+              {t('selectCategoryToSeeProducts')}
+            </div>
+          ) : (
+            <div className="grid grid-cols-6 gap-1 content-start text-lg">
+              {pageCells.map((entry, idx) => {
+                const product = typeof entry === 'string' && entry.startsWith('p:')
+                  ? productById.get(entry.slice(2))
+                  : null;
+                const absoluteIdx = pageStart + idx;
+                const colorId = colorForCategory[String(absoluteIdx)];
+                const tileStyle = colorStyleById[colorId] || undefined;
+                if (!product) {
+                  return (
+                    <div
+                      key={`empty-${idx}`}
+                      className="min-h-[70px] max-h-[70px] rounded-lg bg-transparent"
                     />
-                  ) : null}
-                  <span className="text-sm absolute bottom-0 left-0 pb-1 pl-1 block max-w-[100px] break-words leading-tight">{product.name}</span>
-                  <span className="font-semibold absolute top-0 right-0 pr-1 pt-1 text-sm">€{Number(product.price).toFixed(2)}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </main>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    key={`${product.id}-${idx}`}
+                    style={tileStyle}
+                    className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                      }`}
+                    onClick={() => handleProductPress(product)}
+                  >
+                    {product.kassaPhotoPath ? (
+                      <img
+                        src={product.kassaPhotoPath}
+                        alt={product.name}
+                        className="max-w-[45px] absolute top-0 left-0 mt-1 ml-1 min-w-[45px] max-h-[45px] min-h-[45px] object-cover rounded"
+                      />
+                    ) : null}
+                    <span className="text-sm absolute bottom-0 left-0 pb-1 pl-1 block max-w-[100px] break-words leading-tight">{product.name}</span>
+                    <span className="font-semibold absolute top-0 right-0 pr-1 pt-1 text-sm">€{Number(product.price).toFixed(2)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
 
-    {showSubproductModal && selectedProduct && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeSubproductModal}>
-        <div
-          className="bg-pos-bg rounded-xl border border-pos-border shadow-2xl p-6 max-w-[90vw] max-h-[85vh] overflow-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-pos-text">
-              {selectedProduct.name} — {t('subproducts', 'Subproducts')}
-            </h3>
-            <button
-              type="button"
-              className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
-              onClick={closeSubproductModal}
-              aria-label={t('close', 'Close')}
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <div className="grid grid-cols-5 gap-2">
-            {subproducts.map((sp) => (
+      {showSubproductModal && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-stretch justify-start bg-black/50" onClick={closeSubproductModal}>
+          <div
+            className="bg-pos-bg relative rounded-r-xl border-r border-y border-pos-border shadow-2xl p-6 w-[max(360px,min(90vw,770px))] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-pos-text">
+                {selectedProduct.name} — {t('subproducts', 'Subproducts')}
+              </h3>
               <button
                 type="button"
-                key={sp.id}
-                className="flex flex-col items-center justify-center p-4 bg-pos-panel rounded-lg text-pos-text hover:bg-pos-surface transition-colors min-h-[80px]"
-                onClick={() => handleSubproductPress(sp)}
+                className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+                onClick={closeSubproductModal}
+                aria-label={t('close', 'Close')}
               >
-                {sp.kioskPicture ? (
-                  <img src={sp.kioskPicture} alt={sp.name} className="w-12 h-12 object-cover rounded mb-1" />
-                ) : null}
-                <span className="text-sm font-medium truncate w-full text-center">{sp.name}</span>
-                <span className="text-xs text-pos-muted">€{Number(sp.price ?? 0).toFixed(2)}</span>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
-              onClick={closeSubproductModal}
-            >
-              {t('done', 'Done')}
-            </button>
+            </div>
+            <div className="space-y-6">
+              {subproductsByGroup.map(({ groupId, groupName, items }) => (
+                <div key={groupId} className='flex'>
+                  <h4 className="text-md font-medium text-pos-text mb-2 min-w-[80px]">{groupName || t('other', 'Other')}</h4>
+                  <div className="grid grid-cols-5 gap-2 w-full">
+                    {items.map((sp) => (
+                      <button
+                        type="button"
+                        key={sp.id}
+                        className="flex items-center justify-center p-1 min-h-[50px] max-h-[50px] bg-pos-panel rounded-lg text-pos-text hover:bg-pos-surface transition-colors"
+                        onClick={() => handleSubproductPress(sp)}
+                      >
+                        {sp.kioskPicture ? (
+                          <img src={sp.kioskPicture} alt={sp.name} className="w-10 h-10 object-cover rounded" />
+                        ) : null}
+                        <div className="flex flex-col items-center justify-center">
+                          <span className="text-sm font-medium truncate w-full text-center">{sp.name}</span>
+                          <span className="text-xs text-pos-muted">€{Number(sp.price ?? 0).toFixed(2)}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="w-full px-5 pb-2 flex justify-end gap-2 absolute bottom-0 right-0">
+              <button
+                type="button"
+                className="px-4 py-2 w-full rounded-lg border border-pos-border bg-pos-panel text-pos-text hover:bg-pos-bg"
+                onClick={closeSubproductModal}
+              >
+                {t('cancel', 'Cancel')}
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 w-full rounded-lg bg-green-600 text-white hover:bg-green-700"
+                onClick={closeSubproductModal}
+              >
+                {t('ok', 'OK')}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   );
 }

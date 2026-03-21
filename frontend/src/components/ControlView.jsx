@@ -9383,7 +9383,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
       {/* Product positioning modal */}
       {showProductPositioningModal && (() => {
-        const GRID_COLUMNS = 5;
+        const GRID_COLUMNS = 6;
         const GRID_ROWS = 8;
         const PAGE_SIZE = GRID_COLUMNS * GRID_ROWS;
         const positionCategoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
@@ -9793,7 +9793,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </label>
                   <div
                     ref={productSubproductsLeftListRef}
-                    className="flex-1 overflow-y-auto p-2 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    className="flex-1 overflow-y-auto p-2 min-h-[350px] max-h-[350px] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                   >
                     {!productSubproductsGroupId ? (
                       <div className="text-pos-muted px-2 py-4">{tr('control.productSubproducts.selectGroupFirst', 'Select a group above')}</div>
@@ -9864,7 +9864,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </label>
                   <div
                     ref={productSubproductsListRef}
-                    className="flex-1 overflow-y-auto p-2 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    className="flex-1 overflow-y-auto p-2 min-h-[350px] max-h-[350px] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                   >
                     {loadingProductSubproductsLinked ? (
                       <div className="text-pos-muted px-2 py-4">{tr('control.productSubproducts.loading', 'Loading...')}</div>
