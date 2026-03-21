@@ -194,7 +194,8 @@ app.get('/api/products/:id/subproducts', async (req, res) => {
     const ids = links.map((l) => l.subproductId);
     if (ids.length === 0) return res.json([]);
     const items = await prisma.subproduct.findMany({
-      where: { id: { in: ids } }
+      where: { id: { in: ids } },
+      include: { group: true }
     });
     const sorted = items
       .filter((sp) => idOrder.has(sp.id))
