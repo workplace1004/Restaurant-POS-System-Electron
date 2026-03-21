@@ -1326,7 +1326,7 @@ app.get('/api/orders/history', async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
       where: { status: 'paid' },
-      include: { table: true },
+      include: { table: true, customer: true },
       orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
     });
     res.json(orders);
