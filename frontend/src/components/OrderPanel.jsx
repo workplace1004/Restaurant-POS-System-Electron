@@ -1052,7 +1052,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <button
             type="button"
             disabled={payableTotalForPaymentModal <= 0.009}
-            className={`flex-1 py-1 border-none rounded-md ${payableTotalForPaymentModal <= 0.009
+            className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009
               ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
               : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
               }`}
@@ -1077,20 +1077,20 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           aria-labelledby="pay-differently-title"
         >
           <div
-            className="flex flex-col h-[60vh] bg-gray-100 rounded-xl shadow-2xl max-w-[1800px] w-full overflow-auto text-gray-800"
+            className="flex flex-col bg-gray-100 rounded-xl shadow-2xl max-w-[1800px] w-full overflow-auto text-gray-800"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Left: Total + payment methods + Cancel */}
+            {/* Left: Total + payment methods */}
             <div className="flex items-center justify-center">
-              <div className="p-10 min-w-[46%] w-full h-full flex flex-col">
-                <div className="text-3xl font-semibold mb-4 flex w-full justify-center items-center">{t('total')}: €{payModalTargetTotal.toFixed(2)}</div>
-                <div className="flex flex-wrap gap-6 w-full mb-6 h-full items-start justify-center">
+              <div className="p-6 min-w-[46%] w-full h-full flex flex-col">
+                <div className="text-lg font-semibold mb-3 flex w-full justify-center items-center">{t('total')}: €{payModalTargetTotal.toFixed(2)}</div>
+                <div className="flex flex-wrap gap-4 w-full mb-4 h-full items-start justify-center">
                   {paymentMethodsLoading ? (
-                    <div className="text-2xl text-gray-600 py-8">
+                    <div className="text-sm text-gray-600 py-6">
                       {tr('orderPanel.loadingPaymentMethods', 'Loading payment methods...')}
                     </div>
                   ) : activePaymentMethods.length === 0 ? (
-                    <div className="text-2xl text-amber-900 py-8 text-center max-w-lg px-4">
+                    <div className="text-sm text-amber-900 py-6 text-center max-w-lg px-4">
                       {tr(
                         'orderPanel.noPaymentMethods',
                         'No active payment methods. Configure them under Control → Payment types.',
@@ -1102,7 +1102,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       const isHighlighted = selectedPayment === m.id || amt > 0;
                       const integ = m.integration || 'generic';
                       return (
-                        <div key={m.id} className="flex flex-col items-center gap-2">
+                        <div key={m.id} className="flex flex-col items-center gap-1.5">
                           <button
                             type="button"
                             disabled={payModalSplitComplete || payModalWouldExceedTotal}
@@ -1112,19 +1112,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                             aria-label={m.name}
                           >
                             {integ === 'manual_cash' ? (
-                              <span className="flex items-center justify-center w-[180px] h-[200px] text-8xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
+                              <span className="flex items-center justify-center w-[70px] h-[70px] text-4xl font-bold text-amber-600 bg-amber-50/80 rounded">€</span>
                             ) : integ === 'cashmatic' ? (
-                              <img src="/cash.png" alt={m.name} className="max-h-[280px] w-auto object-contain" />
+                              <img src="/cash.png" alt={m.name} className="max-h-[70px] w-auto object-contain" />
                             ) : integ === 'payworld' ? (
-                              <img src="/payworld.png" alt={m.name} className="max-h-[280px] w-auto object-contain" />
+                              <img src="/payworld.png" alt={m.name} className="max-h-[70px] w-auto object-contain" />
                             ) : (
-                              <span className="flex items-center justify-center w-[180px] min-h-[120px] px-3 py-4 text-2xl font-semibold text-center text-blue-900 bg-blue-50/80 rounded leading-tight">
+                              <span className="flex items-center justify-center w-[70px] min-h-[70px] px-2 py-3 text-base font-semibold text-center text-blue-900 bg-blue-50/80 rounded leading-tight">
                                 {m.name}
                               </span>
                             )}
                           </button>
-                          <div className="text-2xl font-semibold tabular-nums text-center max-w-[200px]" aria-live="polite">
-                            <span className="block text-sm font-normal text-gray-600 mb-0.5 truncate">{m.name}</span>
+                          <div className="text-sm font-semibold tabular-nums text-center max-w-[140px]" aria-live="polite">
+                            <span className="block text-xs font-normal text-gray-600 mb-0.5 truncate">{m.name}</span>
                             {formatPaymentAmount(amt)}
                           </div>
                         </div>
@@ -1133,28 +1133,27 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   )}
                 </div>
               </div>
-              {/* Right: Assigned + input + keypad + actions + To confirm */}
+              {/* Right: Assigned + input + keypad */}
               <div className="min-w-[30%] p-6">
-                <div className="text-3xl font-semibold mb-2 flex justify-center">{t('assigned')}: €{payModalTotalAssigned.toFixed(2)}</div>
-                <div className="flex justify-center mt-3">
+                <div className="text-lg font-semibold mb-2 flex justify-center">{t('assigned')}: €{payModalTotalAssigned.toFixed(2)}</div>
+                <div className="flex justify-center mt-2">
                   <input
                     readOnly
-                    className="w-[200px] py-3 px-4 bg-gray-200 rounded-lg text-xl mb-4 outline-none cursor-default"
+                    className="w-[160px] py-2 px-3 bg-gray-200 rounded-lg text-base mb-3 outline-none cursor-default"
                     value={payModalKeypadInput}
                     aria-label={t('amountKeypad')}
                   />
-
                 </div>
-                <div className="flex gap-4 flex-1 min-h-0 mt-5">
-                  <div className="flex flex-col gap-2 flex-1">
+                <div className="flex gap-2 flex-1 min-h-0 mt-3">
+                  <div className="flex flex-col gap-1.5 flex-1">
                     {KEYPAD.map((row, ri) => (
-                      <div key={ri} className="grid grid-cols-4 gap-2">
+                      <div key={ri} className="grid grid-cols-3 gap-1.5">
                         {row.map((key) => (
                           <button
                             key={key}
                             type="button"
                             disabled={payModalSplitComplete}
-                            className={`py-9 rounded-lg text-3xl font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
+                            className={`py-4 rounded-lg text-lg font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
                             onClick={() => handlePayModalKeypad(key)}
                           >
                             {key}
@@ -1165,11 +1164,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   </div>
                 </div>
               </div>
-              <div className="min-w-[24%] flex flex-col items-center justify-center gap-10">
+              <div className="min-w-[24%] flex flex-col items-center justify-center gap-4 p-6">
                 <button
                   type="button"
                   disabled={payModalSplitComplete}
-                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
+                  className={`py-2 px-4 w-full max-w-[200px] rounded-lg text-sm font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
                   onClick={handlePayHalfAmount}
                 >
                   {t('halfAmount')}
@@ -1177,25 +1176,25 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <button
                   type="button"
                   disabled={payModalSplitComplete}
-                  className={`py-3 px-3 w-[300px] rounded-lg text-3xl font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
+                  className={`py-2 px-4 w-full max-w-[200px] rounded-lg text-sm font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
                   onClick={handlePayRemaining}
                 >
                   {t('remainingAmount')}
                 </button>
                 <button
                   type="button"
-                  className="py-3 px-3 bg-gray-300 w-[300px] rounded-lg text-gray-800 text-3xl font-medium hover:bg-gray-400"
+                  className="py-2 px-4 bg-gray-300 w-full max-w-[200px] rounded-lg text-gray-800 text-sm font-medium hover:bg-gray-400"
                   onClick={handlePayReset}
                 >
                   {t('reset')}
                 </button>
               </div>
             </div>
-            <div className="flex justify-between px-[250px] text-3xl gap-10 w-full pt-10">
+            <div className="flex justify-around px-6 gap-4 w-full pt-6 pb-6">
               <button
                 type="button"
                 disabled={payModalSplitComplete && !payConfirmLoading}
-                className={`mt-auto w-[230px] py-3 px-6 rounded-lg font-medium ${payModalSplitComplete && !payConfirmLoading
+                className={`w-[140px] py-2 px-4 rounded-lg text-sm font-medium ${payModalSplitComplete && !payConfirmLoading
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
                   }`}
@@ -1211,7 +1210,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   paymentMethodsLoading ||
                   activePaymentMethods.length === 0
                 }
-                className={`mt-4 py-3 w-[230px] px-6 rounded-lg font-medium ${Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading || paymentMethodsLoading || activePaymentMethods.length === 0
+                className={`w-[140px] py-2 px-4 rounded-lg text-sm font-medium ${Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading || paymentMethodsLoading || activePaymentMethods.length === 0
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
                   }`}

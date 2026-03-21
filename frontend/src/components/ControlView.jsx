@@ -167,7 +167,7 @@ const REPORT_TABS = [
 ];
 
 const REPORT_GENERATE_UNTIL_OPTIONS = [
-  { value: 'current-time', label: 'Current time' }
+  { value: 'current-time', labelKey: 'control.reports.currentTime', fallback: 'Current time' }
 ];
 
 const PERIODIC_REPORT_TIME_OPTIONS = Array.from({ length: 25 }, (_, i) => {
@@ -220,15 +220,15 @@ const DISCOUNT_ON_OPTIONS = [
 ];
 
 const REPORT_SETTINGS_ROWS = [
-  { id: 'category-totals', label: 'Category totals:' },
-  { id: 'product-totals', label: 'Product totals:' },
-  { id: 'vat-totals', label: 'VAT totals:' },
-  { id: 'payments', label: 'Payments:' },
-  { id: 'ticket-types', label: 'Ticket types:' },
-  { id: 'eat-in-take-out', label: 'Eat-in / Take-out:' },
-  { id: 'open-tables', label: 'Open tables:' },
-  { id: 'hour-totals', label: 'Hour totals:' },
-  { id: 'hour-totals-per-user', label: 'Hour totals per user:' }
+  { id: 'category-totals', labelKey: 'control.reports.settings.categoryTotals', fallback: 'Category totals:' },
+  { id: 'product-totals', labelKey: 'control.reports.settings.productTotals', fallback: 'Product totals:' },
+  { id: 'vat-totals', labelKey: 'control.reports.settings.vatTotals', fallback: 'VAT totals:' },
+  { id: 'payments', labelKey: 'control.reports.settings.payments', fallback: 'Payments:' },
+  { id: 'ticket-types', labelKey: 'control.reports.settings.ticketTypes', fallback: 'Ticket types:' },
+  { id: 'eat-in-take-out', labelKey: 'control.reports.settings.eatInTakeOut', fallback: 'Eat-in / Take-out:' },
+  { id: 'open-tables', labelKey: 'control.reports.settings.openTables', fallback: 'Open tables:' },
+  { id: 'hour-totals', labelKey: 'control.reports.settings.hourTotals', fallback: 'Hour totals:' },
+  { id: 'hour-totals-per-user', labelKey: 'control.reports.settings.hourTotalsPerUser', fallback: 'Hour totals per user:' }
 ];
 
 const DEFAULT_REPORT_SETTINGS = Object.fromEntries(
@@ -540,10 +540,10 @@ const normalizeLayoutEditorDraft = (raw, locationName = 'Restaurant') => {
 };
 
 const PAYMENT_INTEGRATION_OPTIONS = [
-  { value: 'manual_cash', labelKey: 'control.paymentTypes.integration.manual_cash', fallback: 'Manual cash' },
+  { value: 'manual_cash', labelKey: 'control.paymentTypes.integration.manual_cash', fallback: 'Manual Cash' },
   { value: 'cashmatic', labelKey: 'control.paymentTypes.integration.cashmatic', fallback: 'Cashmatic' },
   { value: 'payworld', labelKey: 'control.paymentTypes.integration.payworld', fallback: 'Payworld' },
-  { value: 'generic', labelKey: 'control.paymentTypes.integration.generic', fallback: 'manual card' }
+  { value: 'generic', labelKey: 'control.paymentTypes.integration.generic', fallback: 'Manual Card' }
 ];
 
 const VAT_PERCENT_OPTIONS = [
@@ -730,6 +730,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const usersListRef = useRef(null);
+  const [canUsersScrollUp, setCanUsersScrollUp] = useState(false);
+  const [canUsersScrollDown, setCanUsersScrollDown] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [userName, setUserName] = useState('');
@@ -740,8 +743,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [userAvatarColorIndex, setUserAvatarColorIndex] = useState(0);
   const [userModalActiveField, setUserModalActiveField] = useState(null);
   const [userPrivileges, setUserPrivileges] = useState(() => ({ ...DEFAULT_USER_PRIVILEGES }));
-  const [usersPage, setUsersPage] = useState(0);
-  const USERS_PAGE_SIZE = 11;
 
   const [discounts, setDiscounts] = useState([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
@@ -1403,6 +1404,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updateUsersScrollState = useCallback(() => {
+    const el = usersListRef.current;
+    if (!el) {
+      setCanUsersScrollUp(false);
+      setCanUsersScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanUsersScrollUp(el.scrollTop > 0);
+    setCanUsersScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollUsersByPage = useCallback((direction) => {
+    const el = usersListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
   const formatDateForCurrentLanguage = useCallback((isoDate) => {
     if (!isoDate) return '';
     const d = new Date(isoDate);
@@ -1453,6 +1474,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (topNavId !== 'cash-register' || subNavId !== 'Payment types') return;
     updatePaymentTypesScrollState();
   }, [topNavId, subNavId, paymentTypes, updatePaymentTypesScrollState]);
+
+  useEffect(() => {
+    if (controlSidebarId !== 'users') return;
+    updateUsersScrollState();
+  }, [controlSidebarId, users, updateUsersScrollState]);
 
   useEffect(() => {
     if (topNavId !== 'tables') return;
@@ -1810,7 +1836,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   useEffect(() => {
     if (controlSidebarId === 'users') fetchUsers();
-    if (controlSidebarId !== 'users') setUsersPage(0);
   }, [controlSidebarId, fetchUsers]);
 
   const fetchSubproducts = useCallback(async (groupId) => {
@@ -5067,18 +5092,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
         {/* Reports tabs - when Reports sidebar selected */}
         {controlSidebarId === 'reports' && (
-          <div className="flex items-center gap-1 p-4 px-10 justify-around w-full bg-pos-bg/50">
+          <div className="flex items-center gap-1 px-4 py-2 justify-around w-full bg-pos-bg/50">
             {REPORT_TABS.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`flex items-center gap-2 px-5 py-3 rounded-lg text-3xl transition-colors ${reportTabId === item.id
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${reportTabId === item.id
                   ? 'bg-pos-panel text-pos-text font-medium border border-pos-border'
                   : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50 border border-transparent'
                   }`}
                 onClick={() => setReportTabId(item.id)}
               >
-                <ReportTabIcon id={item.icon} className="w-8 h-8 shrink-0" />
+                <ReportTabIcon id={item.icon} className="w-5 h-5 shrink-0" />
                 {tr(`control.reportTabs.${item.id}`, item.label)}
               </button>
             ))}
@@ -5152,23 +5177,23 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           {controlSidebarId === 'reports' ? (
             <div className="flex flex-col h-full gap-4">
               {reportTabId === 'financial' && (
-                <div className="flex gap-6 flex-col min-h-0 flex-1 w-full">
-                  <div className="shrink-0 flex justify-around gap-4 h-[70px] w-full items-center">
-                    <span className="text-pos-text text-3xl font-medium">Z</span>
-                    <span className="text-pos-text text-3xl font-medium">X</span>
-                    <button type="button" className="text-pos-text hover:underline text-3xl">History</button>
+                <div className="flex gap-4 flex-col min-h-0 flex-1 w-full">
+                  <div className="shrink-0 flex justify-around gap-2 h-[46px] w-full items-center">
+                    <span className="text-pos-text text-sm font-medium">Z</span>
+                    <span className="text-pos-text text-sm font-medium">X</span>
+                    <button type="button" className="text-pos-text hover:underline text-sm">{tr('control.reports.history', 'History')}</button>
                   </div>
-                  <div className="relative grid grid-cols-2 flex-1 px-20 min-h-0 gap-10">
-                    <div className="flex flex-col min-h-0 gap-5">
-                      <div id="financial-report-pospoint-scroll" className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
+                  <div className="relative grid grid-cols-2 flex-1 px-4 min-h-0 gap-4">
+                    <div className="flex flex-col min-h-0 gap-3">
+                      <div id="financial-report-pospoint-scroll" className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-4 min-h-[400px]">
                         <div className="text-sm font-mono space-y-1 whitespace-pre-wrap text-center">
-                          <div className="text-xl font-medium mb-2">pospoint demo</div>
+                          <div className="text-base font-medium mb-2">pospoint demo</div>
                           <div className="mb-2">BE.0.0.0</div>
                           <div className="flex justify-between border-b border-dotted border-gray-400 pb-1 mb-2">
                             <span>Date : {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')}</span>
                             <span>Tijd: {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
                           </div>
-                          <div className="border-b border-dotted border-gray-400 pb-2 mb-4 font-semibold text-lg">Z FINANCIEEL #2</div>
+                          <div className="border-b border-dotted border-gray-400 pb-2 mb-4 font-semibold text-sm">Z FINANCIEEL #2</div>
                           <div className="text-left space-y-1">
                             <div className="font-medium">Terminals:</div>
                             <div>Kassa 2 — 16/01-08:26 =&gt; 25/01-11:04</div>
@@ -5230,7 +5255,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between px-2 py-3 shrink-0">
+                      <div className="flex items-center justify-between px-2 py-2 shrink-0">
                         <div className="flex-1" />
                         <PaginationArrows
                           canPrev={true}
@@ -5248,132 +5273,128 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         <div className="flex-1" />
                       </div>
                     </div>
-                    <div className="flex flex-col h-full gap-4 shrink-0 justify-center items-center">
-                      <div className="flex items-center gap-10 w-full justify-center">
-                        <label className="text-pos-text text-xl shrink-0">Create to :</label>
-                        <Dropdown options={REPORT_GENERATE_UNTIL_OPTIONS} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder="Current time" className="text-xl min-w-[240px] max-w-[240px]" />
+                    <div className="flex flex-col h-full gap-3 shrink-0 justify-center items-center">
+                      <div className="flex items-center gap-4 w-full justify-center">
+                        <label className="text-pos-text text-sm shrink-0">{tr('control.reports.createTo', 'Create to :')}</label>
+                        <Dropdown options={mapTranslatedOptions(REPORT_GENERATE_UNTIL_OPTIONS)} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder={tr('control.reports.currentTime', 'Current time')} className="text-sm min-w-[180px] max-w-[180px]" />
                       </div>
-                      <button type="button" className="flex mt-10 items-center gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl justify-center w-[150px]">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                        Print
+                      <button type="button" className="flex mt-4 items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm justify-center w-[120px]">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        {tr('control.reports.print', 'Print')}
                       </button>
                     </div>
                   </div>
                 </div>
               )}
               {reportTabId === 'user' && (
-
-                <div className="flex gap-6 flex-col min-h-[940px] max-h-[940px] w-full">
-                  <div className="shrink-0 flex justify-around gap-4 h-[70px] w-full items-center">
-                    <span className="text-pos-text text-3xl font-medium">Z</span>
-                    <span className="text-pos-text text-3xl font-medium">X</span>
+                <div className="flex gap-4 flex-col min-h-[650px] max-h-[650px] w-full">
+                  <div className="shrink-0 flex justify-around gap-2 h-[46px] w-full items-center">
+                    <span className="text-pos-text text-sm font-medium">Z</span>
+                    <span className="text-pos-text text-sm font-medium">X</span>
                   </div>
-                  <div className="relative grid grid-cols-2 h-full gap-10">
-                    <div className='flex flex-col h-full gap-5'>
-                      <div className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-6 min-h-[400px]">
+                  <div className="relative grid grid-cols-2 h-full gap-4">
+                    <div className='flex flex-col h-full gap-3'>
+                      <div className="flex-1 overflow-auto rounded-xl border border-pos-border bg-white text-gray-800 p-4 min-h-[400px]">
                         <div className="">
 
                         </div>
 
                       </div>
-                      <div className="flex items-center justify-between px-2 py-3">
+                      <div className="flex items-center justify-between px-2 py-2">
                         <div className="flex-1" />
                         <PaginationArrows canPrev={true} canNext={true} onPrev={() => { }} onNext={() => { }} className="relative py-0" />
                         <div className="flex-1" />
                       </div>
-
                     </div>
                     <div className='flex justify-center items-center'>
-                      <button type="button" className="flex items-center h-[60px] w-[150px] gap-2 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                        Print
+                      <button type="button" className="flex items-center h-[40px] w-[120px] gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                        {tr('control.reports.print', 'Print')}
                       </button>
                     </div>
                   </div>
-
-
                 </div>
               )}
               {reportTabId === 'periodic' && (
                 <div className="flex flex-col gap-4 flex-1 min-h-0">
                   {/* Date and time row */}
-                  <div className="flex flex-wrap items-center justify-around gap-4 shrink-0">
-                    <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportStartTime} onChange={setPeriodicReportStartTime} placeholder="00:00" className="text-xl min-w-[100px]" />
-                    <input type="text" value={periodicReportStartDate} onChange={(e) => setPeriodicReportStartDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                    <span className="text-pos-text text-xl">to</span>
-                    <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportEndTime} onChange={setPeriodicReportEndTime} placeholder="24:00" className="text-xl min-w-[100px]" />
-                    <input type="text" value={periodicReportEndDate} onChange={(e) => setPeriodicReportEndDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[140px] px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-xl" />
-                    <button type="button" className="flex items-center gap-2 px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl font-medium">
-                      Make report
+                  <div className="flex flex-wrap items-center justify-around gap-3 shrink-0">
+                    <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportStartTime} onChange={setPeriodicReportStartTime} placeholder="00:00" className="text-sm min-w-[80px]" />
+                    <input type="text" value={periodicReportStartDate} onChange={(e) => setPeriodicReportStartDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[120px] px-3 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-sm" />
+                    <span className="text-pos-text text-sm">{tr('control.reports.to', 'to')}</span>
+                    <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportEndTime} onChange={setPeriodicReportEndTime} placeholder="24:00" className="text-sm min-w-[80px]" />
+                    <input type="text" value={periodicReportEndDate} onChange={(e) => setPeriodicReportEndDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[120px] px-3 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-sm" />
+                    <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium">
+                      {tr('control.reports.makeReport', 'Make report')}
                     </button>
                   </div>
                   {/* Report area (left) + Info panel (right) */}
-                  <div className="flex gap-6 flex-1 min-h-0">
+                  <div className="flex gap-4 flex-1 min-h-0">
                     <div className="relative flex-1 min-w-0 flex flex-col rounded-xl border border-pos-border bg-white min-h-[400px] overflow-hidden">
-                      <div className="flex-1 overflow-auto p-6 text-gray-800 min-h-[300px]">
-                        <p className="text-gray-500 text-lg">Select period and click &quot;Make report&quot; to generate the report.</p>
+                      <div className="flex-1 overflow-auto p-4 text-gray-800 min-h-[300px]">
+                        <p className="text-gray-500 text-sm">{tr('control.reports.selectPeriodHint', 'Select period and click "Make report" to generate the report.')}</p>
                       </div>
-                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
+                      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 bg-gray-50 shrink-0">
                         <div className="flex-1" />
                         <PaginationArrows canPrev={true} canNext={true} onPrev={() => { }} onNext={() => { }} className="relative py-0" />
                         <div className="flex-1 flex justify-end">
-                          <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-xl">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                            Print
+                          <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            {tr('control.reports.print', 'Print')}
                           </button>
                         </div>
                       </div>
                     </div>
-                    <div className="shrink-0 w-[320px] rounded-xl border border-pos-border bg-white p-6 text-gray-800 text-lg leading-relaxed">
-                      <p className="font-medium text-gray-900 mb-2">In this new management system we work with 24:00 instead of 00:00 as the end point as in the web panel.</p>
-                      <p className="mb-2">Example,</p>
-                      <p className="mb-2">all turnover of 27-02-2026</p>
-                      <p className="font-medium mt-3">Earlier:</p>
-                      <p className="mb-2">00:00 27-02-2026 to 00:00 28-02-2026</p>
-                      <p className="font-medium mt-3">Not:</p>
-                      <p>00:00 27-02-2026 tot 24:00 27-02-2026</p>
+                    <div className="shrink-0 w-[280px] rounded-xl border border-pos-border bg-white p-4 text-gray-800 text-sm leading-relaxed">
+                      <p className="font-medium text-gray-900 mb-2 text-sm">{tr('control.reports.periodicInfo1', 'In this new management system we work with 24:00 instead of 00:00 as the end point as in the web panel.')}</p>
+                      <p className="mb-2">{tr('control.reports.periodicExample', 'Example,')}</p>
+                      <p className="mb-2">{tr('control.reports.periodicExample2', 'all turnover of 27-02-2026')}</p>
+                      <p className="font-medium mt-3">{tr('control.reports.periodicEarlier', 'Earlier:')}</p>
+                      <p className="mb-2">{tr('control.reports.periodicEarlierExample', '00:00 27-02-2026 to 00:00 28-02-2026')}</p>
+                      <p className="font-medium mt-3">{tr('control.reports.periodicNot', 'Not:')}</p>
+                      <p>{tr('control.reports.periodicNotExample', '00:00 27-02-2026 to 24:00 27-02-2026')}</p>
                     </div>
                   </div>
                 </div>
               )}
               {reportTabId === 'settings' && (
-                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[940px]">
+                <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px] min-h-[650px]">
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-left">
                       <thead>
                         <tr className="border-b border-pos-border">
-                          <th className="text-pos-text text-xl font-medium py-3 pr-8"></th>
-                          <th className="text-pos-text text-xl font-medium py-3 px-4 text-center w-24">Z</th>
-                          <th className="text-pos-text text-xl font-medium py-3 px-4 text-center w-24">X</th>
-                          <th className="text-pos-text text-xl font-medium py-3 px-4 text-center w-28">Periodic</th>
+                          <th className="text-pos-text text-sm font-medium py-2 pr-4"></th>
+                          <th className="text-pos-text text-sm font-medium py-2 px-3 text-center w-16">Z</th>
+                          <th className="text-pos-text text-sm font-medium py-2 px-3 text-center w-16">X</th>
+                          <th className="text-pos-text text-sm font-medium py-2 px-3 text-center w-20">{tr('control.reports.periodic', 'Periodic')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {REPORT_SETTINGS_ROWS.map((row) => (
                           <tr key={row.id} className="border-b border-pos-border/70">
-                            <td className="text-pos-text text-xl py-3 pr-8">{row.label}</td>
-                            <td className="py-3 px-4 text-center">
+                            <td className="text-pos-text text-sm py-2 pr-4">{tr(row.labelKey, row.fallback)}</td>
+                            <td className="py-2 px-3 text-center">
                               <input
                                 type="checkbox"
                                 checked={reportSettings[row.id]?.z ?? false}
                                 onChange={(e) => setReportSetting(row.id, 'z', e.target.checked)}
-                                className="w-10 h-10 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
+                                className="w-5 h-5 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
                               />
                             </td>
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-2 px-3 text-center">
                               <input
                                 type="checkbox"
                                 checked={reportSettings[row.id]?.x ?? false}
                                 onChange={(e) => setReportSetting(row.id, 'x', e.target.checked)}
-                                className="w-10 h-10 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
+                                className="w-5 h-5 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
                               />
                             </td>
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-2 px-3 text-center">
                               <input
                                 type="checkbox"
                                 checked={reportSettings[row.id]?.periodic ?? false}
                                 onChange={(e) => setReportSetting(row.id, 'periodic', e.target.checked)}
-                                className="w-10 h-10 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
+                                className="w-5 h-5 rounded border-pos-border bg-pos-bg text-green-600 focus:ring-green-500"
                               />
                             </td>
                           </tr>
@@ -5381,93 +5402,82 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex justify-center mt-[150px]">
+                  <div className="flex justify-center mt-6">
                     <button
                       type="button"
-                      className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-sm"
                       disabled={savingReportSettings}
                       onClick={handleSaveReportSettings}
                     >
-                      <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
-                      Save
+                      <svg fill="currentColor" className="w-4 h-4" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                      {tr('control.save', 'Save')}
                     </button>
                   </div>
                 </div>
               )}
             </div>
-          ) : controlSidebarId === 'users' ? (() => {
-            const sortedUsers = [...users].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-            const totalUsersPages = Math.max(1, Math.ceil(sortedUsers.length / USERS_PAGE_SIZE));
-            const usersPageClamped = Math.min(usersPage, totalUsersPages - 1);
-            const paginatedUsers = sortedUsers.slice(usersPageClamped * USERS_PAGE_SIZE, (usersPageClamped + 1) * USERS_PAGE_SIZE);
-            const canPrevUsers = usersPageClamped > 0;
-            const canNextUsers = usersPageClamped < totalUsersPages - 1;
-            return (
-              <div className="relative rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[1040px] pb-24">
-                <div className="flex items-center justify-center mb-6">
-                  <button
-                    type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
-                    onClick={openNewUserModal}
+          ) : controlSidebarId === 'users' ? (
+            <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+              <div className="flex items-center w-full justify-center mb-2">
+                <button
+                  type="button"
+                  className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                  disabled={usersLoading}
+                  onClick={openNewUserModal}
+                >
+                  {tr('control.users.new', 'New user')}
+                </button>
+              </div>
+              {usersLoading ? (
+                <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl py-4">{tr('loginLoadingUsers', 'Loading users...')}</li></ul>
+              ) : users.length === 0 ? (
+                <ul className="w-full flex flex-col"><li className="text-pos-muted text-xl font-medium text-center py-4">{tr('control.users.empty', 'No users yet.')}</li></ul>
+              ) : (
+                <>
+                  <div
+                    ref={usersListRef}
+                    className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    onScroll={updateUsersScrollState}
                   >
-                    {tr('control.users.new', 'New user')}
-                  </button>
-                </div>
-                {usersLoading ? (
-                  <p className="text-pos-muted text-xl py-8 text-center">{tr('loginLoadingUsers', 'Loading users...')}</p>
-                ) : users.length === 0 ? (
-                  <p className="text-pos-muted text-xl py-8 text-center">{tr('control.users.empty', 'No users yet.')}</p>
-                ) : (
-                  <>
-                    <ul className="w-full flex flex-col border border-pos-border rounded-xl overflow-hidden bg-pos-bg/50">
-                      {paginatedUsers.map((u, idx) => (
+                    <ul className="w-full flex flex-col">
+                      {[...users].sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((u) => (
                         <li
                           key={u.id}
-                          className="flex items-center justify-between w-full px-6 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors gap-4"
+                          className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
                         >
-                          <div className='flex gap-5 items-center w-[400px]'>
-                            <div
-                              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0"
-                              style={{ backgroundColor: USER_AVATAR_COLORS[idx % USER_AVATAR_COLORS.length] }}
-                            >
-                              {(u.name || 'U').charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <span className="text-pos-text text-xl font-medium block truncate">{u.name || '—'}</span>
-                            </div>
-                          </div>
-                          <div className='flex items-center'>
+                          <span className="font-medium">{u.name || '—'}</span>
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text pr-20 hover:bg-pos-bg"
+                              className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
                               onClick={() => openEditUserModal(u)}
                               aria-label={tr('control.edit', 'Edit')}
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-bg"
+                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
                               onClick={() => setDeleteConfirmUserId(u.id)}
                               aria-label={tr('delete', 'Delete')}
                             >
-                              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </li>
                       ))}
                     </ul>
-                    <PaginationArrows
-                      canPrev={canPrevUsers}
-                      canNext={canNextUsers}
-                      onPrev={() => setUsersPage((p) => Math.max(0, p - 1))}
-                      onNext={() => setUsersPage((p) => Math.min(totalUsersPages - 1, p + 1))}
-                    />
-                  </>
-                )}
-              </div>
-            );
-          })() : controlSidebarId === 'language' ? (
+                  </div>
+                  <PaginationArrows
+                    canPrev={canUsersScrollUp}
+                    canNext={canUsersScrollDown}
+                    onPrev={() => scrollUsersByPage('up')}
+                    onNext={() => scrollUsersByPage('down')}
+                  />
+                </>
+              )}
+            </div>
+          ) : controlSidebarId === 'language' ? (
             <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[700px]">
               <h2 className="text-pos-text text-2xl font-medium mb-6">{tr('control.languageTitle', 'Language')}</h2>
               <p className="text-pos-muted text-xl mb-8">{tr('control.languageDescription', 'Select the language for the application.')}</p>
@@ -10017,3 +10027,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     </div>
   );
 }
+
+
+
