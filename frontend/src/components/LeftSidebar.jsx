@@ -71,19 +71,19 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
 
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-pos-panel border border-pos-border rounded-xl shadow-xl p-8 py-14 max-w-4xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <p className="text-pos-text text-5xl mb-8 text-center">{t('logoutConfirm')}</p>
-            <div className="flex gap-4 justify-around mt-20 items-center">
+          <div className="bg-pos-panel border border-pos-border rounded-xl shadow-xl p-8 py-8 max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-pos-text text-xl mb-8 text-center">{t('logoutConfirm')}</p>
+            <div className="flex gap-4 justify-around mt-10 items-center">
               <button
                 type="button"
-                className="px-8 py-4 rounded-lg text-4xl font-medium bg-pos-bg text-pos-text hover:bg-gray-700 border border-pos-border"
+                className="px-8 py-4 rounded-lg text-md font-medium bg-pos-bg text-pos-text hover:bg-gray-700 border border-pos-border"
                 onClick={() => setShowLogoutModal(false)}
               >
                 {t('cancel')}
               </button>
               <button
                 type="button"
-                className="px-8 py-4 rounded-lg text-4xl font-medium bg-red-600 text-white hover:bg-red-700"
+                className="px-8 py-4 rounded-lg text-md font-medium bg-red-600 text-white hover:bg-red-700"
                 onClick={handleLogoutConfirm}
               >
                 {t('logOut')}

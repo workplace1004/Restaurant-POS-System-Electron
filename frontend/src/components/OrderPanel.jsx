@@ -832,7 +832,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     <aside className="w-1/4 shrink-0 flex flex-col px-2 py-1 bg-pos-bg border-l border-pos-border">
       <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden min-h-[50%]">
         {showSubtotalView ? (
-          <div className="flex-1 overflow-auto p-4 text-pos-bg text-lg">
+          <div className="flex-1 overflow-auto p-4 py-2 text-pos-bg text-sm">
             {(() => {
               let start = 0;
               const result = [];
@@ -842,7 +842,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 const groupTotal = group.reduce((s, it) => s + it.price * it.quantity, 0);
                 group.forEach((item) => (
                   result.push(
-                    <div key={item.id} className="py-1.5">
+                    <div key={item.id} className="py-1">
                       <div className="flex justify-between items-baseline">
                         <span className="font-medium">{item.quantity}x {getItemLabel(item)}</span>
                         <span className="font-medium">{formatSubtotalPrice(getItemBaseLinePrice(item))}</span>
@@ -857,10 +857,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   )
                 ));
                 result.push(
-                  <div key={`sub-${i}`} className="border-b border-gray-800 mb-2 pb-2 mb-3">
-                    <div className="flex justify-center items-baseline text-xl font-medium relative">
+                  <div key={`sub-${i}`} className="border-b border-gray-800 mb-2">
+                    <div className="flex justify-around items-baseline text-md font-medium relative">
                       <span className='font-bold'>{t('subtotal')}:</span>
-                      <span className='flex font-bold absolute w-full justify-end'>{formatSubtotalPrice(groupTotal)}</span>
+                      <span className='flex font-bold'>{formatSubtotalPrice(groupTotal)}</span>
                     </div>
                   </div>
                 );
@@ -869,13 +869,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               const remaining = items.slice(start);
               remaining.forEach((item) =>
                 result.push(
-                  <div key={item.id} className="py-1.5 text-2xl">
+                  <div key={item.id} className="py-1 text-sm">
                     <div className="flex justify-between items-baseline">
                       <span className="font-medium">{item.quantity}x {getItemLabel(item)}</span>
                       <span className="font-medium">{formatSubtotalPrice(getItemBaseLinePrice(item))}</span>
                     </div>
                     {getItemNotes(item).map((note, noteIdx) => (
-                      <div key={`${item.id}-note-rem-${noteIdx}`} className="flex justify-between items-baseline pl-6 text-xl text-pos-bg/80">
+                      <div key={`${item.id}-note-rem-${noteIdx}`} className="flex justify-between items-baseline pl-6 text-sm text-pos-bg/80">
                         <span>{note.label}</span>
                         <span>{formatSubtotalPrice(getItemNoteLinePrice(item, note))}</span>
                       </div>
@@ -893,7 +893,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 {(savedOrder.items || []).map((item) => (
                   <div
                     key={`saved-${savedOrder.id}-${item.id}`}
-                    className="flex flex-wrap items-center gap-1 p-2 text-2xl text-pos-bg rounded mb-1"
+                    className="flex flex-wrap items-center gap-1 p-1 text-sm text-pos-bg rounded"
                   >
                     <div className="w-full">
                       <div className="flex items-baseline justify-between">
@@ -903,7 +903,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                         <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
                       </div>
                       {getItemNotes(item).map((note, noteIdx) => (
-                        <div key={`saved-${savedOrder.id}-${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-xl opacity-90">
+                        <div key={`saved-${savedOrder.id}-${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-sm opacity-90">
                           <span>▪ {note.label}</span>
                           <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
                         </div>
@@ -917,7 +917,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     const savedCashierName = savedMeta?.cashierName || cashierName;
                     const savedTime = formatSavedOrderTime(savedMeta?.savedAt, savedOrder?.createdAt);
                     return (
-                      <div className="flex items-center justify-around text-2xl font-semibold py-1">
+                      <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
                         <span>{savedCashierName}</span>
                         <span>{savedTime}</span>
                       </div>
@@ -1038,7 +1038,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
       {hasSelectedTable ? (
         showSettlementActions ? (
-          <div className="flex gap-2 text-xl">
+          <div className="flex gap-2 text-sm py-1 min-h-[59px]">
             <button
               type="button"
               className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
@@ -1055,10 +1055,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             </button>
           </div>
         ) : (
-          <div className="flex">
+          <div className="flex py-2">
             <button
               type="button"
-              className={`w-full py-3 px-2 border-none rounded-md text-xl ${hasOrderItems
+              className={`w-full py-3 px-2 border-none rounded-md text-md ${hasOrderItems
                 ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                 : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
                 }`}
@@ -1331,7 +1331,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           aria-labelledby="final-settlement-options-title"
         >
           <div
-            className="bg-gray-100 rounded-xl shadow-2xl max-w-6xl w-full px-8 py-10"
+            className="bg-gray-100 rounded-xl shadow-2xl max-w-3xl w-full px-8 py-10"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="final-settlement-options-title" className="sr-only">
@@ -1340,7 +1340,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="grid grid-cols-3 gap-10 items-start">
               <button
                 type="button"
-                className="h-20 bg-gray-200 border-none rounded text-3xl font-semibold text-gray-700 hover:bg-gray-300"
+                className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
                 onClick={() => {
                   setShowFinalSettlementModal(false);
                   openPayDifferentlyModal();
@@ -1351,7 +1351,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <div className="flex flex-col gap-6">
                 <button
                   type="button"
-                  className="h-20 bg-gray-200 border-none rounded text-3xl font-semibold text-gray-700 hover:bg-gray-300"
+                  className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
                   onClick={() => {
                     setShowFinalSettlementModal(false);
                     setShowSettlementSubtotalModal(true);
@@ -1365,7 +1365,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </button>
                 <button
                   type="button"
-                  className="h-20 bg-gray-200 border-none rounded text-3xl font-semibold text-gray-700 hover:bg-gray-300"
+                  className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
                   onClick={() => setShowFinalSettlementModal(false)}
                 >
                   {t('cancel')}
@@ -1373,7 +1373,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               </div>
               <button
                 type="button"
-                className="h-20 bg-gray-200 border-none rounded text-3xl font-semibold text-gray-700 hover:bg-gray-300"
+                className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
                 onClick={() => {
                   setShowFinalSettlementModal(false);
                   setShowSettlementSubtotalModal(true);
@@ -1401,19 +1401,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             className="bg-pos-panel rounded-xl shadow-2xl w-full max-w-[1400px] h-[86vh] p-4 border border-pos-border flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div id="settlement-subtotal-title" className="flex items-center justify-between text-3xl font-semibold text-pos-text px-2 pb-3 border-b border-pos-border">
+            <div id="settlement-subtotal-title" className="flex items-center justify-between text-xl font-semibold text-pos-text px-2 pb-1 border-b border-pos-border">
               <span>{selectedTable?.name || t('table')}</span>
               <span>€ {payableTotal.toFixed(2)}</span>
             </div>
 
-            <div className="flex-1 min-h-0 flex gap-5 pt-3">
+            <div className="flex-1 min-h-0 flex gap-5">
               <div className="flex flex-col h-full w-full">
                 <div className="flex-1 border border-pos-border overflow-auto bg-pos-bg">
                   {settlementSubtotalLeftLines.map((line) => (
                     <button
                       key={line.id}
                       type="button"
-                      className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-2xl text-pos-text flex items-center justify-between ${subtotalSelectedLeftIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                      className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-sm text-pos-text flex items-center justify-between ${subtotalSelectedLeftIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
                         }`}
                       onClick={() => {
                         setSubtotalSelectedLeftIds((prev) =>
@@ -1427,11 +1427,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     </button>
                   ))}
                 </div>
-                <div className="py-3 flex items-center justify-center border-t border-pos-border/50">
+                <div className="pt-4 flex items-center justify-center border-t border-pos-border/50">
                   <button
                     type="button"
                     disabled={settlementSubtotalLeftLines.length === 0}
-                    className={`min-w-[200px] py-3 px-6 rounded text-pos-text text-2xl ${settlementSubtotalLeftLines.length === 0
+                    className={`min-w-[100px] py-1 px-6 rounded text-pos-text text-md ${settlementSubtotalLeftLines.length === 0
                       ? 'bg-pos-surface opacity-50 cursor-not-allowed'
                       : 'bg-pos-surface hover:bg-pos-surface-hover'
                       }`}
@@ -1494,19 +1494,19 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     {settlementSubtotalRightGroups.map((group) => (
                       <div
                         key={group.id}
-                        className={`px-4 py-3 border-b ${group.lines.length > 0 && group.lines.every((line) => subtotalSelectedRightIds.includes(line.id))
+                        className={`px-4 py-2 border-b ${group.lines.length > 0 && group.lines.every((line) => subtotalSelectedRightIds.includes(line.id))
                           ? 'border-2 border-rose-500 rounded-md'
                           : ''
                           }`}
                       >
-                        <div className="text-center text-3xl font-semibold text-pos-text mb-2">
+                        <div className="text-center text-lg font-semibold text-pos-text">
                           {group.label}
                         </div>
                         {group.lines.map((line) => (
                           <button
                             key={line.id}
                             type="button"
-                            className={`w-full text-left px-2 py-1 text-2xl text-pos-text flex items-center justify-between ${subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                            className={`w-full text-left px-2 py-1 text-sm text-pos-text flex items-center justify-between ${subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
                               }`}
                             onClick={() => {
                               setSubtotalSelectedRightIds((prev) =>
@@ -1519,16 +1519,16 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                             <span>€ {line.amount.toFixed(2)}</span>
                           </button>
                         ))}
-                        <div className="text-center text-3xl font-semibold text-pos-text mt-2">
+                        <div className="text-center text-md font-semibold text-pos-text">
                           € {group.total.toFixed(2)}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="py-3 flex items-center justify-around gap-5">
+                  <div className="py-1 flex items-center justify-around gap-5">
                     <button
                       type="button"
-                      className="w-16 h-14 rounded bg-pos-surface text-pos-text text-4xl leading-none hover:bg-pos-surface-hover"
+                      className="w-10 h-10 rounded bg-pos-surface text-pos-text text-xl leading-none hover:bg-pos-surface-hover"
                       onClick={() => scrollSplitRightPanel(-1)}
                       aria-label={t('scrollUp')}
                     >
@@ -1536,7 +1536,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     </button>
                     <button
                       type="button"
-                      className="min-w-[200px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
+                      className="min-w-[100px] py-2 px-6 rounded bg-pos-surface text-pos-text text-md hover:bg-pos-surface-hover"
                       onClick={() => {
                         setSubtotalLineGroups([]);
                         setSubtotalSelectedLeftIds([]);
@@ -1547,7 +1547,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     </button>
                     <button
                       type="button"
-                      className="w-16 h-14 rounded bg-pos-surface text-pos-text text-4xl leading-none hover:bg-pos-surface-hover"
+                      className="w-10 h-10 rounded bg-pos-surface text-pos-text text-xl leading-none hover:bg-pos-surface-hover"
                       onClick={() => scrollSplitRightPanel(1)}
                       aria-label={t('scrollDown')}
                     >
@@ -1558,7 +1558,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <div className="pt-4 flex items-center justify-center gap-12">
                   <button
                     type="button"
-                    className="min-w-[200px] min-h-[80px] py-3 px-6 rounded bg-pos-surface text-pos-text text-2xl hover:bg-pos-surface-hover"
+                    className="min-w-[100px] py-1 px-6 rounded bg-pos-surface text-pos-text text-md hover:bg-pos-surface-hover"
                     onClick={() => {
                       setShowSettlementSubtotalModal(false);
                       setSettlementModalType('subtotal');
@@ -1574,7 +1574,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       <button
                         type="button"
                         disabled={!hasSplitBillSelection}
-                        className={`min-w-[200px] min-h-[80px] py-3 px-6 rounded text-2xl ${!hasSplitBillSelection
+                        className={`min-w-[150px] py-1 px-6 rounded text-md ${!hasSplitBillSelection
                           ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                           : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                           }`}
@@ -1594,7 +1594,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       <button
                         type="button"
                         disabled={!hasSplitBillSelection}
-                        className={`min-w-[220px] min-h-[80px] py-3 px-6 rounded text-2xl ${!hasSplitBillSelection
+                        className={`min-w-[170px] py-1 px-6 rounded text-md ${!hasSplitBillSelection
                           ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                           : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                           }`}
@@ -1616,7 +1616,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <button
                       type="button"
                       disabled={settlementSubtotalLeftLines.length > 0}
-                      className={`min-w-[200px] py-3 px-6 rounded text-2xl ${settlementSubtotalLeftLines.length > 0
+                      className={`min-w-[100px] py-1 px-6 rounded text-md ${settlementSubtotalLeftLines.length > 0
                         ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
                         : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
                         }`}

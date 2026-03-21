@@ -280,7 +280,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           onOpenWeborders={() => {
             setOrdersModalTab('new');
             setShowOrdersModal(true);
-            fetchWeborders();
+            fetchOrders();
+            fetchOrderHistory();
           }}
           onOpenInPlanning={() => {
             setShowInPlanningModal(true);
@@ -327,11 +328,12 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       <WebordersModal
         open={showOrdersModal}
         onClose={() => setShowOrdersModal(false)}
-        weborders={weborders}
-        inPlanningOrders={(orders || []).filter((o) => o.status === 'in_planning')}
+        weborders={(orders || []).filter((o) => o.status === 'in_planning')}
+        inPlanningOrders={historyOrders || []}
         initialTab={ordersModalTab}
         onConfirm={() => {
           fetchOrders();
+          fetchOrderHistory();
           fetchWebordersCount();
           fetchInPlanningCount();
         }}

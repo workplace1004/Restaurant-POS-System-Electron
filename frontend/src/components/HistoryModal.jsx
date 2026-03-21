@@ -38,11 +38,11 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
       <div
-        className="bg-gray-200 min-h-[800px] p-5 bg-pos-panel rounded-lg shadow-xl flex flex-col border border-gray-400 w-full max-w-7xl max-h-[90vh] overflow-hidden"
+        className="bg-gray-200 min-h-[700px] p-5 bg-pos-panel rounded-lg shadow-xl flex flex-col border border-gray-400 w-full max-w-5xl max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-pos-border">
-          <h2 className="text-3xl font-semibold text-pos-text">{t('historyOrderTitle')}</h2>
+        <div className="p-4 py-2 border-b border-pos-border">
+          <h2 className="text-xl font-semibold text-pos-text">{t('historyOrderTitle')}</h2>
         </div>
 
         <div
@@ -51,7 +51,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
         >
           <table className="w-full text-left text-pos-text">
             <thead className="bg-pos-bg sticky top-0">
-              <tr className="text-2xl font-semibold">
+              <tr className="text-md font-semibold">
                 <th className="p-2">{t('historyReceiptNo')}:</th>
                 <th className="p-2">{t('historyTime')}:</th>
                 <th className="p-2 border-l border-dotted border-gray-500">{t('historyAmount')}:</th>
@@ -69,7 +69,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
                 historyOrders.map((order, index) => (
                   <tr
                     key={order.id}
-                    className={`border-t text-xl bg-pos-bg border-pos-border ${selectedId === order.id ? 'bg-pos-bg/50' : 'hover:bg-pos-bg/70'}`}
+                    className={`border-t text-md bg-pos-bg border-pos-border ${selectedId === order.id ? 'bg-pos-bg/50' : 'hover:bg-pos-bg/70'}`}
                     onClick={() => setSelectedId(selectedId === order.id ? null : order.id)}
                   >
                     <td className="p-2 font-medium">
@@ -89,7 +89,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
           </table>
         </div>
 
-        <div className="flex justify-around text-2xl gap-2 py-3 border-b border-pos-border bg-pos-bg">
+        <div className="flex justify-around text-2xl gap-2 py-1 border-b border-pos-border bg-pos-bg">
           <button
             type="button"
             className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
@@ -112,7 +112,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2 p-4 text-3xl justify-around bg-pos-bg">
+        <div className="flex flex-wrap gap-2 p-4 text-md py-1 justify-around bg-pos-bg">
           <button
             type="button"
             className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"

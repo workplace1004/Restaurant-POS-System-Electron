@@ -76,8 +76,8 @@ export function CalendarModal({ open, onClose, value, onChange }) {
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
     >
-      <div className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[800px]" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-pos-bg px-4 py-7 flex items-center justify-between">
+      <div className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[700px]" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-pos-bg px-4 py-5 flex items-center justify-between">
           <button type="button" className="text-white p-1 hover:opacity-80" onClick={goPrev} aria-label="Previous month">
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
@@ -101,7 +101,7 @@ export function CalendarModal({ open, onClose, value, onChange }) {
                 <button
                   key={i}
                   type="button"
-                  className={`py-7 rounded flex flex-col items-center justify-center text-5xl relative ${
+                  className={`py-6 rounded flex flex-col items-center justify-center text-5xl relative ${
                     grey ? 'text-gray-400 hover:bg-gray-100' : 'text-gray-800 hover:bg-gray-100'
                   } ${todayCell ? 'bg-pos-bg text-white hover:bg-pos-bg hover:opacity-90' : ''} ${
                     selectedCell && !todayCell ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
