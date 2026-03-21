@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useLanguage } from './contexts/LanguageContext';
 import { Header } from './components/Header';
@@ -147,6 +147,15 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       fetchRoomCount();
     }
   }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount]);
+
+  const prevViewRef = useRef(view);
+  useEffect(() => {
+    if (prevViewRef.current === 'control' && view === 'pos') {
+      fetchCategories();
+      if (selectedCategoryId) fetchProducts(selectedCategoryId);
+    }
+    prevViewRef.current = view;
+  }, [view, fetchCategories, fetchProducts, selectedCategoryId]);
 
   useEffect(() => {
     setSubtotalBreaks([]);

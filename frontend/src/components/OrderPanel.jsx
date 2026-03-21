@@ -832,7 +832,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     <aside className="w-1/4 shrink-0 flex flex-col px-2 py-1 bg-pos-bg border-l border-pos-border">
       <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden min-h-[50%]">
         {showSubtotalView ? (
-          <div className="flex-1 overflow-auto p-4 py-2 text-pos-bg text-sm">
+          <div className="flex-1 overflow-auto scrollbar-hide p-4 py-2 text-pos-bg text-sm">
             {(() => {
               let start = 0;
               const result = [];
@@ -887,7 +887,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             })()}
           </div>
         ) : (
-          <div className="flex-1 overflow-auto p-2">
+          <div className="flex-1 overflow-auto scrollbar-hide p-2">
             {savedOrdersForSelectedTable.map((savedOrder) => (
               <div key={`saved-order-${savedOrder.id}`}>
                 {(savedOrder.items || []).map((item) => (

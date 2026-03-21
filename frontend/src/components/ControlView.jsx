@@ -819,8 +819,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [productSubproductsGroupId, setProductSubproductsGroupId] = useState('');
   const [productSubproductsOptions, setProductSubproductsOptions] = useState([]);
   const [productSubproductsByGroup, setProductSubproductsByGroup] = useState({});
-  const [productSubproductsSelectedId, setProductSubproductsSelectedId] = useState('');
+  const [productSubproductsLeftSelectedIds, setProductSubproductsLeftSelectedIds] = useState(() => new Set());
+  const [productSubproductsRightSelectedIds, setProductSubproductsRightSelectedIds] = useState(() => new Set());
   const [productSubproductsLinked, setProductSubproductsLinked] = useState([]);
+  const productSubproductsLeftListRef = useRef(null);
   const productSubproductsListRef = useRef(null);
   const [loadingProductSubproductsLinked, setLoadingProductSubproductsLinked] = useState(false);
   const [savingProductSubproducts, setSavingProductSubproducts] = useState(false);
@@ -829,6 +831,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [positioningCategoryId, setPositioningCategoryId] = useState(null);
   const [positioningSelectedProductId, setPositioningSelectedProductId] = useState(null);
   const [positioningSelectedCellIndex, setPositioningSelectedCellIndex] = useState(null);
+  const [positioningSelectedPoolItemId, setPositioningSelectedPoolItemId] = useState(null);
   const [positioningSubproducts, setPositioningSubproducts] = useState([]);
   const [positioningLayoutByCategory, setPositioningLayoutByCategory] = useState({});
   const [positioningColorByCategory, setPositioningColorByCategory] = useState({});
@@ -1746,6 +1749,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setPositioningCategoryId(selectedCategoryId || categories[0]?.id || null);
     setPositioningSelectedProductId(null);
     setPositioningSelectedCellIndex(null);
+    setPositioningSelectedPoolItemId(null);
     setShowProductPositioningModal(true);
   };
 
@@ -1753,6 +1757,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setShowProductPositioningModal(false);
     setPositioningSelectedProductId(null);
     setPositioningSelectedCellIndex(null);
+    setPositioningSelectedPoolItemId(null);
     setPositioningLayoutSaveMessage('');
   };
 
@@ -1880,7 +1885,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       }
     }
     setProductSubproductsGroupId('');
-    setProductSubproductsSelectedId('');
+    setProductSubproductsLeftSelectedIds(new Set());
+    setProductSubproductsRightSelectedIds(new Set());
     setProductSubproductsOptions([]);
     setProductSubproductsLinked([]);
     setLoadingProductSubproductsLinked(true);
@@ -1911,7 +1917,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setShowProductSubproductsModal(false);
     setProductSubproductsProduct(null);
     setProductSubproductsGroupId('');
-    setProductSubproductsSelectedId('');
+    setProductSubproductsLeftSelectedIds(new Set());
+    setProductSubproductsRightSelectedIds(new Set());
     setProductSubproductsOptions([]);
     setProductSubproductsLinked([]);
     setLoadingProductSubproductsLinked(false);
@@ -1921,7 +1928,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   useEffect(() => {
     if (!showProductSubproductsModal || !productSubproductsGroupId) {
       setProductSubproductsOptions([]);
-      setProductSubproductsSelectedId('');
+      setProductSubproductsLeftSelectedIds(new Set());
       return;
     }
     let alive = true;
@@ -1932,12 +1939,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         if (!alive) return;
         const list = Array.isArray(data) ? data : [];
         setProductSubproductsOptions(list);
-        // Keep placeholder selected by default when a group is chosen.
-        setProductSubproductsSelectedId('');
+        setProductSubproductsLeftSelectedIds(new Set());
       } catch {
         if (!alive) return;
         setProductSubproductsOptions([]);
-        setProductSubproductsSelectedId('');
+        setProductSubproductsLeftSelectedIds(new Set());
       }
     };
     loadGroupSubproducts();
@@ -1946,27 +1952,38 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     };
   }, [showProductSubproductsModal, productSubproductsGroupId]);
 
-  const handleAddProductSubproductLink = useCallback(() => {
-    if (!productSubproductsSelectedId) return;
-    const selected = productSubproductsOptions.find((sp) => sp.id === productSubproductsSelectedId);
-    if (!selected) return;
-    let added = false;
+  const productSubproductsAvailable = useMemo(() => {
+    const linkedIds = new Set(productSubproductsLinked.map((l) => l.subproductId));
+    return productSubproductsOptions.filter((sp) => !linkedIds.has(sp.id));
+  }, [productSubproductsOptions, productSubproductsLinked]);
+
+  const handleAddProductSubproductLinks = useCallback(() => {
+    if (!productSubproductsLeftSelectedIds.size) return;
+    const group = subproductGroups.find((g) => g.id === productSubproductsGroupId);
+    const toAdd = productSubproductsAvailable.filter((sp) => productSubproductsLeftSelectedIds.has(sp.id));
+    if (!toAdd.length) return;
     setProductSubproductsLinked((prev) => {
-      if (prev.some((x) => x.subproductId === selected.id)) return prev;
-      const group = subproductGroups.find((g) => g.id === productSubproductsGroupId);
-      added = true;
-      return [
-        ...prev,
-        {
-          subproductId: selected.id,
-          subproductName: selected.name,
+      const existingIds = new Set(prev.map((l) => l.subproductId));
+      const newLinks = toAdd
+        .filter((sp) => !existingIds.has(sp.id))
+        .map((sp) => ({
+          subproductId: sp.id,
+          subproductName: sp.name,
           groupId: group?.id || productSubproductsGroupId || '',
           groupName: group?.name || ''
-        }
-      ];
+        }));
+      return [...prev, ...newLinks];
     });
-    if (added) setProductSubproductsSelectedId('');
-  }, [productSubproductsSelectedId, productSubproductsOptions, subproductGroups, productSubproductsGroupId]);
+    setProductSubproductsLeftSelectedIds(new Set());
+  }, [productSubproductsLeftSelectedIds, productSubproductsAvailable, subproductGroups, productSubproductsGroupId]);
+
+  const handleRemoveProductSubproductLinks = useCallback(() => {
+    if (!productSubproductsRightSelectedIds.size) return;
+    setProductSubproductsLinked((prev) =>
+      prev.filter((l) => !productSubproductsRightSelectedIds.has(l.subproductId))
+    );
+    setProductSubproductsRightSelectedIds(new Set());
+  }, [productSubproductsRightSelectedIds]);
 
   const removeProductSubproductLink = useCallback((subproductId) => {
     setProductSubproductsLinked((prev) => prev.filter((x) => x.subproductId !== subproductId));
@@ -9281,7 +9298,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Product positioning modal */}
       {showProductPositioningModal && (() => {
         const GRID_COLUMNS = 5;
-        const GRID_ROWS = 5;
+        const GRID_ROWS = 8;
         const PAGE_SIZE = GRID_COLUMNS * GRID_ROWS;
         const positionCategoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
         const positioningProducts = products
@@ -9346,6 +9363,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           }
           setPositioningSelectedProductId(null);
           setPositioningSelectedCellIndex(null);
+          setPositioningSelectedPoolItemId(null);
         };
         const applyColorToSelectedCell = (colorId) => {
           if (!positionCategoryId) return;
@@ -9417,6 +9435,50 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           const next = cells.map((id) => (id === itemId ? null : id));
           updateLayout(next);
         };
+        const handleCellClick = (idx) => {
+          const itemIdAtCell = cells[idx];
+          const itemAtCell = itemIdAtCell ? itemMap.get(itemIdAtCell) : null;
+          const hasPoolSelection = positioningSelectedPoolItemId && itemMap.has(positioningSelectedPoolItemId);
+          const hasGridSelection = Number.isInteger(positioningSelectedCellIndex) && positioningSelectedCellIndex >= 0 && positioningSelectedCellIndex < PAGE_SIZE;
+          const selectedItemId = hasGridSelection ? cells[positioningSelectedCellIndex] : null;
+
+          if (hasPoolSelection && !itemIdAtCell) {
+            const next = [...cells];
+            next[idx] = positioningSelectedPoolItemId;
+            updateLayout(next);
+            setPositioningSelectedPoolItemId(null);
+            return;
+          }
+          if (hasGridSelection && selectedItemId && itemMap.has(selectedItemId) && idx !== positioningSelectedCellIndex) {
+            const sourceIndex = positioningSelectedCellIndex;
+            const targetIndex = idx;
+            const next = [...cells];
+            const targetItemBeforeMove = next[targetIndex];
+            next[sourceIndex] = targetItemBeforeMove;
+            next[targetIndex] = selectedItemId;
+            updateLayout(next);
+            if (positionCategoryId) {
+              setPositioningColorByCategory((prev) => {
+                const byCategory = { ...(prev[positionCategoryId] || {}) };
+                const sourceKey = String(sourceIndex);
+                const targetKey = String(targetIndex);
+                const sourceColor = byCategory[sourceKey];
+                const targetColor = byCategory[targetKey];
+                if (sourceColor) byCategory[targetKey] = sourceColor; else delete byCategory[targetKey];
+                if (targetColor) byCategory[sourceKey] = targetColor; else delete byCategory[sourceKey];
+                return { ...prev, [positionCategoryId]: byCategory };
+              });
+            }
+            setPositioningSelectedProductId(null);
+            setPositioningSelectedCellIndex(null);
+            return;
+          }
+          if (itemAtCell) {
+            setPositioningSelectedProductId(itemAtCell.id);
+            setPositioningSelectedCellIndex(idx);
+            setPositioningSelectedPoolItemId(null);
+          }
+        };
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -9452,7 +9514,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         <button
                           key={c.id}
                           type="button"
-                          onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); }}
+                          onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); setPositioningSelectedPoolItemId(null); }}
                           className={`px-4 py-2 text-sm font-medium border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-green-600 text-white' : 'bg-pos-panel text-gray-200 hover:bg-pos-bg'
                             }`}
                         >
@@ -9498,8 +9560,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             type="button"
                             draggable
                             onDragStart={(e) => handleDragStartFromPool(e, item._positioningId)}
+                            onClick={() => {
+                              setPositioningSelectedPoolItemId(item._positioningId);
+                              setPositioningSelectedProductId(null);
+                              setPositioningSelectedCellIndex(null);
+                            }}
                             className={`text-left px-3 py-2 rounded border text-md ${item.type === 'product' ? 'bg-green-500/90 text-white border-green-600' : 'bg-amber-500/90 text-white border-amber-600'
-                              }`}
+                              } ${positioningSelectedPoolItemId === item._positioningId ? 'ring-2 ring-white' : ''}`}
                           >
                             <div className="truncate">{item.name}</div>
                             <div className="text-xs opacity-90">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)} · {item.type}</div>
@@ -9507,7 +9574,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-0 flex h-full justify-center items-center bg-pos-panel/30 rounded-lg overflow-hidden">
+                  <div className="grid gap-0 flex h-full justify-center items-center bg-pos-panel/30 rounded-lg overflow-hidden" style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${GRID_ROWS}, minmax(0, 1fr))` }}>
                     {cells.map((itemId, idx) => {
                       const item = itemId ? itemMap.get(itemId) : null;
                       const selected = item && positioningSelectedProductId === item.id && positioningSelectedCellIndex === idx;
@@ -9518,25 +9585,24 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       return (
                         <div
                           key={item?.id || `empty-${idx}`}
-                          className={`h-[75px] border border-gray-300 px-2 text-center text-md ${tileClass} ${selected ? 'ring-2 ring-gray-300' : ''}`}
+                          role="button"
+                          tabIndex={0}
+                          className={`h-[55px] border border-gray-300 px-2 text-center text-md cursor-pointer ${tileClass} ${selected ? 'ring-2 ring-gray-300' : ''}`}
                           style={selected ? { boxShadow: 'inset 0 0 0 2px #9ca3af' } : undefined}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDropOnCell(e, idx)}
+                          onClick={() => handleCellClick(idx)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleCellClick(idx)}
                         >
                           {item ? (
-                            <button
-                              type="button"
+                            <div
                               draggable
                               onDragStart={(e) => handleDragStartFromCell(e, idx, item._positioningId)}
-                              onClick={() => {
-                                setPositioningSelectedProductId(item.id);
-                                setPositioningSelectedCellIndex(idx);
-                              }}
                               className="w-full h-full"
                             >
                               <div className="truncate text-md">{item.name}</div>
                               <div className="text-md">€{Number(item._positioningPrice ?? item.price ?? 0).toFixed(2)}</div>
-                            </button>
+                            </div>
                           ) : null}
                         </div>
                       );
@@ -9606,94 +9672,171 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* Product row -> Subproducts modal */}
       {showProductSubproductsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl p-6 text-sm max-h-[90vh] overflow-auto [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-pos-bg rounded-xl min-w-[600px] border border-pos-border shadow-2xl p-6 text-sm max-h-[90vh] overflow-auto [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="absolute top-2 right-4 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductSubproductsModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
-            <div className="grid grid-cols-[260px_1fr] gap-6 mt-6">
-              <div className="space-y-4">
-                <Dropdown
-                  options={[
-                    { value: '', label: tr('control.productSubproducts.withoutGroup', 'Without group') },
-                    ...subproductGroups.map((g) => ({ value: g.id, label: g.name }))
-                  ]}
-                  value={productSubproductsGroupId}
-                  onChange={setProductSubproductsGroupId}
-                  className="w-full"
-                />
-                <Dropdown
-                  options={[
-                    { value: '', label: tr('control.productSubproducts.selectSubproduct', '---') },
-                    ...productSubproductsOptions
-                      .filter((sp) => !productSubproductsLinked.some((link) => link.subproductId === sp.id))
-                      .map((sp) => ({ value: sp.id, label: sp.name }))
-                  ]}
-                  value={productSubproductsSelectedId}
-                  onChange={setProductSubproductsSelectedId}
-                  className="w-full"
-                />
-                <button
-                  type="button"
-                  className={`inline-flex items-center gap-2 w-full justify-center disabled:opacity-50 ${productSubproductsSelectedId ? 'text-white hover:text-white' : 'text-pos-muted hover:text-pos-text'}`}
-                  onClick={handleAddProductSubproductLink}
-                  disabled={!productSubproductsSelectedId}
-                >
-                  <svg className={`w-8 h-8 rounded-full p-1 ${productSubproductsSelectedId ? 'border-white' : 'border-pos-border'} border`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                  <span>{tr('control.productSubproducts.add', 'Add')}</span>
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div
-                  ref={productSubproductsListRef}
-                  className="rounded-lg border min-w-[300px] border-pos-border bg-pos-panel/30 p-3 overflow-y-auto max-h-[300px] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-                >
-                  {loadingProductSubproductsLinked ? (
-                    <div className="text-pos-muted px-3 py-2">{tr('control.productSubproducts.loading', 'Loading...')}</div>
-                  ) : productSubproductsLinked.length === 0 ? (
-                    <div className="text-pos-muted px-3 py-2">{tr('control.productSubproducts.noLinkedYet', 'No subproducts linked yet.')}</div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {productSubproductsLinked.map((link) => (
-                        <li key={link.subproductId} className="flex items-center justify-between px-4 py-2 rounded bg-pos-bg text-pos-text">
-                          <span className="truncate pr-4">{link.subproductName}</span>
-                          <button
-                            type="button"
-                            className="p-1 rounded hover:bg-pos-panel shrink-0"
-                            onClick={() => removeProductSubproductLink(link.subproductId)}
-                            aria-label={tr('delete', 'Delete')}
-                          >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+            <div className="space-y-4 mt-6">
+              <Dropdown
+                options={[
+                  { value: '', label: tr('control.productSubproducts.withoutGroup', 'Without group') },
+                  ...subproductGroups.map((g) => ({ value: g.id, label: g.name }))
+                ]}
+                value={productSubproductsGroupId}
+                onChange={setProductSubproductsGroupId}
+                className="w-full max-w-[200px]"
+              />
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch min-h-[280px]">
+                {/* Left: Available in group */}
+                <div className="flex flex-col rounded-lg border border-pos-border bg-pos-panel/30 overflow-hidden min-w-0">
+                  <div className="px-3 py-2 border-b border-pos-border bg-pos-panel/50 font-medium text-pos-text shrink-0">
+                    {tr('control.productSubproducts.available', 'Available in group')}
+                  </div>
+                  <label className="flex items-center gap-2 px-3 py-2 border-b border-pos-border text-pos-text shrink-0 cursor-pointer hover:bg-pos-panel/50">
+                    <input
+                      type="checkbox"
+                      checked={productSubproductsAvailable.length > 0 && productSubproductsAvailable.every((sp) => productSubproductsLeftSelectedIds.has(sp.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setProductSubproductsLeftSelectedIds(new Set(productSubproductsAvailable.map((sp) => sp.id)));
+                        } else {
+                          setProductSubproductsLeftSelectedIds(new Set());
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <span>{tr('control.productSubproducts.selectAll', 'Select all')}</span>
+                  </label>
+                  <div
+                    ref={productSubproductsLeftListRef}
+                    className="flex-1 overflow-y-auto p-2 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {!productSubproductsGroupId ? (
+                      <div className="text-pos-muted px-2 py-4">{tr('control.productSubproducts.selectGroupFirst', 'Select a group above')}</div>
+                    ) : productSubproductsAvailable.length === 0 ? (
+                      <div className="text-pos-muted px-2 py-4">{tr('control.productSubproducts.allLinked', 'All subproducts in this group are linked')}</div>
+                    ) : (
+                      <ul className="space-y-1">
+                        {productSubproductsAvailable.map((sp) => (
+                          <li key={sp.id}>
+                            <label className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-pos-panel/50 text-pos-text">
+                              <input
+                                type="checkbox"
+                                checked={productSubproductsLeftSelectedIds.has(sp.id)}
+                                onChange={(e) => {
+                                  setProductSubproductsLeftSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(sp.id);
+                                    else next.delete(sp.id);
+                                    return next;
+                                  });
+                                }}
+                                className="rounded"
+                              />
+                              <span className="truncate">{sp.name}</span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="px-3 py-2 border-t border-pos-border shrink-0">
+                    <button
+                      type="button"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2 rounded bg-green-600/80 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleAddProductSubproductLinks}
+                      disabled={!productSubproductsLeftSelectedIds.size}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                      {tr('control.productSubproducts.add', 'Add')}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    type="button"
-                    className="p-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-pos-text"
-                    onClick={() => {
-                      const el = productSubproductsListRef.current;
-                      if (el) el.scrollBy({ top: -80, behavior: 'smooth' });
-                    }}
-                    aria-label={tr('scrollUp', 'Scroll up')}
+
+                {/* Center: transfer hint (optional visual spacer on desktop) */}
+                <div className="hidden md:flex items-center justify-center text-pos-muted shrink-0">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                </div>
+
+                {/* Right: Linked to product */}
+                <div className="flex flex-col rounded-lg border border-pos-border bg-pos-panel/30 overflow-hidden min-w-0">
+                  <div className="px-3 py-2 border-b border-pos-border bg-pos-panel/50 font-medium text-pos-text shrink-0">
+                    {tr('control.productSubproducts.linked', 'Linked to product')}
+                  </div>
+                  <label className={`flex items-center gap-2 px-3 py-2 border-b border-pos-border text-pos-text shrink-0 cursor-pointer hover:bg-pos-panel/50 ${!productSubproductsLinked.length ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={productSubproductsLinked.length > 0 && productSubproductsLinked.every((l) => productSubproductsRightSelectedIds.has(l.subproductId))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setProductSubproductsRightSelectedIds(new Set(productSubproductsLinked.map((l) => l.subproductId)));
+                        } else {
+                          setProductSubproductsRightSelectedIds(new Set());
+                        }
+                      }}
+                      className="rounded"
+                    />
+                    <span>{tr('control.productSubproducts.selectAll', 'Select all')}</span>
+                  </label>
+                  <div
+                    ref={productSubproductsListRef}
+                    className="flex-1 overflow-y-auto p-2 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="p-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-pos-text"
-                    onClick={() => {
-                      const el = productSubproductsListRef.current;
-                      if (el) el.scrollBy({ top: 80, behavior: 'smooth' });
-                    }}
-                    aria-label={tr('scrollDown', 'Scroll down')}
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                  </button>
+                    {loadingProductSubproductsLinked ? (
+                      <div className="text-pos-muted px-2 py-4">{tr('control.productSubproducts.loading', 'Loading...')}</div>
+                    ) : productSubproductsLinked.length === 0 ? (
+                      <div className="text-pos-muted px-2 py-4">{tr('control.productSubproducts.noLinkedYet', 'No subproducts linked yet.')}</div>
+                    ) : (
+                      <ul className="space-y-1">
+                        {productSubproductsLinked.map((link) => (
+                          <li key={link.subproductId}>
+                            <label className="flex items-center justify-between gap-2 px-3 py-2 rounded cursor-pointer hover:bg-pos-panel/50 text-pos-text group">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <input
+                                  type="checkbox"
+                                  checked={productSubproductsRightSelectedIds.has(link.subproductId)}
+                                  onChange={(e) => {
+                                    setProductSubproductsRightSelectedIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (e.target.checked) next.add(link.subproductId);
+                                      else next.delete(link.subproductId);
+                                      return next;
+                                    });
+                                  }}
+                                  className="rounded shrink-0"
+                                  onClick={(ev) => ev.stopPropagation()}
+                                />
+                                <span className="truncate">{link.subproductName}</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="p-1 rounded hover:bg-red-500/20 text-pos-muted hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  removeProductSubproductLink(link.subproductId);
+                                }}
+                                aria-label={tr('delete', 'Delete')}
+                              >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              </button>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="px-3 py-2 border-t border-pos-border shrink-0">
+                    <button
+                      type="button"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2 rounded bg-red-600/80 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleRemoveProductSubproductLinks}
+                      disabled={!productSubproductsRightSelectedIds.size}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      {tr('control.productSubproducts.remove', 'Remove')}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

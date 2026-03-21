@@ -20,6 +20,7 @@ export function ProductArea({
   const [selectedOrderItemId, setSelectedOrderItemId] = useState(null);
   const [subproducts, setSubproducts] = useState([]);
   const [loadingSubproducts, setLoadingSubproducts] = useState(false);
+  const [showSubproductModal, setShowSubproductModal] = useState(false);
   const subproductsRequestIdRef = useRef(0);
   const getSubproductExtra = useCallback(() => {
     try {
@@ -35,7 +36,7 @@ export function ProductArea({
     ? positioningLayoutByCategory[selectedCategoryId]
     : null;
   const colorForCategory = positioningColorByCategory?.[selectedCategoryId] || {};
-  const PAGE_SIZE = 25; // 5 x 5, same as positioning modal
+  const PAGE_SIZE = 40; // 5 x 8, same as positioning modal
   const totalPages = Math.max(1, Math.ceil((layoutForCategory?.length || PAGE_SIZE) / PAGE_SIZE));
   const pageStart = page * PAGE_SIZE;
   const pageCells = Array.from({ length: PAGE_SIZE }, (_, i) => layoutForCategory?.[pageStart + i] || null);
@@ -57,6 +58,7 @@ export function ProductArea({
     setSelectedProduct(null);
     setSelectedOrderItemId(null);
     setSubproducts([]);
+    setShowSubproductModal(false);
     setLoadingSubproducts(false);
     setPage(0);
     setSubPage(0);
@@ -93,7 +95,9 @@ export function ProductArea({
           kioskPicture: extraMap?.[sp.id]?.kioskPicture || ''
         }));
         setSubproducts(withExtras);
-        if (list.length === 0) {
+        if (list.length > 0) {
+          setShowSubproductModal(true);
+        } else {
           setSelectedProduct(null);
           setSelectedOrderItemId(null);
         }
@@ -120,6 +124,12 @@ export function ProductArea({
     },
     [appendSubproductNoteToItem, selectedOrderItemId, selectedProduct]
   );
+
+  const closeSubproductModal = useCallback(() => {
+    setShowSubproductModal(false);
+    setSelectedProduct(null);
+    setSelectedOrderItemId(null);
+  }, []);
 
   const colorStyleById = {
     green: { backgroundColor: '#22c55e', color: '#ffffff' },
@@ -182,7 +192,7 @@ export function ProductArea({
                 return (
                   <div
                     key={`empty-${idx}`}
-                    className="min-h-[92px] max-h-[92px] rounded-lg bg-transparent"
+                    className="min-h-[70px] max-h-[70px] rounded-lg bg-transparent"
                   />
                 );
               }
@@ -191,7 +201,7 @@ export function ProductArea({
                   type="button"
                   key={`${product.id}-${idx}`}
                   style={tileStyle}
-                  className={`flex flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[92px] max-h-[92px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                  className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                     }`}
                   onClick={() => handleProductPress(product)}
                 >
@@ -199,84 +209,16 @@ export function ProductArea({
                     <img
                       src={product.kassaPhotoPath}
                       alt={product.name}
-                      className="max-w-[50px] min-w-[50px] max-h-[50px] min-h-[50px] object-cover rounded"
+                      className="max-w-[45px] absolute top-0 left-0 mt-1 ml-1 min-w-[45px] max-h-[45px] min-h-[45px] object-cover rounded"
                     />
                   ) : null}
-                  <div className="flex flex-col items-start justify-center">
-                    <span className="text-sm">{product.name}</span>
-                    <span className="font-semibold text-sm">€{Number(product.price).toFixed(2)}</span>
-                  </div>
+                  <span className="text-sm absolute bottom-0 left-0 pb-1 pl-1 block max-w-[100px] break-words leading-tight">{product.name}</span>
+                  <span className="font-semibold absolute top-0 right-0 pr-1 pt-1 text-sm">€{Number(product.price).toFixed(2)}</span>
                 </button>
               );
             })}
           </div>
         )}
-      </div>
-      <div className="mt-1 min-h-[125px] max-h-[125px] overflow-auto">
-        {selectedProduct && loadingSubproducts ? (
-          <div className="h-full flex items-center justify-center text-pos-surface text-lg">
-            {t('loadingSubproducts')}
-          </div>
-        ) : null}
-        {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
-          <div className="grid grid-cols-5 gap-1 content-start">
-            {paginatedSubproducts.map((subproduct) => (
-              <button
-                type="button"
-                key={subproduct.id}
-                className="flex items-center justify-center p-4 bg-pos-surface border-none rounded-lg text-pos-text text-sm min-h-[90px] max-h-[90px] hover:bg-pos-rowHover"
-                onClick={() => handleSubproductPress(subproduct)}
-              >
-                {subproduct?.kioskPicture ? (
-                  <img
-                    src={subproduct.kioskPicture}
-                    alt={subproduct.name}
-                    className="max-w-[50px] min-w-[50px] min-h-[50px] max-h-[50px] object-cover rounded"
-                  />
-                ) : null}
-                <div className="flex flex-col w-full items-center justify-center">
-                  <span>{subproduct.name}</span>
-                  <span className="font-semibold text-pos-text text-sm">
-                    €{Number(subproduct?.price != null ? subproduct.price : selectedProduct?.price ?? 0).toFixed(2)}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : null}
-        {selectedProduct && !loadingSubproducts && subproducts.length > 0 ? (
-          <div className="flex items-center justify-center gap-10 mt-2">
-            <button
-              type="button"
-              className="w-6 h-6 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
-              onClick={goSubPrev}
-              aria-label={t('previousSubproducts')}
-            >
-              ‹
-            </button>
-            <div className="flex gap-10">
-              {Array.from({ length: subTotalPages }, (_, i) => (
-                <span
-                  key={`sub-page-${i}`}
-                  className={`w-2.5 h-2.5 rounded-full cursor-pointer ${i === subPage ? 'bg-pos-text' : 'bg-pos-surface'}`}
-                  onClick={() => setSubPage(i)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setSubPage(i)}
-                  aria-label={`${t('subproductsPage')} ${i + 1}`}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              className="w-6 h-6 flex items-center justify-center bg-pos-panel border-none text-pos-text text-xl rounded hover:bg-pos-surface"
-              onClick={goSubNext}
-              aria-label={t('nextSubproducts')}
-            >
-              ›
-            </button>
-          </div>
-        ) : null}
       </div>
     </main>
   );
