@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { CalendarModal } from './CalendarModal';
+import { AddRecurringOrderModal } from './AddRecurringOrderModal';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const SortIcon = () => (
@@ -60,8 +61,9 @@ function MonthPickerModal({ open, onClose, value, onChange, prevYearLabel, nextY
   );
 }
 
-export function InPlanningModal({ open, onClose, orders = [] }) {
+export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onLoadOrder, onFetchOrders }) {
   const { t } = useLanguage();
+  const tr = (key, fallback) => (t(key) === key ? fallback : t(key));
   const leftListRef = useRef(null);
   const rightListRef = useRef(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -76,6 +78,7 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
   const [historyMonthDate, setHistoryMonthDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [showMonthPickerModal, setShowMonthPickerModal] = useState(false);
   const [dateViewActive, setDateViewActive] = useState(false); // true = show all orders history, white Date, hide date input
+  const [showAddRecurringModal, setShowAddRecurringModal] = useState(false);
 
   const keyDisplay = (k) => (/^[a-z]$/.test(k) ? (keyboardUppercase ? k.toUpperCase() : k) : k);
 
@@ -106,9 +109,43 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
       return '–';
     }
   };
+  const formatDateTime = (d) => {
+    try {
+      const date = new Date(d);
+      const dateStr = date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
+      const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `${dateStr} ${timeStr}`;
+    } catch {
+      return '–';
+    }
+  };
   const formatAmount = (total) => (total != null ? `€${Number(total).toFixed(2)}` : '€0.00');
   const customerName = (o) => (o?.customer ? (o.customer.companyName || o.customer.name) : '–');
   const orderNo = (id) => (id ? id.slice(-6) : '–');
+
+  const getItemLabel = (item) => item?.product?.name ?? '–';
+  const parseNoteToken = (token) => {
+    const raw = String(token || '').trim();
+    if (!raw) return null;
+    const [labelPart, pricePart] = raw.split('::');
+    const label = String(labelPart || '').trim();
+    if (!label) return null;
+    if (pricePart == null) return { label, price: 0 };
+    const parsed = Number(pricePart);
+    return { label, price: Number.isFinite(parsed) ? parsed : 0 };
+  };
+  const getItemNotes = (item) =>
+    String(item?.notes || '')
+      .split(/[;,]/)
+      .map((n) => parseNoteToken(n))
+      .filter(Boolean);
+  const getItemQuantity = (item) => Math.max(1, Number(item?.quantity) || 1);
+  const getItemBaseLinePrice = (item) => {
+    const qty = getItemQuantity(item);
+    const baseUnit = Number(item?.product?.price) ?? Number(item?.price) ?? 0;
+    const noteTotal = getItemNotes(item).reduce((s, n) => s + (Number(n?.price) || 0), 0);
+    return (baseUnit + noteTotal) * qty;
+  };
 
   // In history mode: fromDate/toDate = first/last day of selected month; when dateViewActive show all orders (no date filter)
   const effectiveFrom = dateViewActive
@@ -151,13 +188,16 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
       : ordersInDateRange.filter((o) => {
         const no = orderNo(o.id).toLowerCase();
         const name = customerName(o).toLowerCase();
-        const time = formatTime(o.createdAt).toLowerCase();
+        const time = formatDateTime(o.createdAt).toLowerCase();
         const type = t('webordersCollection').toLowerCase();
         const amount = formatAmount(o.total).toLowerCase();
         const origin = (o.source || 'pos').toLowerCase();
         const q = searchQuery;
         return no.includes(q) || name.includes(q) || time.includes(q) || type.includes(q) || amount.includes(q) || origin.includes(q);
       });
+
+  const selectedOrder = selectedOrderId ? displayedOrders.find((o) => o.id === selectedOrderId) : null;
+  const selectedOrderItems = selectedOrder?.items ?? [];
 
   const scroll = (ref, dir) => {
     const el = ref?.current;
@@ -268,17 +308,17 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                           }`}
                         onClick={() => setSelectedOrderId(order.id)}
                       >
-                        <td className="p-3 min-w-[60px] max-w-[60px] whitespace-nowrap">
+                        <td className="p-3 min-w-[50px] max-w-[50px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
                             {orderNo(order.id)}
                           </div>
                         </td>
-                        <td className="p-3 min-w-[110px] max-w-[110px] whitespace-nowrap">
+                        <td className="p-3 min-w-[120px] max-w-[120px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            {formatTime(order.createdAt)}
+                            {formatDateTime(order.createdAt)}
                           </div>
                         </td>
-                        <td className="p-3 min-w-[80px] max-w-[80px] truncate">
+                        <td className="p-3 min-w-[75px] max-w-[75px] truncate">
                           <div className="flex items-center justify-center">
                             {customerName(order)}
                           </div>
@@ -288,19 +328,19 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
                             {t('webordersCollection')}
                           </div>
                         </td>
-                        <td className="p-3 min-w-[80px] max-w-[80px] whitespace-nowrap">
+                        <td className="p-3 min-w-[90px] max-w-[90px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
                             {formatAmount(order.total)}
                           </div>
                         </td>
                         <td className="p-3 min-w-[80px] max-w-[80px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            {t('no')}
+                            {order.printed ? t('yes') : t('no')}
                           </div>
                         </td>
-                        <td className="p-3 min-w-[70px] max-w-[70px] whitespace-nowrap">
+                        <td className="p-3 min-w-[60px] max-w-[60px] whitespace-nowrap">
                           <div className="flex items-center justify-center">
-                            {order.status === 'paid' ? t('yes') : t('no')}
+                            {(order.status === 'paid' || (order.payments && order.payments.length > 0)) ? t('yes') : t('no')}
                           </div>
                         </td>
                         <td className="p-3 min-w-[60px] max-w-[60px] whitespace-nowrap">
@@ -356,7 +396,40 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
               </button>
               <button type="button" className="px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded bg-gray-200 text-gray-800 text-md hover:bg-gray-300">{t('inPlanningPrintTotals')}</button>
             </div>
-            <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white" />
+            <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white p-2">
+              {selectedOrder ? (
+                selectedOrderItems.length > 0 ? (
+                  <div className="flex flex-col gap-2 text-sm text-white">
+                    {selectedOrderItems.map((item) => (
+                      <div key={item.id} className="p-2 rounded bg-pos-panel/80 border border-white/20">
+                        <div className="flex justify-between items-baseline">
+                          <span className="font-medium">{getItemQuantity(item)}x {getItemLabel(item)}</span>
+                          <span className="font-medium">{formatAmount(getItemBaseLinePrice(item))}</span>
+                        </div>
+                        {getItemNotes(item).length > 0 && (
+                          <div className="mt-1 pl-3 space-y-0.5 text-white/90">
+                            {getItemNotes(item).map((note, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <span>▪ {note.label}</span>
+                                <span>€{((Number(note?.price) || 0) * getItemQuantity(item)).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    {tr('inPlanningNoItems', 'No items in this order')}
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  {tr('inPlanningSelectOrder', 'Select an order to view items')}
+                </div>
+              )}
+            </div>
             <div className="flex justify-around w-full gap-2 py-2">
               <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, -1)} aria-label={t('scrollUp')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
@@ -420,9 +493,41 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
             </div>
             {/* Action buttons */}
             <div className="flex flex-col gap-2 text-md w-[242px] justify-center items-center ml-2">
-              <button type="button" className="w-48 h-[40px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>{t('inPlanningLoad')}</button>
-              <button type="button" className="w-48 h-[40px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>{t('inPlanningAddRecurringOrder')}</button>
-              <button type="button" className="w-48 h-[40px] px-3 rounded bg-gray-300 text-gray-500 cursor-not-allowed" disabled>{t('webordersCancelOrder')}</button>
+              <button
+                type="button"
+                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                disabled={!selectedOrderId}
+                onClick={() => {
+                  if (selectedOrderId && onLoadOrder) {
+                    onLoadOrder(selectedOrderId);
+                    onClose();
+                  }
+                }}
+              >
+                {t('inPlanningLoad')}
+              </button>
+              <button
+                type="button"
+                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                disabled={!selectedOrderId}
+                onClick={() => selectedOrderId && setShowAddRecurringModal(true)}
+              >
+                {t('inPlanningAddRecurringOrder')}
+              </button>
+              <button
+                type="button"
+                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                disabled={!selectedOrderId}
+                onClick={async () => {
+                  if (selectedOrderId && onDeleteOrder) {
+                    await onDeleteOrder(selectedOrderId);
+                    setSelectedOrderId(null);
+                    onFetchOrders?.();
+                  }
+                }}
+              >
+                {t('webordersCancelOrder')}
+              </button>
               <button type="button" className="w-48 h-[40px] px-3 rounded bg-gray-400 text-gray-800 font-medium hover:bg-gray-500" onClick={onClose}>{t('webordersClose')}</button>
             </div>
           </div>
@@ -448,6 +553,16 @@ export function InPlanningModal({ open, onClose, orders = [] }) {
         onChange={(firstDayOfMonth) => setHistoryMonthDate(firstDayOfMonth)}
         prevYearLabel={t('previousYear')}
         nextYearLabel={t('nextYear')}
+      />
+
+      <AddRecurringOrderModal
+        open={showAddRecurringModal}
+        onClose={() => setShowAddRecurringModal(false)}
+        initialDate={selectedOrder?.createdAt}
+        onAdd={() => {
+          setShowAddRecurringModal(false);
+          onFetchOrders?.();
+        }}
       />
 
       {/* Print options modal */}

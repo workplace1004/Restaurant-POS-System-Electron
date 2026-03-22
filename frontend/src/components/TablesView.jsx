@@ -72,16 +72,25 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
 
   const sortedRooms = useMemo(() => {
     if (!rooms.length) return [];
+    const roomHasTables = (room) => {
+      const roomId = room?.id != null ? String(room.id) : null;
+      if (!roomId) return false;
+      return tables.some((t) => t && String(t?.roomId || '') === roomId);
+    };
     const roomHasOpenOrders = (room) => {
       const roomId = room?.id != null ? String(room.id) : null;
       if (!roomId) return false;
       return tables.some((t) => t && String(t?.roomId || '') === roomId && Array.isArray(t?.orders) && t.orders.length > 0);
     };
     return [...rooms].sort((a, b) => {
-      const aHas = roomHasOpenOrders(a);
-      const bHas = roomHasOpenOrders(b);
-      if (aHas && !bHas) return -1;
-      if (!aHas && bHas) return 1;
+      const aHasTables = roomHasTables(a);
+      const bHasTables = roomHasTables(b);
+      if (aHasTables && !bHasTables) return -1;
+      if (!aHasTables && bHasTables) return 1;
+      const aHasOpen = roomHasOpenOrders(a);
+      const bHasOpen = roomHasOpenOrders(b);
+      if (aHasOpen && !bHasOpen) return -1;
+      if (!aHasOpen && bHasOpen) return 1;
       return 0;
     });
   }, [rooms, tables]);
@@ -337,7 +346,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
               const lastPaidAt = Number(lastPaidAtByTableId?.[id]) || 0;
               const wasPaidRecently = !hasOpenOrders && lastPaidAt > 0 && Date.now() - lastPaidAt <= TABLE_PAID_HIGHLIGHT_WINDOW_MS;
               const tableNumberColorClass = 'text-white';
-              const tableColorOverlay = hasOpenOrders ? 'bg-rose-500/50' : wasPaidRecently ? 'bg-yellow-400/50' : '';
+              const tableColorOverlay = hasOpenOrders ? 'bg-rose-500/50' : wasPaidRecently ? 'bg-green-500/50' : '';
               return (
                 <button
                   key={id}

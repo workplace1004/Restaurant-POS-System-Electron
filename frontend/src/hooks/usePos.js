@@ -178,25 +178,32 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
         const next = idx >= 0 ? [...prev.slice(0, idx), order, ...prev.slice(idx + 1)] : [order, ...prev];
         return next;
       });
+      if (order?.status === 'paid' || order?.status === 'in_planning') {
+        fetchTables();
+      }
     };
-    const clearHandler = () => fetchOrders();
+    const clearHandler = () => {
+      fetchOrders();
+      fetchTables();
+    };
     socket.on('order:updated', handler);
     socket.on('orders:cleared', clearHandler);
     return () => {
       socket.off('order:updated', handler);
       socket.off('orders:cleared', clearHandler);
     };
-  }, [socket, fetchOrders]);
+  }, [socket, fetchOrders, fetchTables]);
 
   const currentOrderCandidates = orders.filter((o) => {
     if (o?.status !== 'open') return false;
     if (selectedTableId) return o?.tableId === selectedTableId;
     return !o?.tableId;
   });
-  // When viewing an in_waiting order, show it without changing status (keeps it in In waiting list)
+  // When viewing an in_waiting or in_planning order, show it without changing status
   const focusedOrderFromWaiting = focusedOrderId ? orders.find((o) => o?.id === focusedOrderId && o?.status === 'in_waiting') : null;
+  const focusedOrderFromPlanning = focusedOrderId ? orders.find((o) => o?.id === focusedOrderId && o?.status === 'in_planning') : null;
   const focusedOrder = focusedOrderId
-    ? (focusedOrderFromWaiting || currentOrderCandidates.find((o) => o?.id === focusedOrderId))
+    ? (focusedOrderFromWaiting || focusedOrderFromPlanning || currentOrderCandidates.find((o) => o?.id === focusedOrderId))
     : null;
   const currentOrder = focusedOrder || currentOrderCandidates.reduce((latest, candidate) => {
     if (!latest) return candidate;

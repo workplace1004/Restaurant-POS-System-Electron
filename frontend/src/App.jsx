@@ -400,6 +400,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           setFocusedOrderId(null);
           setFocusedOrderInitialItemCount(0);
         }}
+        showInPlanningButton={Array.isArray(savedFunctionButtonsLayout) && savedFunctionButtonsLayout.includes('geplande-orders')}
         onSaveInWaitingAndReset={async () => {
           setFocusedOrderId(null);
           setFocusedOrderInitialItemCount(0);
@@ -409,7 +410,10 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         tables={tables}
         showSubtotalView={showSubtotalView}
         subtotalBreaks={subtotalBreaks}
-        onPaymentCompleted={() => fetchOrderHistory()}
+        onPaymentCompleted={() => {
+          fetchOrderHistory();
+          fetchTables();
+        }}
         selectedTable={selectedTable}
         currentUser={user}
         currentTime={time}
@@ -444,6 +448,19 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         open={showInPlanningModal}
         onClose={() => setShowInPlanningModal(false)}
         orders={orders || []}
+        onDeleteOrder={async (orderId) => {
+          await removeOrder(orderId);
+          fetchInPlanningCount();
+        }}
+        onLoadOrder={(orderId) => {
+          setSelectedTable(null);
+          setSelectedTableLabel(null);
+          const ord = (orders || []).find((o) => o.id === orderId);
+          setFocusedOrderId(orderId);
+          setFocusedOrderInitialItemCount(ord?.items?.length ?? 0);
+          setShowInPlanningModal(false);
+        }}
+        onFetchOrders={fetchOrders}
       />
       <InWaitingModal
         open={showInWaitingModal}

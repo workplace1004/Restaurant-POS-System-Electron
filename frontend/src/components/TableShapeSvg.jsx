@@ -6,7 +6,6 @@ const GREEN_500 = '#22c55e';
 
 export function getTableFill(hasOpenOrders, wasPaidRecently) {
   if (hasOpenOrders) return ROSE_500;
-  if (wasPaidRecently) return YELLOW_400;
   return GREEN_500;
 }
 

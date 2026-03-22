@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { InWaitingNameModal } from './InWaitingNameModal';
+import { InPlanningDateTimeModal } from './InPlanningDateTimeModal';
 
 const KEYPAD = [
   ['7', '8', '9'],
@@ -43,7 +44,7 @@ function allocatePaymentBreakdown(paymentBreakdown, orderTotal, totalOfAllOrders
   return Object.keys(allocated).length > 0 ? { amounts: allocated } : null;
 }
 
-export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput, showInWaitingButton = false, onOpenInPlanning, onOpenInWaiting, onSaveInWaitingAndReset, focusedOrderId = null, focusedOrderInitialItemCount = 0 }) {
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput, showInWaitingButton = false, showInPlanningButton = true, onOpenInPlanning, onOpenInWaiting, onSaveInWaitingAndReset, focusedOrderId = null, focusedOrderInitialItemCount = 0 }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
     const translated = t(key);
@@ -55,6 +56,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showInWaitingNameModal, setShowInWaitingNameModal] = useState(false);
+  const [showPayNowOrLaterModal, setShowPayNowOrLaterModal] = useState(false);
+  const [showInPlanningDateTimeModal, setShowInPlanningDateTimeModal] = useState(false);
+  const [inPlanningCalendarAction, setInPlanningCalendarAction] = useState(null); // 'payNow' | 'inPlanning'
+  const payNowFromInWaitingRef = useRef(false); // When Yes → calendar → Save → payment: after success, set status to in_planning
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
   const [paymentAmounts, setPaymentAmounts] = useState({});
   const [activePaymentMethods, setActivePaymentMethods] = useState([]);
@@ -209,6 +214,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
   const customerDisplayName = order?.customer ? (order.customer.companyName || order.customer.name) : null;
   const isViewedFromInWaiting = !!(order?.id && focusedOrderId && order.id === focusedOrderId && order?.status === 'in_waiting');
+  const isViewedFromInPlanning = !!(order?.id && focusedOrderId && order.id === focusedOrderId && order?.status === 'in_planning');
   const parseBatchData = () => {
     let boundaries = [];
     let meta = [];
@@ -581,6 +587,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
       setShowPayworldStatusModal(false);
       setPaymentErrorMessage(tr('orderPanel.paymentCancelled', 'Payment cancelled.'));
     }
+    payNowFromInWaitingRef.current = false;
     setShowPayDifferentlyModal(false);
     setPendingSplitCheckout(null);
   };
@@ -710,6 +717,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
 
   const resetAfterSuccessfulPayment = () => {
+    payNowFromInWaitingRef.current = false;
     setShowPayDifferentlyModal(false);
     setPaymentAmounts({});
     setActivePaymentMethods([]);
@@ -813,6 +821,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         return sum + (o ? computeOrderTotal(o) : 0);
       }, 0));
 
+      const useInPlanningForPayNow = payNowFromInWaitingRef.current;
       for (const paidOrderId of targetOrderIds) {
         const paidOrder = showSettlementActions
           ? savedOrdersForSelectedTable.find((o) => o?.id === paidOrderId)
@@ -821,7 +830,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         const orderPaymentBreakdown = paymentBreakdown && settlementTotal > 0
           ? allocatePaymentBreakdown(paymentBreakdown, orderTotal, settlementTotal)
           : paymentBreakdown;
-        await onStatusChange?.(paidOrderId, 'paid', orderPaymentBreakdown ? { paymentBreakdown: orderPaymentBreakdown } : {});
+        const targetStatus = useInPlanningForPayNow && paidOrder?.status === 'in_waiting' ? 'in_planning' : 'paid';
+        await onStatusChange?.(paidOrderId, targetStatus, orderPaymentBreakdown ? { paymentBreakdown: orderPaymentBreakdown } : {});
       }
       await onPaymentCompleted?.(targetOrderIds);
       markSelectedTablePaid();
@@ -858,7 +868,9 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           `Receipt printed successfully${printResult?.printerName ? ` on ${printResult.printerName}` : ''}.`,
         ].filter(Boolean).join(' '));
       }
-      if (!hasSelectedTable) {
+      if (useInPlanningForPayNow) {
+        onOpenInPlanning?.();
+      } else if (!hasSelectedTable) {
         await onCreateOrder?.();
       }
       resetAfterSuccessfulPayment();
@@ -1215,10 +1227,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <div className="flex gap-2">
           <button
             type="button"
-            disabled={!order?.id || inWaitingButtonDisabled}
-            className={`flex-1 py-1 border-none rounded-md ${order?.id && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
+            disabled={!order?.id || !hasOrderItems || inWaitingButtonDisabled}
+            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
             onClick={async () => {
-              if (!order?.id || inWaitingButtonDisabled) return;
+              if (!order?.id || !hasOrderItems || inWaitingButtonDisabled) return;
               if (isViewedFromInWaiting) {
                 const existingName = order?.customer ? (order.customer.companyName || order.customer.name) : null;
                 const newBoundaries = [...batchBoundaries, items.length];
@@ -1240,18 +1252,27 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           >
             {tr('orderPanel.inWaiting', 'In waiting')}
           </button>
+          {showInPlanningButton ? (
+            <button
+              type="button"
+              disabled={!order?.id || !hasOrderItems || (!hasSelectedTable && !isViewedFromInWaiting)}
+              className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
+              onClick={() => {
+                if (!order?.id || !hasOrderItems) return;
+                if (isViewedFromInWaiting) {
+                  setShowPayNowOrLaterModal(true);
+                } else {
+                  onStatusChange(order.id, 'in_planning');
+                }
+              }}
+            >
+              {t('inPlanning')}
+            </button>
+          ) : null}
           <button
             type="button"
-            disabled={!order?.id || !hasOrderItems || (!hasSelectedTable && !isViewedFromInWaiting)}
-            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
-            onClick={() => order?.id && hasOrderItems && onStatusChange(order.id, 'in_planning')}
-          >
-            {t('inPlanning')}
-          </button>
-          <button
-            type="button"
-            disabled={payableTotalForPaymentModal <= 0.009 && !(isViewedFromInWaiting && hasOrderItems)}
-            className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009 && !(isViewedFromInWaiting && hasOrderItems)
+            disabled={payableTotalForPaymentModal <= 0.009 && !((isViewedFromInWaiting || isViewedFromInPlanning) && hasOrderItems) && !(hasOrderItems && order?.id)}
+            className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009 && !((isViewedFromInWaiting || isViewedFromInPlanning) && hasOrderItems) && !(hasOrderItems && order?.id)
               ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
               : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
               }`}
@@ -1813,6 +1834,68 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         </div>
       )}
 
+      {showPayNowOrLaterModal && (
+        <div
+          className="fixed inset-0 z-[52] flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pay-now-or-later-title"
+        >
+          <div
+            className="bg-pos-panel rounded-lg shadow-xl px-16 py-8 max-w-2xl w-full mx-4 border border-pos-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="pay-now-or-later-title" className="text-2xl mb-10 font-semibold flex justify-center w-full text-pos-text">
+              {t('payNowOrLater')}
+            </h2>
+            <div className="flex gap-4 justify-center">
+              <button
+                type="button"
+                className="flex-1 py-3 px-10 bg-pos-surface text-pos-text rounded text-xl hover:bg-pos-surface-hover"
+                onClick={() => {
+                  setShowPayNowOrLaterModal(false);
+                  setInPlanningCalendarAction('payNow');
+                  setShowInPlanningDateTimeModal(true);
+                }}
+              >
+                {t('yes')}
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-3 px-10 bg-pos-surface text-pos-text rounded text-xl hover:bg-pos-surface-hover"
+                onClick={() => {
+                  setShowPayNowOrLaterModal(false);
+                  setInPlanningCalendarAction('inPlanning');
+                  setShowInPlanningDateTimeModal(true);
+                }}
+              >
+                {t('no')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <InPlanningDateTimeModal
+        open={showInPlanningDateTimeModal}
+        onClose={() => {
+          setShowInPlanningDateTimeModal(false);
+          setInPlanningCalendarAction(null);
+        }}
+        onSave={(scheduledDate) => {
+          setShowInPlanningDateTimeModal(false);
+          if (inPlanningCalendarAction === 'payNow') {
+            payNowFromInWaitingRef.current = true; // After payment+print success → in_planning
+            setInPlanningCalendarAction(null);
+            openPayDifferentlyModal();
+          } else if (inPlanningCalendarAction === 'inPlanning') {
+            setInPlanningCalendarAction(null);
+            order?.id && onStatusChange?.(order.id, 'in_planning');
+            onOpenInPlanning?.();
+          }
+        }}
+      />
+
       <InWaitingNameModal
         open={showInWaitingNameModal}
         onClose={() => setShowInWaitingNameModal(false)}
@@ -1825,7 +1908,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               itemBatchBoundaries: itemCount > 0 ? [itemCount] : undefined,
               itemBatchMeta: itemCount > 0 ? [{ userId: currentUser?.id, userName: currentUser?.name || currentUser?.label || cashierName, createdAt: new Date().toISOString() }] : undefined
             });
-            onOpenInWaiting?.();
+            await onSaveInWaitingAndReset?.();
           }
         }}
       />
