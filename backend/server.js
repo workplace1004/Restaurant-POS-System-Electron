@@ -560,6 +560,7 @@ const SETTING_KEY_PRODUCT_POSITIONING_COLORS = 'product_positioning_colors';
 const SETTING_KEY_TABLE_SAVED_ORDER_IDS = 'table_saved_order_ids';
 const SETTING_KEY_FUNCTION_BUTTONS_LAYOUT = 'function_buttons_layout';
 const SETTING_KEY_TABLE_LAYOUTS = 'table_layouts';
+const SETTING_KEY_DEVICE_SETTINGS = 'device_settings';
 const FUNCTION_BUTTON_LAYOUT_ALLOWED_IDS = [
   'tables',
   'weborders',
@@ -568,7 +569,7 @@ const FUNCTION_BUTTON_LAYOUT_ALLOWED_IDS = [
   'reservaties',
   'verkopers'
 ];
-const FUNCTION_BUTTON_LAYOUT_SLOT_COUNT = 3;
+const FUNCTION_BUTTON_LAYOUT_SLOT_COUNT = 4;
 const normalizeFunctionButtonsLayout = (value) => {
   if (!Array.isArray(value)) return Array(FUNCTION_BUTTON_LAYOUT_SLOT_COUNT).fill('');
   const next = Array(FUNCTION_BUTTON_LAYOUT_SLOT_COUNT).fill('');
@@ -795,6 +796,38 @@ app.put('/api/settings/table-layouts', async (req, res) => {
   }
 });
 
+app.get('/api/settings/device-settings', async (req, res) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_DEVICE_SETTINGS } });
+    if (!row?.value) {
+      res.json({ value: {} });
+      return;
+    }
+    const parsed = JSON.parse(row.value);
+    res.json({ value: parsed && typeof parsed === 'object' ? parsed : {} });
+  } catch (err) {
+    console.error('GET /api/settings/device-settings', err);
+    res.status(500).json({ error: err.message || 'Failed to get device settings' });
+  }
+});
+
+app.put('/api/settings/device-settings', async (req, res) => {
+  try {
+    const incoming = req.body?.value;
+    const safeValue = incoming && typeof incoming === 'object' ? incoming : {};
+    const serialized = JSON.stringify(safeValue);
+    await prisma.appSetting.upsert({
+      where: { key: SETTING_KEY_DEVICE_SETTINGS },
+      create: { key: SETTING_KEY_DEVICE_SETTINGS, value: serialized },
+      update: { value: serialized }
+    });
+    res.json({ value: safeValue });
+  } catch (err) {
+    console.error('PUT /api/settings/device-settings', err);
+    res.status(500).json({ error: err.message || 'Failed to save device settings' });
+  }
+});
+
 app.get('/api/settings/credit-card', async (req, res) => {
   try {
     const row = await prisma.appSetting.findUnique({ where: { key: SETTING_KEY_CREDIT_CARD } });
@@ -998,12 +1031,23 @@ app.post('/api/orders', async (req, res) => {
   res.json(order);
 });
 
-// REST: update order (add/remove items, set table, status)
+// REST: update order (add/remove items, set table, status, customer)
 app.patch('/api/orders/:id', async (req, res) => {
-  const { tableId, status, items, paymentBreakdown } = req.body;
+  const { tableId, status, items, paymentBreakdown, customerName } = req.body;
   const updates = {};
   if (tableId !== undefined) updates.tableId = tableId;
   if (status !== undefined) updates.status = status;
+  if (customerName !== undefined) {
+    const name = String(customerName || '').trim();
+    if (name) {
+      const customer = await prisma.customer.create({
+        data: { name, companyName: null, firstName: null, lastName: null }
+      });
+      updates.customerId = customer.id;
+    } else {
+      updates.customerId = null;
+    }
+  }
   if (items !== undefined) {
     await prisma.orderItem.deleteMany({ where: { orderId: req.params.id } });
     if (items.length) {
@@ -1026,7 +1070,7 @@ app.patch('/api/orders/:id', async (req, res) => {
   const order = await prisma.order.update({
     where: { id: req.params.id },
     data: updates,
-    include: { items: { include: { product: true } }, table: true }
+    include: { items: { include: { product: true } }, table: true, customer: true }
   });
 
   // Save payment breakdown to OrderPayment for reports when order is marked paid
