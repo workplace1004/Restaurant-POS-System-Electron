@@ -24,7 +24,7 @@ const normalizeFunctionButtonsLayout = (value) => {
   return next;
 };
 
-export function usePos(API, socket, selectedTableId = null) {
+export function usePos(API, socket, selectedTableId = null, focusedOrderId = null) {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -186,7 +186,8 @@ export function usePos(API, socket, selectedTableId = null) {
     if (selectedTableId) return o?.tableId === selectedTableId;
     return !o?.tableId;
   });
-  const currentOrder = currentOrderCandidates.reduce((latest, candidate) => {
+  const focusedOrder = focusedOrderId ? currentOrderCandidates.find((o) => o?.id === focusedOrderId) : null;
+  const currentOrder = focusedOrder || currentOrderCandidates.reduce((latest, candidate) => {
     if (!latest) return candidate;
     const latestTime = new Date(latest?.createdAt || 0).getTime();
     const candidateTime = new Date(candidate?.createdAt || 0).getTime();
@@ -324,6 +325,9 @@ export function usePos(API, socket, selectedTableId = null) {
       const body = { status };
       if (status === 'paid' && options?.paymentBreakdown && typeof options.paymentBreakdown === 'object') {
         body.paymentBreakdown = options.paymentBreakdown;
+      }
+      if (options?.customerName !== undefined) {
+        body.customerName = options.customerName;
       }
       await fetch(`${API}/orders/${orderId}`, {
         method: 'PATCH',

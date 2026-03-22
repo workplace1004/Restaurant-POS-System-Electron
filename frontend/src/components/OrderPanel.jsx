@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { InWaitingNameModal } from './InWaitingNameModal';
 
 const KEYPAD = [
   ['7', '8', '9'],
@@ -42,7 +43,7 @@ function allocatePaymentBreakdown(paymentBreakdown, orderTotal, totalOfAllOrders
   return Object.keys(allocated).length > 0 ? { amounts: allocated } : null;
 }
 
-export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput }) {
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput, showInWaitingButton = false, onOpenInPlanning, onOpenInWaiting, focusedOrderId = null, focusedOrderInitialItemCount = 0 }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
     const translated = t(key);
@@ -53,6 +54,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const setDisplayQuantity = setQuantityInput || setFallbackQuantity;
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [showInWaitingNameModal, setShowInWaitingNameModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
   const [paymentAmounts, setPaymentAmounts] = useState({});
   const [activePaymentMethods, setActivePaymentMethods] = useState([]);
@@ -74,6 +76,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const [subtotalSelectedRightIds, setSubtotalSelectedRightIds] = useState([]);
   const [savedTableOrders, setSavedTableOrders] = useState([]);
   const splitRightPanelScrollRef = useRef(null);
+  const orderListScrollRef = useRef(null);
   const activeCashmaticSessionIdRef = useRef(null);
   const cancelCashmaticRequestedRef = useRef(false);
   const activePayworldSessionIdRef = useRef(null);
@@ -81,6 +84,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   const total = order?.total ?? 0;
   const items = order?.items ?? [];
+
+  useEffect(() => {
+    if (orderListScrollRef.current && items.length > 0) {
+      orderListScrollRef.current.scrollTop = orderListScrollRef.current.scrollHeight;
+    }
+  }, [items.length, items]);
   const hasSelectedTable = selectedTable?.id != null;
   const hasOrderItems = items.length > 0;
   const cashierName = currentUser?.label || currentUser?.name || 'admin';
@@ -187,6 +196,20 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     if (Number.isNaN(d.getTime())) return currentTime || '';
     return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
+  const formatOrderTimestamp = (dateLike) => {
+    try {
+      const d = new Date(dateLike);
+      if (Number.isNaN(d.getTime())) return '–';
+      const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
+      const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      return `${dateStr} ${timeStr}`;
+    } catch {
+      return '–';
+    }
+  };
+  const customerDisplayName = order?.customer ? (order.customer.companyName || order.customer.name) : null;
+  const isViewedFromInWaiting = !!(order?.id && focusedOrderId && order.id === focusedOrderId);
+  const inWaitingButtonDisabled = isViewedFromInWaiting && (order?.items?.length ?? 0) <= (focusedOrderInitialItemCount ?? 0);
   const normalizeSavedTableOrders = (list) => {
     if (!Array.isArray(list)) return [];
     const byOrderId = new Map();
@@ -833,8 +856,13 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   return (
     <aside className="w-1/4 shrink-0 flex flex-col px-2 py-1 bg-pos-bg border-l border-pos-border">
       <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden min-h-[50%]">
+        {customerDisplayName ? (
+          <div className="px-2 py-2 text-center border-b border-pos-border">
+            <span className="text-pos-bg font-medium truncate block">{customerDisplayName}</span>
+          </div>
+        ) : null}
         {showSubtotalView ? (
-          <div className="flex-1 overflow-auto scrollbar-hide p-4 py-2 text-pos-bg text-sm">
+          <div ref={orderListScrollRef} className="flex-1 overflow-auto scrollbar-hide p-4 py-2 text-pos-bg text-sm">
             {(() => {
               let start = 0;
               const result = [];
@@ -889,7 +917,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             })()}
           </div>
         ) : (
-          <div className="flex-1 overflow-auto scrollbar-hide p-2">
+          <div ref={orderListScrollRef} className="flex-1 overflow-auto scrollbar-hide p-2">
             {savedOrdersForSelectedTable.map((savedOrder) => (
               <div key={`saved-order-${savedOrder.id}`}>
                 {(savedOrder.items || []).map((item) => (
@@ -952,6 +980,15 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </div>
               </div>
             ))}
+            {hasOrderItems ? (
+              <div className="pt-1 px-2 text-pos-bg/90">
+                <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
+                  <span>{cashierName}</span>
+                  <span>{formatOrderTimestamp(order?.createdAt)}</span>
+                </div>
+                <div className="w-full h-px bg-pos-bg/40" />
+              </div>
+            ) : null}
           </div>
         )}
       </div>
@@ -1093,7 +1130,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         )
       ) : (
         <div className="flex flex-col gap-2 text-md py-1">
-          {hasOrderItems && onOpenTables ? (
+          {hasOrderItems && onOpenTables && hasSelectedTable ? (
             <button
               type="button"
               className="w-full py-2 px-2 bg-pos-accent/20 border border-pos-accent/50 rounded-md text-pos-text hover:bg-pos-accent/30 text-sm font-medium"
@@ -1105,6 +1142,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <div className="flex gap-2">
           <button
             type="button"
+            disabled={!order?.id || inWaitingButtonDisabled}
+            className={`flex-1 py-1 border-none rounded-md ${order?.id && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
+            onClick={() => order?.id && !inWaitingButtonDisabled && setShowInWaitingNameModal(true)}
+          >
+            {tr('orderPanel.inWaiting', 'In waiting')}
+          </button>
+          <button
+            type="button"
             className="flex-1 py-1 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
             onClick={() => order && onStatusChange(order.id, 'in_planning')}
           >
@@ -1112,8 +1157,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </button>
           <button
             type="button"
-            disabled={payableTotalForPaymentModal <= 0.009}
-            className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009
+            disabled={payableTotalForPaymentModal <= 0.009 && !(isViewedFromInWaiting && hasOrderItems)}
+            className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009 && !(isViewedFromInWaiting && hasOrderItems)
               ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
               : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
               }`}
@@ -1678,6 +1723,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </div>
         </div>
       )}
+
+      <InWaitingNameModal
+        open={showInWaitingNameModal}
+        onClose={() => setShowInWaitingNameModal(false)}
+        onConfirm={async (name) => {
+          if (order?.id) {
+            await onStatusChange?.(order.id, 'in_planning', name ? { customerName: name } : {});
+            onOpenInWaiting?.();
+          }
+        }}
+      />
 
       {showDeleteAllModal && (
         <div

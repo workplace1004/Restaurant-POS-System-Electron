@@ -10,6 +10,7 @@ import { CustomersView } from './components/CustomersView';
 import { TablesView } from './components/TablesView';
 import { WebordersModal } from './components/WebordersModal';
 import { InPlanningModal } from './components/InPlanningModal';
+import { InWaitingModal } from './components/InWaitingModal';
 import { HistoryModal } from './components/HistoryModal';
 import { LoginScreen } from './components/LoginScreen';
 import { ControlView } from './components/ControlView';
@@ -72,11 +73,15 @@ export default function App() {
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [ordersModalTab, setOrdersModalTab] = useState('new');
   const [showInPlanningModal, setShowInPlanningModal] = useState(false);
+  const [showInWaitingModal, setShowInWaitingModal] = useState(false);
+  const [focusedOrderId, setFocusedOrderId] = useState(null);
+  const [focusedOrderInitialItemCount, setFocusedOrderInitialItemCount] = useState(0);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
   const [showSubtotalView, setShowSubtotalView] = useState(false);
   const [subtotalBreaks, setSubtotalBreaks] = useState([]); // after each click: item count at which we inserted a subtotal
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [quantityInput, setQuantityInput] = useState('');
+  const [showInWaitingButton, setShowInWaitingButton] = useState(false);
   const UA_TIMEZONE = 'Europe/Kyiv';
 const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { timeZone: UA_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false }));
   const {
@@ -118,12 +123,46 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchTableLayouts,
     appendSubproductNoteToItem,
     setOrderTable
-  } = usePos(API, socket, selectedTable?.id ?? null);
+  } = usePos(API, socket, selectedTable?.id ?? null, focusedOrderId);
+
+  const inPlanningCountDisplay = (orders || []).filter((o) => o?.status === 'in_planning').length;
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date().toLocaleTimeString('en-GB', { timeZone: UA_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false })), 1000);
     return () => clearInterval(t);
   }, []);
+
+  const refreshDeviceSettings = useCallback(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_device_settings');
+      const saved = raw ? JSON.parse(raw) : {};
+      const allFour =
+        !!saved.ordersConfirmOnHold &&
+        !!saved.ordersCustomerCanBeModified &&
+        !!saved.ordersBookTableToWaiting &&
+        !!saved.ordersFastCustomerName;
+      setShowInWaitingButton(!!allFour);
+    } catch {
+      setShowInWaitingButton(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshDeviceSettings();
+    (async () => {
+      try {
+        const res = await fetch(`${API}/settings/device-settings`);
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const saved = data?.value;
+          if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+            if (typeof localStorage !== 'undefined') localStorage.setItem('pos_device_settings', JSON.stringify(saved));
+            refreshDeviceSettings();
+          }
+        }
+      } catch (_) {}
+    })();
+  }, [refreshDeviceSettings]);
 
   useEffect(() => {
     fetchCategories();
@@ -147,8 +186,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       fetchSavedPositioningColors();
       fetchSavedFunctionButtonsLayout();
       fetchRoomCount();
+      refreshDeviceSettings();
     }
-  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount]);
+  }, [view, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount, refreshDeviceSettings]);
 
   const prevViewRef = useRef(view);
   useEffect(() => {
@@ -197,6 +237,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       if (table != null && orderWithItemsNoTable && currentOrder?.id) {
         await setOrderTable(currentOrder.id, table.id);
       }
+      setFocusedOrderId(null);
+      setFocusedOrderInitialItemCount(0);
       setSelectedTable(table);
       if (table == null) {
         setSelectedTableLabel(null);
@@ -207,7 +249,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       }
       setViewAndPersist('pos');
     },
-    [setViewAndPersist, currentOrder, setOrderTable]
+    [setViewAndPersist, currentOrder, setOrderTable, setFocusedOrderId]
   );
 
   const handleAddProductWithSelectedTable = useCallback(
@@ -291,7 +333,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       <div className="flex flex-col flex-1 min-h-0 w-2/4">
         <Header
           webordersCount={webordersCount}
-          inPlanningCount={inPlanningCount}
+          inPlanningCount={inPlanningCountDisplay}
           functionButtonSlots={savedFunctionButtonsLayout}
           selectedTable={selectedTable}
           selectedTableLabel={selectedTableLabel}
@@ -306,6 +348,10 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           }}
           onOpenInPlanning={() => {
             setShowInPlanningModal(true);
+            fetchOrders();
+          }}
+          onOpenInWaiting={() => {
+            setShowInWaitingModal(true);
             fetchOrders();
           }}
         />
@@ -333,10 +379,16 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       <OrderPanel
         order={currentOrder}
         orders={orders}
+        focusedOrderId={focusedOrderId}
+        focusedOrderInitialItemCount={focusedOrderInitialItemCount}
         onRemoveItem={removeOrderItem}
         onUpdateItemQuantity={updateOrderItemQuantity}
         onStatusChange={setOrderStatus}
-        onCreateOrder={createOrder}
+        onCreateOrder={async (tableId) => {
+          setFocusedOrderId(null);
+          setFocusedOrderInitialItemCount(0);
+          await createOrder(tableId);
+        }}
         onRemoveAllOrders={removeAllOrders}
         tables={tables}
         showSubtotalView={showSubtotalView}
@@ -348,6 +400,15 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         onOpenTables={handleOpenTables}
         quantityInput={quantityInput}
         setQuantityInput={setQuantityInput}
+        showInWaitingButton={showInWaitingButton}
+        onOpenInPlanning={() => {
+          setShowInPlanningModal(true);
+          fetchOrders();
+        }}
+        onOpenInWaiting={() => {
+          setShowInWaitingModal(true);
+          fetchOrders();
+        }}
       />
       <WebordersModal
         open={showOrdersModal}
@@ -367,6 +428,28 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         open={showInPlanningModal}
         onClose={() => setShowInPlanningModal(false)}
         orders={orders || []}
+      />
+      <InWaitingModal
+        open={showInWaitingModal}
+        onClose={() => setShowInWaitingModal(false)}
+        orders={orders || []}
+        currentUser={user}
+        onViewOrder={async (orderId) => {
+          setSelectedTable(null);
+          setSelectedTableLabel(null);
+          const viewedOrder = (orders || []).find((o) => o.id === orderId);
+          setFocusedOrderId(orderId);
+          setFocusedOrderInitialItemCount(viewedOrder?.items?.length ?? 0);
+          await setOrderStatus(orderId, 'open');
+          setShowInWaitingModal(false);
+          fetchOrders();
+          fetchInPlanningCount();
+        }}
+        onDeleteOrder={async (orderId) => {
+          await removeOrder(orderId);
+          fetchOrders();
+          fetchInPlanningCount();
+        }}
       />
       <HistoryModal
         open={showHistoryModal}

@@ -33,6 +33,15 @@ function IconCalendar() {
   );
 }
 
+function IconInWaiting() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" strokeWidth="3" stroke="currentColor" fill="none" aria-hidden="true" className="shrink-0">
+      <circle cx="32" cy="32" r="25.3" />
+      <polyline points="32 11.88 32 32.77 43.22 41.38" />
+    </svg>
+  );
+}
+
 function IconUser() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -47,6 +56,7 @@ export function Header({
   onOpenTables,
   onOpenWeborders,
   onOpenInPlanning,
+  onOpenInWaiting,
   selectedTable,
   selectedTableLabel,
   selectedRoomName,
@@ -76,9 +86,19 @@ export function Header({
       case 'weborders':
         return { label: t('control.functionButton.weborders'), icon: <IconCart />, onClick: onOpenWeborders, isTablesSlot: false };
       case 'in-wacht':
-        return { label: t('control.functionButton.inWaiting'), icon: <IconCalendar />, onClick: onOpenInPlanning, isTablesSlot: false };
+        return {
+          label: `${inPlanningCount} ${t('control.functionButton.inWaiting')}`,
+          icon: <IconInWaiting />,
+          onClick: onOpenInWaiting || onOpenInPlanning,
+          isTablesSlot: false
+        };
       case 'geplande-orders':
-        return { label: t('control.functionButton.scheduledOrders'), icon: <IconCalendar />, onClick: onOpenInPlanning, isTablesSlot: false };
+        return {
+          label: `${inPlanningCount} ${t('control.functionButton.scheduledOrders')}`,
+          icon: <IconCalendar />,
+          onClick: onOpenInPlanning,
+          isTablesSlot: false
+        };
       case 'reservaties':
         return { label: t('control.functionButton.reservations'), icon: <IconCalendar />, onClick: null, isTablesSlot: false };
       case 'verkopers':

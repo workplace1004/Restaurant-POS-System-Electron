@@ -3246,13 +3246,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     }
   };
 
-  useEffect(() => {
-    if (!showDeviceSettingsModal) return;
-    fetchCategories();
-    try {
-      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_device_settings');
-      const saved = raw ? JSON.parse(raw) : {};
-      if (saved.useSubproducts != null) setDeviceUseSubproducts(!!saved.useSubproducts);
+  const applyDeviceSettingsToState = (saved) => {
+    if (!saved || typeof saved !== 'object') return;
+    if (saved.useSubproducts != null) setDeviceUseSubproducts(!!saved.useSubproducts);
       if (saved.autoLogoutAfterTransaction != null) setDeviceAutoLogoutAfterTransaction(!!saved.autoLogoutAfterTransaction);
       if (saved.autoReturnToTablePlan != null) setDeviceAutoReturnToTablePlan(!!saved.autoReturnToTablePlan);
       if (saved.disableCashButtonInPayment != null) setDeviceDisableCashButtonInPayment(!!saved.disableCashButtonInPayment);
@@ -3293,25 +3289,45 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       if (saved.scheduledPrintCustomerProductionReceipt != null) setDeviceScheduledPrintCustomerProductionReceipt(!!saved.scheduledPrintCustomerProductionReceipt);
       if (saved.scheduledWebOrderAutoPrint != null) setDeviceScheduledWebOrderAutoPrint(!!saved.scheduledWebOrderAutoPrint);
       if (saved.optionButtonLayout != null) setOptionButtonSlots(normalizeOptionButtonSlots(saved.optionButtonLayout));
-      setSelectedFunctionButtonSlotIndex(null);
-      setSelectedOptionButtonSlotIndex(null);
-    } catch (_) { }
+    setSelectedFunctionButtonSlotIndex(null);
+    setSelectedOptionButtonSlotIndex(null);
+  };
+
+  useEffect(() => {
+    if (!showDeviceSettingsModal) return;
+    fetchCategories();
+    try {
+      const raw = typeof localStorage !== 'undefined' && localStorage.getItem('pos_device_settings');
+      const saved = raw ? JSON.parse(raw) : {};
+      applyDeviceSettingsToState(saved);
+    } catch (_) {}
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${API}/settings/function-buttons-layout`);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || cancelled) return;
-        setFunctionButtonSlots(normalizeFunctionButtonSlots(data?.value));
-      } catch {
-        if (!cancelled) {
+        const [deviceRes, layoutRes] = await Promise.all([
+          fetch(`${API}/settings/device-settings`),
+          fetch(`${API}/settings/function-buttons-layout`)
+        ]);
+        if (cancelled) return;
+        if (deviceRes.ok) {
+          const deviceData = await deviceRes.json().catch(() => ({}));
+          const saved = deviceData?.value;
+          if (saved && typeof saved === 'object') {
+            applyDeviceSettingsToState(saved);
+            if (typeof localStorage !== 'undefined') localStorage.setItem('pos_device_settings', JSON.stringify(saved));
+          }
+        }
+        if (layoutRes.ok) {
+          const layoutData = await layoutRes.json().catch(() => ({}));
+          setFunctionButtonSlots(normalizeFunctionButtonSlots(layoutData?.value));
+        } else if (!cancelled) {
           setFunctionButtonSlots(normalizeFunctionButtonSlots([]));
         }
+      } catch {
+        if (!cancelled) setFunctionButtonSlots(normalizeFunctionButtonSlots([]));
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [showDeviceSettingsModal, fetchCategories]);
 
   const handleSaveDeviceSettings = async () => {
@@ -3360,6 +3376,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         scheduledWebOrderAutoPrint: deviceScheduledWebOrderAutoPrint,
         optionButtonLayout: optionButtonSlots
       };
+      const deviceRes = await fetch(`${API}/settings/device-settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: payload })
+      });
+      if (!deviceRes.ok) {
+        const errData = await deviceRes.json().catch(() => ({}));
+        throw new Error(errData?.error || 'Failed to save device settings');
+      }
       if (typeof localStorage !== 'undefined') localStorage.setItem('pos_device_settings', JSON.stringify(payload));
       const layoutRes = await fetch(`${API}/settings/function-buttons-layout`, {
         method: 'PUT',
