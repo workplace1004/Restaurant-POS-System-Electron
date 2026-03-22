@@ -395,7 +395,17 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           setFocusedOrderInitialItemCount(0);
           await createOrder(tableId);
         }}
-        onRemoveAllOrders={removeAllOrders}
+        onRemoveAllOrders={async () => {
+          await removeAllOrders();
+          setFocusedOrderId(null);
+          setFocusedOrderInitialItemCount(0);
+        }}
+        onSaveInWaitingAndReset={async () => {
+          setFocusedOrderId(null);
+          setFocusedOrderInitialItemCount(0);
+          await createOrder(null);
+          fetchOrders();
+        }}
         tables={tables}
         showSubtotalView={showSubtotalView}
         subtotalBreaks={subtotalBreaks}
@@ -445,7 +455,14 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           setSelectedTableLabel(null);
           const viewedOrder = (orders || []).find((o) => o.id === orderId);
           setFocusedOrderId(orderId);
-          setFocusedOrderInitialItemCount(viewedOrder?.items?.length ?? 0);
+          let savedCount = viewedOrder?.items?.length ?? 0;
+          try {
+            if (viewedOrder?.itemBatchBoundariesJson) {
+              const b = JSON.parse(viewedOrder.itemBatchBoundariesJson);
+              if (Array.isArray(b) && b.length > 0) savedCount = b[b.length - 1];
+            }
+          } catch { /* ignore */ }
+          setFocusedOrderInitialItemCount(savedCount);
           setShowInWaitingModal(false);
           // Don't change status to open - order stays in_waiting, remains in In waiting list
         }}

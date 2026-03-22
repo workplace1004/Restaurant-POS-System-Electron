@@ -179,14 +179,14 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
         return next;
       });
     };
-    const clearHandler = () => setOrders([]);
+    const clearHandler = () => fetchOrders();
     socket.on('order:updated', handler);
     socket.on('orders:cleared', clearHandler);
     return () => {
       socket.off('order:updated', handler);
       socket.off('orders:cleared', clearHandler);
     };
-  }, [socket]);
+  }, [socket, fetchOrders]);
 
   const currentOrderCandidates = orders.filter((o) => {
     if (o?.status !== 'open') return false;
@@ -343,6 +343,12 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
       if (options?.userId !== undefined) {
         body.userId = options.userId;
       }
+      if (options?.itemBatchBoundaries !== undefined) {
+        body.itemBatchBoundaries = options.itemBatchBoundaries;
+      }
+      if (options?.itemBatchMeta !== undefined) {
+        body.itemBatchMeta = options.itemBatchMeta;
+      }
       await fetch(`${API}/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -377,7 +383,14 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
 
   const removeAllOrders = useCallback(async () => {
     await fetch(`${API}/orders`, { method: 'DELETE' });
-    setOrders([]);
+    await fetch(`${API}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableId: null })
+    });
+    const res = await fetch(`${API}/orders`);
+    const data = await safeJson(res);
+    if (Array.isArray(data)) setOrders(data);
   }, [API]);
 
   const markOrderPrinted = useCallback(

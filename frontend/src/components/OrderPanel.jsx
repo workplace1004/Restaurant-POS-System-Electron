@@ -43,7 +43,7 @@ function allocatePaymentBreakdown(paymentBreakdown, orderTotal, totalOfAllOrders
   return Object.keys(allocated).length > 0 ? { amounts: allocated } : null;
 }
 
-export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput, showInWaitingButton = false, onOpenInPlanning, onOpenInWaiting, focusedOrderId = null, focusedOrderInitialItemCount = 0 }) {
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput, showInWaitingButton = false, onOpenInPlanning, onOpenInWaiting, onSaveInWaitingAndReset, focusedOrderId = null, focusedOrderInitialItemCount = 0 }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
     const translated = t(key);
@@ -209,7 +209,28 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
   const customerDisplayName = order?.customer ? (order.customer.companyName || order.customer.name) : null;
   const isViewedFromInWaiting = !!(order?.id && focusedOrderId && order.id === focusedOrderId && order?.status === 'in_waiting');
-  const inWaitingButtonDisabled = isViewedFromInWaiting && (order?.items?.length ?? 0) <= (focusedOrderInitialItemCount ?? 0);
+  const parseBatchData = () => {
+    let boundaries = [];
+    let meta = [];
+    try {
+      if (order?.itemBatchBoundariesJson) {
+        boundaries = JSON.parse(order.itemBatchBoundariesJson);
+        if (!Array.isArray(boundaries)) boundaries = [];
+      }
+      if (order?.itemBatchMetaJson) {
+        meta = JSON.parse(order.itemBatchMetaJson);
+        if (!Array.isArray(meta)) meta = [];
+      }
+    } catch { /* ignore parse errors */ }
+    if (boundaries.length === 0 && (focusedOrderInitialItemCount ?? 0) > 0) {
+      boundaries = [focusedOrderInitialItemCount];
+      meta = [{ userId: order?.userId, userName: order?.user?.name, createdAt: order?.createdAt }];
+    }
+    return { boundaries, meta };
+  };
+  const { boundaries: batchBoundaries, meta: batchMeta } = isViewedFromInWaiting ? parseBatchData() : { boundaries: [], meta: [] };
+  const lastSavedBoundary = batchBoundaries.length > 0 ? batchBoundaries[batchBoundaries.length - 1] : 0;
+  const inWaitingButtonDisabled = isViewedFromInWaiting && (order?.items?.length ?? 0) <= lastSavedBoundary;
   const normalizeSavedTableOrders = (list) => {
     if (!Array.isArray(list)) return [];
     const byOrderId = new Map();
@@ -956,36 +977,47 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </div>
               </div>
             ))}
-            {isViewedFromInWaiting && items.length > focusedOrderInitialItemCount ? (
+            {isViewedFromInWaiting && batchBoundaries.length > 0 ? (
               <>
-                {items.slice(0, focusedOrderInitialItemCount).map((item) => (
-                  <div
-                    key={item.id}
-                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
-                    onClick={() => toggleItemSelection(item.id)}
-                  >
-                    <div className="w-full">
-                      <div className="flex items-baseline justify-between">
-                        <span className="flex-1 font-semibold">{item.quantity}x {getItemLabel(item)}</span>
-                        <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
-                      </div>
-                      {getItemNotes(item).map((note, noteIdx) => (
-                        <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
-                          <span>▪ {note.label}</span>
-                          <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
+                {batchBoundaries.map((endIdx, batchIdx) => {
+                  const startIdx = batchIdx === 0 ? 0 : batchBoundaries[batchIdx - 1];
+                  const batchItems = items.slice(startIdx, endIdx);
+                  const metaEntry = batchMeta[batchIdx] || {};
+                  const metaUserName = metaEntry.userName ?? order?.user?.name ?? cashierName;
+                  const metaTime = metaEntry.createdAt ? formatOrderTimestamp(metaEntry.createdAt) : formatOrderTimestamp(order?.createdAt);
+                  return (
+                    <React.Fragment key={`batch-${batchIdx}`}>
+                      {batchItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                          onClick={() => toggleItemSelection(item.id)}
+                        >
+                          <div className="w-full">
+                            <div className="flex items-baseline justify-between">
+                              <span className="flex-1 font-semibold">{item.quantity}x {getItemLabel(item)}</span>
+                              <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
+                            </div>
+                            {getItemNotes(item).map((note, noteIdx) => (
+                              <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
+                                <span>▪ {note.label}</span>
+                                <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                ))}
-                <div className="pt-1 px-2 text-pos-bg/90">
-                  <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
-                    <span>{order?.user?.name ?? cashierName}</span>
-                    <span>{formatOrderTimestamp(order?.createdAt)}</span>
-                  </div>
-                  <div className="w-full h-px bg-pos-bg/40" />
-                </div>
-                {items.slice(focusedOrderInitialItemCount).map((item) => (
+                      <div className="pt-1 px-2 text-pos-bg/90">
+                        <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
+                          <span>{metaUserName}</span>
+                          <span>{metaTime}</span>
+                        </div>
+                        <div className="w-full h-px bg-pos-bg/40" />
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+                {items.slice(lastSavedBoundary).map((item) => (
                   <div
                     key={item.id}
                     className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
@@ -1028,15 +1060,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     </div>
                   </div>
                 ))}
-                {hasOrderItems && isViewedFromInWaiting ? (
-                  <div className="pt-1 px-2 text-pos-bg/90">
-                    <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
-                      <span>{cashierName}</span>
-                      <span>{formatOrderTimestamp(new Date())}</span>
-                    </div>
-                    <div className="w-full h-px bg-pos-bg/40" />
-                  </div>
-                ) : null}
               </>
             )}
           </div>
@@ -1194,7 +1217,26 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             type="button"
             disabled={!order?.id || inWaitingButtonDisabled}
             className={`flex-1 py-1 border-none rounded-md ${order?.id && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
-            onClick={() => order?.id && !inWaitingButtonDisabled && setShowInWaitingNameModal(true)}
+            onClick={async () => {
+              if (!order?.id || inWaitingButtonDisabled) return;
+              if (isViewedFromInWaiting) {
+                const existingName = order?.customer ? (order.customer.companyName || order.customer.name) : null;
+                const newBoundaries = [...batchBoundaries, items.length];
+                const newMeta = [
+                  ...batchMeta,
+                  { userId: currentUser?.id, userName: currentUser?.name || currentUser?.label || cashierName, createdAt: new Date().toISOString() }
+                ];
+                await onStatusChange?.(order.id, 'in_waiting', {
+                  customerName: existingName || undefined,
+                  userId: currentUser?.id,
+                  itemBatchBoundaries: newBoundaries,
+                  itemBatchMeta: newMeta
+                });
+                await onSaveInWaitingAndReset?.();
+              } else {
+                setShowInWaitingNameModal(true);
+              }
+            }}
           >
             {tr('orderPanel.inWaiting', 'In waiting')}
           </button>
@@ -1776,9 +1818,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         onClose={() => setShowInWaitingNameModal(false)}
         onConfirm={async (name) => {
           if (order?.id) {
+            const itemCount = order?.items?.length ?? 0;
             await onStatusChange?.(order.id, 'in_waiting', {
               customerName: name || undefined,
-              userId: currentUser?.id
+              userId: currentUser?.id,
+              itemBatchBoundaries: itemCount > 0 ? [itemCount] : undefined,
+              itemBatchMeta: itemCount > 0 ? [{ userId: currentUser?.id, userName: currentUser?.name || currentUser?.label || cashierName, createdAt: new Date().toISOString() }] : undefined
             });
             onOpenInWaiting?.();
           }

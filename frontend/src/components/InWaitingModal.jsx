@@ -2,10 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { KeyboardWithNumpad } from './KeyboardWithNumpad';
 
-const toDateOnly = (d) => {
-  const x = new Date(d);
-  return new Date(x.getFullYear(), x.getMonth(), x.getDate());
-};
 
 /**
  * Modal for "In waiting" / waiting orders list.
@@ -42,12 +38,7 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
   const orderNo = (id) => (id ? id.slice(-6) : '–');
   const userName = (o) => (o?.user?.name ?? currentUser?.label ?? currentUser?.name ?? '–');
 
-  const today = toDateOnly(new Date());
-  const waitingOrders = orders.filter((o) => {
-    if (o.status !== 'in_waiting') return false;
-    const orderDay = toDateOnly(o.createdAt);
-    return orderDay.getTime() === today.getTime();
-  });
+  const waitingOrders = orders.filter((o) => o?.status === 'in_waiting');
 
   const searchQuery = searchValue.trim().toLowerCase();
   const displayedOrders =
