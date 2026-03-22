@@ -11,7 +11,7 @@ const toDateOnly = (d) => {
  * Modal for "In waiting" / waiting orders list.
  * Layout: list (Nummer, Gebruiker, Klant, Tijd, Bedrag, Geprint), action buttons, AZERTY + numpad keyboard.
  */
-export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDeleteOrder, currentUser }) {
+export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDeleteOrder, onPrintOrder, currentUser }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
     const translated = t(key);
@@ -40,11 +40,11 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
   const formatAmount = (total) => (total != null ? `€${Number(total).toFixed(2)}` : '€0.00');
   const customerName = (o) => (o?.customer ? (o.customer.companyName || o.customer.name) : '–');
   const orderNo = (id) => (id ? id.slice(-6) : '–');
-  const userName = () => currentUser?.label || currentUser?.name || '–';
+  const userName = (o) => (o?.user?.name ?? currentUser?.label ?? currentUser?.name ?? '–');
 
   const today = toDateOnly(new Date());
   const waitingOrders = orders.filter((o) => {
-    if (o.status !== 'in_planning') return false;
+    if (o.status !== 'in_waiting') return false;
     const orderDay = toDateOnly(o.createdAt);
     return orderDay.getTime() === today.getTime();
   });
@@ -76,6 +76,12 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
     if (selectedOrderId && onDeleteOrder) {
       await onDeleteOrder(selectedOrderId);
       setSelectedOrderId(null);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (selectedOrderId && onPrintOrder) {
+      await onPrintOrder(selectedOrderId);
     }
   };
 
@@ -114,11 +120,19 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
                         <td className="p-2 flex items-center justify-center min-w-[130px] max-w-[130px]">
                           {orderNo(order.id)}
                         </td>
-                        <td className="p-2 flex items-center justify-center min-w-[100px] max-w-[100px]">{userName()}</td>
+                        <td className="p-2 flex items-center justify-center min-w-[100px] max-w-[100px]">{userName(order)}</td>
                         <td className="p-2 flex items-center justify-center min-w-[120px] max-w-[120px]">{customerName(order)}</td>
                         <td className="p-2 flex items-center justify-center min-w-[100px] max-w-[100px]">{formatTime(order.createdAt)}</td>
                         <td className="p-2 flex items-center justify-center min-w-[130px] max-w-[130px]">{formatAmount(order.total)}</td>
-                        <td className="p-2 flex items-center justify-center min-w-[100px] max-w-[100px]">{t('no')}</td>
+                        <td className="p-2 flex items-center justify-center min-w-[100px] max-w-[100px]">
+                          {order?.printed ? (
+                            <svg className="w-6 h-6 text-green-500 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            t('no')
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -175,6 +189,14 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
               className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
             >
               {tr('inWaitingModal.view', 'View')}
+            </button>
+            <button
+              type="button"
+              disabled={!selectedOrderId}
+              onClick={handlePrint}
+              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
+            >
+              {tr('inWaitingModal.print', 'Print')}
             </button>
             <button
               type="button"

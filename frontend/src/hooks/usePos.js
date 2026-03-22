@@ -32,6 +32,7 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
   const [webordersCount, setWebordersCount] = useState(0);
   const [weborders, setWeborders] = useState([]);
   const [inPlanningCount, setInPlanningCount] = useState(0);
+  const [inWaitingCount, setInWaitingCount] = useState(0);
   const [historyOrders, setHistoryOrders] = useState([]);
   const [savedPositioningLayoutByCategory, setSavedPositioningLayoutByCategory] = useState({});
   const [savedPositioningColorByCategory, setSavedPositioningColorByCategory] = useState({});
@@ -83,6 +84,12 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     const res = await fetch(`${API}/orders/in-planning/count`);
     const data = await safeJson(res);
     if (data && typeof data.count === 'number') setInPlanningCount(data.count);
+  }, [API]);
+
+  const fetchInWaitingCount = useCallback(async () => {
+    const res = await fetch(`${API}/orders/in-waiting/count`);
+    const data = await safeJson(res);
+    if (data && typeof data.count === 'number') setInWaitingCount(data.count);
   }, [API]);
 
   const fetchTables = useCallback(async () => {
@@ -186,7 +193,11 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     if (selectedTableId) return o?.tableId === selectedTableId;
     return !o?.tableId;
   });
-  const focusedOrder = focusedOrderId ? currentOrderCandidates.find((o) => o?.id === focusedOrderId) : null;
+  // When viewing an in_waiting order, show it without changing status (keeps it in In waiting list)
+  const focusedOrderFromWaiting = focusedOrderId ? orders.find((o) => o?.id === focusedOrderId && o?.status === 'in_waiting') : null;
+  const focusedOrder = focusedOrderId
+    ? (focusedOrderFromWaiting || currentOrderCandidates.find((o) => o?.id === focusedOrderId))
+    : null;
   const currentOrder = focusedOrder || currentOrderCandidates.reduce((latest, candidate) => {
     if (!latest) return candidate;
     const latestTime = new Date(latest?.createdAt || 0).getTime();
@@ -329,6 +340,9 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
       if (options?.customerName !== undefined) {
         body.customerName = options.customerName;
       }
+      if (options?.userId !== undefined) {
+        body.userId = options.userId;
+      }
       await fetch(`${API}/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -337,6 +351,9 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
       if (status === 'in_planning' || status === 'paid') {
         fetchInPlanningCount();
       }
+      if (status === 'in_waiting') {
+        fetchInWaitingCount();
+      }
       if (status === 'paid') {
         fetchWebordersCount();
       }
@@ -344,7 +361,7 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
       const list = await safeJson(res);
       if (Array.isArray(list)) setOrders(list);
     },
-    [API, fetchInPlanningCount, fetchWebordersCount]
+    [API, fetchInPlanningCount, fetchInWaitingCount, fetchWebordersCount]
   );
 
   const createOrder = useCallback(async (tableId = null) => {
@@ -363,6 +380,26 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     setOrders([]);
   }, [API]);
 
+  const markOrderPrinted = useCallback(
+    async (orderId) => {
+      const order = await safeJson(
+        await fetch(`${API}/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ printed: true })
+        })
+      );
+      if (order?.id) {
+        setOrders((prev) => {
+          const idx = prev.findIndex((o) => o.id === orderId);
+          if (idx >= 0) return [...prev.slice(0, idx), order, ...prev.slice(idx + 1)];
+          return prev;
+        });
+      }
+    },
+    [API]
+  );
+
   const removeOrder = useCallback(
     async (orderId) => {
       await fetch(`${API}/orders/${orderId}`, { method: 'DELETE' });
@@ -375,6 +412,9 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
       const planRes = await fetch(`${API}/orders/in-planning/count`);
       const planData = await safeJson(planRes);
       if (planData && typeof planData.count === 'number') setInPlanningCount(planData.count);
+      const waitRes = await fetch(`${API}/orders/in-waiting/count`);
+      const waitData = await safeJson(waitRes);
+      if (waitData && typeof waitData.count === 'number') setInWaitingCount(waitData.count);
     },
     [API]
   );
@@ -389,6 +429,8 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     webordersCount,
     weborders,
     inPlanningCount,
+    inWaitingCount,
+    fetchInWaitingCount,
     tables,
     loading,
     fetchWeborders,
@@ -396,6 +438,7 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     removeOrderItem,
     updateOrderItemQuantity,
     setOrderStatus,
+    markOrderPrinted,
     setOrderTable,
     createOrder,
     removeOrder,

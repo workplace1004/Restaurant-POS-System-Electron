@@ -208,7 +208,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     }
   };
   const customerDisplayName = order?.customer ? (order.customer.companyName || order.customer.name) : null;
-  const isViewedFromInWaiting = !!(order?.id && focusedOrderId && order.id === focusedOrderId);
+  const isViewedFromInWaiting = !!(order?.id && focusedOrderId && order.id === focusedOrderId && order?.status === 'in_waiting');
   const inWaitingButtonDisabled = isViewedFromInWaiting && (order?.items?.length ?? 0) <= (focusedOrderInitialItemCount ?? 0);
   const normalizeSavedTableOrders = (list) => {
     if (!Array.isArray(list)) return [];
@@ -307,8 +307,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   };
 
   const openPayDifferentlyModal = (overrideTotal = null) => {
-    const targetTotal = roundCurrency(overrideTotal ?? payableTotalForPaymentModal);
-    if (targetTotal <= 0) return;
+    const targetTotal = Math.max(0, roundCurrency(overrideTotal ?? payableTotalForPaymentModal));
     setActivePaymentMethods([]);
     setPaymentAmounts({});
     setShowPayDifferentlyModal(true);
@@ -329,7 +328,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     roundCurrency(payModalTotalAssigned + payModalKeypadValue) - payModalTargetTotal > 0.009;
   /** When assigned matches total, lock keypad/methods/half/remaining/cancel; only Reset + To confirm remain active (To confirm runs payment). */
   const payModalSplitComplete =
-    payModalTargetTotal > 0.009 && Math.abs(payModalTotalAssigned - payModalTargetTotal) <= 0.009;
+    (payModalTargetTotal <= 0.009 && payModalTotalAssigned <= 0.009) ||
+    (payModalTargetTotal > 0.009 && Math.abs(payModalTotalAssigned - payModalTargetTotal) <= 0.009);
 
   const handlePayModalKeypad = (key) => {
     if (payModalSplitComplete) return;
@@ -546,7 +546,6 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   })();
 
   const handleCancelPayDifferentlyModal = async () => {
-    if (payModalSplitComplete && !payConfirmLoading) return;
     if (payConfirmLoading) {
       cancelCashmaticRequestedRef.current = true;
       cancelPayworldRequestedRef.current = true;
@@ -715,7 +714,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     const assignedTotal = roundCurrency(payModalTotalAssigned);
     const orderTotal = roundCurrency(payModalTargetTotal);
 
-    if (assignedTotal <= 0) {
+    if (orderTotal > 0.009 && assignedTotal <= 0) {
       setPaymentErrorMessage(tr('orderPanel.assignedAmountGreaterThanZero', 'Assigned amount must be greater than 0.'));
       return;
     }
@@ -957,38 +956,89 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </div>
               </div>
             ))}
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''
-                  }`}
-                onClick={() => toggleItemSelection(item.id)}
-              >
-                <div className="w-full">
-                  <div className="flex items-baseline justify-between">
-                    <span className="flex-1 font-semibold">
-                      {item.quantity}x {getItemLabel(item)}
-                    </span>
-                    <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
-                  </div>
-                  {getItemNotes(item).map((note, noteIdx) => (
-                    <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
-                      <span>▪ {note.label}</span>
-                      <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
+            {isViewedFromInWaiting && items.length > focusedOrderInitialItemCount ? (
+              <>
+                {items.slice(0, focusedOrderInitialItemCount).map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                    onClick={() => toggleItemSelection(item.id)}
+                  >
+                    <div className="w-full">
+                      <div className="flex items-baseline justify-between">
+                        <span className="flex-1 font-semibold">{item.quantity}x {getItemLabel(item)}</span>
+                        <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
+                      </div>
+                      {getItemNotes(item).map((note, noteIdx) => (
+                        <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
+                          <span>▪ {note.label}</span>
+                          <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                ))}
+                <div className="pt-1 px-2 text-pos-bg/90">
+                  <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
+                    <span>{order?.user?.name ?? cashierName}</span>
+                    <span>{formatOrderTimestamp(order?.createdAt)}</span>
+                  </div>
+                  <div className="w-full h-px bg-pos-bg/40" />
                 </div>
-              </div>
-            ))}
-            {hasOrderItems ? (
-              <div className="pt-1 px-2 text-pos-bg/90">
-                <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
-                  <span>{cashierName}</span>
-                  <span>{formatOrderTimestamp(order?.createdAt)}</span>
-                </div>
-                <div className="w-full h-px bg-pos-bg/40" />
-              </div>
-            ) : null}
+                {items.slice(focusedOrderInitialItemCount).map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                    onClick={() => toggleItemSelection(item.id)}
+                  >
+                    <div className="w-full">
+                      <div className="flex items-baseline justify-between">
+                        <span className="flex-1 font-semibold">{item.quantity}x {getItemLabel(item)}</span>
+                        <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
+                      </div>
+                      {getItemNotes(item).map((note, noteIdx) => (
+                        <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
+                          <span>▪ {note.label}</span>
+                          <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                {items.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                    onClick={() => toggleItemSelection(item.id)}
+                  >
+                    <div className="w-full">
+                      <div className="flex items-baseline justify-between">
+                        <span className="flex-1 font-semibold">{item.quantity}x {getItemLabel(item)}</span>
+                        <span className="font-semibold">€{getItemBaseLinePrice(item).toFixed(2)}</span>
+                      </div>
+                      {getItemNotes(item).map((note, noteIdx) => (
+                        <div key={`${item.id}-notes-${noteIdx}`} className="flex items-baseline justify-between pl-6 text-md opacity-90">
+                          <span>▪ {note.label}</span>
+                          <span>€{getItemNoteLinePrice(item, note).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {hasOrderItems && isViewedFromInWaiting ? (
+                  <div className="pt-1 px-2 text-pos-bg/90">
+                    <div className="flex items-center justify-around text-md font-semibold py-1 pt-0">
+                      <span>{cashierName}</span>
+                      <span>{formatOrderTimestamp(new Date())}</span>
+                    </div>
+                    <div className="w-full h-px bg-pos-bg/40" />
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1150,8 +1200,9 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </button>
           <button
             type="button"
-            className="flex-1 py-1 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
-            onClick={() => order && onStatusChange(order.id, 'in_planning')}
+            disabled={!order?.id || !hasOrderItems || (!hasSelectedTable && !isViewedFromInWaiting)}
+            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
+            onClick={() => order?.id && hasOrderItems && onStatusChange(order.id, 'in_planning')}
           >
             {t('inPlanning')}
           </button>
@@ -1302,11 +1353,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex justify-around px-6 gap-4 w-full pt-6 pb-6">
               <button
                 type="button"
-                disabled={payModalSplitComplete && !payConfirmLoading}
-                className={`w-[140px] py-2 px-4 rounded-lg text-sm font-medium ${payModalSplitComplete && !payConfirmLoading
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
-                  }`}
+                className="w-[140px] py-2 px-4 rounded-lg text-sm font-medium bg-gray-300 text-gray-800 hover:bg-gray-400"
                 onClick={handleCancelPayDifferentlyModal}
               >
                 {t('cancel')}
@@ -1729,7 +1776,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         onClose={() => setShowInWaitingNameModal(false)}
         onConfirm={async (name) => {
           if (order?.id) {
-            await onStatusChange?.(order.id, 'in_planning', name ? { customerName: name } : {});
+            await onStatusChange?.(order.id, 'in_waiting', {
+              customerName: name || undefined,
+              userId: currentUser?.id
+            });
             onOpenInWaiting?.();
           }
         }}

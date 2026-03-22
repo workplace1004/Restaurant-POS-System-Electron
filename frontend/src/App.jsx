@@ -94,6 +94,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     webordersCount,
     weborders,
     inPlanningCount,
+    inWaitingCount,
+    fetchInWaitingCount,
     tables,
     fetchWeborders,
     loading,
@@ -102,6 +104,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     updateOrderItemQuantity,
     setOrderStatus,
     createOrder,
+    markOrderPrinted,
     removeOrder,
     removeAllOrders,
     fetchCategories,
@@ -126,6 +129,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   } = usePos(API, socket, selectedTable?.id ?? null, focusedOrderId);
 
   const inPlanningCountDisplay = (orders || []).filter((o) => o?.status === 'in_planning').length;
+  const inWaitingCountDisplay = (orders || []).filter((o) => o?.status === 'in_waiting').length;
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date().toLocaleTimeString('en-GB', { timeZone: UA_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false })), 1000);
@@ -169,12 +173,13 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchOrders();
     fetchWebordersCount();
     fetchInPlanningCount();
+    fetchInWaitingCount();
     fetchTables();
     fetchSavedPositioningLayout();
     fetchSavedPositioningColors();
     fetchSavedFunctionButtonsLayout();
     fetchRoomCount();
-  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount]);
+  }, [fetchCategories, fetchOrders, fetchWebordersCount, fetchInPlanningCount, fetchInWaitingCount, fetchTables, fetchSavedPositioningLayout, fetchSavedPositioningColors, fetchSavedFunctionButtonsLayout, fetchRoomCount]);
 
   useEffect(() => {
     if (selectedCategoryId) fetchProducts(selectedCategoryId);
@@ -334,6 +339,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         <Header
           webordersCount={webordersCount}
           inPlanningCount={inPlanningCountDisplay}
+          inWaitingCount={inWaitingCountDisplay}
           functionButtonSlots={savedFunctionButtonsLayout}
           selectedTable={selectedTable}
           selectedTableLabel={selectedTableLabel}
@@ -434,21 +440,24 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         onClose={() => setShowInWaitingModal(false)}
         orders={orders || []}
         currentUser={user}
-        onViewOrder={async (orderId) => {
+        onViewOrder={(orderId) => {
           setSelectedTable(null);
           setSelectedTableLabel(null);
           const viewedOrder = (orders || []).find((o) => o.id === orderId);
           setFocusedOrderId(orderId);
           setFocusedOrderInitialItemCount(viewedOrder?.items?.length ?? 0);
-          await setOrderStatus(orderId, 'open');
           setShowInWaitingModal(false);
+          // Don't change status to open - order stays in_waiting, remains in In waiting list
+        }}
+        onPrintOrder={async (orderId) => {
+          await markOrderPrinted(orderId);
           fetchOrders();
-          fetchInPlanningCount();
         }}
         onDeleteOrder={async (orderId) => {
           await removeOrder(orderId);
           fetchOrders();
           fetchInPlanningCount();
+          fetchInWaitingCount();
         }}
       />
       <HistoryModal

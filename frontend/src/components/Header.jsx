@@ -53,6 +53,7 @@ function IconUser() {
 export function Header({
   webordersCount,
   inPlanningCount,
+  inWaitingCount = 0,
   onOpenTables,
   onOpenWeborders,
   onOpenInPlanning,
@@ -87,7 +88,7 @@ export function Header({
         return { label: t('control.functionButton.weborders'), icon: <IconCart />, onClick: onOpenWeborders, isTablesSlot: false };
       case 'in-wacht':
         return {
-          label: `${inPlanningCount} ${t('control.functionButton.inWaiting')}`,
+          label: `${inWaitingCount} ${t('control.functionButton.inWaiting')}`,
           icon: <IconInWaiting />,
           onClick: onOpenInWaiting || onOpenInPlanning,
           isTablesSlot: false
