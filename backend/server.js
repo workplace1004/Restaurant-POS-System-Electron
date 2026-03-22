@@ -996,7 +996,7 @@ app.put('/api/products/:id/subproduct-links', async (req, res) => {
 app.get('/api/orders', async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { status: { in: ['open', 'in_waiting', 'in_planning'] } },
-    include: { items: { include: { product: true } }, table: true, customer: true, user: true }
+    include: { items: { include: { product: true } }, table: true, customer: true, user: true, payments: true }
   });
   res.json(orders);
 });
@@ -1082,11 +1082,11 @@ app.patch('/api/orders/:id', async (req, res) => {
   const order = await prisma.order.update({
     where: { id: req.params.id },
     data: updates,
-    include: { items: { include: { product: true } }, table: true, customer: true, user: true }
+    include: { items: { include: { product: true } }, table: true, customer: true, user: true, payments: true }
   });
 
-  // Save payment breakdown to OrderPayment for reports when order is marked paid
-  if (status === 'paid' && paymentBreakdown?.amounts && typeof paymentBreakdown.amounts === 'object') {
+  // Save payment breakdown to OrderPayment for reports when order is marked paid or in_planning (pay-now-from-in-waiting flow)
+  if ((status === 'paid' || status === 'in_planning') && paymentBreakdown?.amounts && typeof paymentBreakdown.amounts === 'object') {
     const amounts = paymentBreakdown.amounts;
     const methodIds = Object.keys(amounts).filter((id) => Math.max(0, Number(amounts[id]) || 0) > 0.0001);
     if (methodIds.length > 0) {
@@ -1194,8 +1194,10 @@ app.delete('/api/orders/:id/items/:itemId', async (req, res) => {
 
 // REST: delete single order (OrderItem cascades)
 app.delete('/api/orders/:id', async (req, res) => {
-  await prisma.order.delete({ where: { id: req.params.id } });
-  io.emit('order:deleted', { id: req.params.id });
+  const { count } = await prisma.order.deleteMany({ where: { id: req.params.id } });
+  if (count > 0) {
+    io.emit('order:deleted', { id: req.params.id });
+  }
   res.json({ ok: true });
 });
 
@@ -2216,12 +2218,16 @@ app.post('/api/printers/receipt', async (req, res) => {
       const unitPrice = Math.round((Number(item.price) || 0) * 100) / 100;
       const lineTotal = Math.round(unitPrice * qty * 100) / 100;
       const preferredPrinterId = String(item?.product?.printer1 || '').trim();
+      const printer2Id = String(item?.product?.printer2 || '').trim();
+      const printer3Id = String(item?.product?.printer3 || '').trim();
       return {
         product: `${productName}${note}`,
         quantity: qty,
         unitPrice,
         lineTotal,
-        preferredPrinterId
+        preferredPrinterId,
+        printer2Id: printer2Id && printersById.has(printer2Id) ? printer2Id : null,
+        printer3Id: printer3Id && printersById.has(printer3Id) ? printer3Id : null
       };
     });
 
@@ -2273,6 +2279,49 @@ app.post('/api/printers/receipt', async (req, res) => {
         receivedBytes: sendResult?.receivedBytes ?? 0,
       });
     }
+
+    const noPriceSlipsByPrinterId = new Map();
+    for (const line of itemLines) {
+      const printerIds = new Set([line.printer2Id, line.printer3Id].filter(Boolean));
+      for (const pid of printerIds) {
+        if (!noPriceSlipsByPrinterId.has(pid)) noPriceSlipsByPrinterId.set(pid, []);
+        noPriceSlipsByPrinterId.get(pid).push(line);
+      }
+    }
+    for (const [printerId, lines] of noPriceSlipsByPrinterId.entries()) {
+      const printer = printersById.get(printerId);
+      if (!printer) continue;
+      const validation = validatePrinterConnection(printer.type, printer.connectionString);
+      if (!validation.ok) continue;
+      const slipLines = [
+        `Order ${order.id}`,
+        `Printed at ${printedAt}`,
+        `Table: ${order.table?.name || '-'}`,
+        `Customer: ${order.customer?.name || '-'}`,
+        '------------------------------',
+        ...lines.map((line) => `${line.quantity}x ${line.product}`),
+        '------------------------------'
+      ];
+      try {
+        const sendResult = await sendToPrinter(printer, slipLines);
+        printJobs.push({
+          printerId: printer.id,
+          printerName: printer.name,
+          items: lines.length,
+          noPrices: true,
+          receipt_text: slipLines.join('\n'),
+          ...sendResult
+        });
+        serverLog('printer', 'No-price slip sent to printer', {
+          orderId: order.id,
+          printerId: printer.id,
+          printerName: printer.name,
+          items: lines.length,
+        });
+      } catch (slipErr) {
+        serverLog('printer', 'No-price slip failed', { orderId: order.id, printerId, error: slipErr?.message });
+      }
+    }
     serverLog('printer', 'Receipt payload prepared', {
       orderId: order.id,
       items: itemLines.length,
@@ -2280,6 +2329,12 @@ app.post('/api/printers/receipt', async (req, res) => {
       paidTotal,
       paymentMethods: paymentMethodsSummary,
     });
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: { printed: true },
+      include: { items: { include: { product: true } }, table: true, customer: true, user: true, payments: true }
+    });
+    io.emit('order:updated', updatedOrder);
     return res.json({
       success: true,
       message: `Receipt print request sent for order "${order.id}"`,
