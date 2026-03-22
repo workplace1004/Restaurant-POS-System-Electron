@@ -42,13 +42,15 @@ function allocatePaymentBreakdown(paymentBreakdown, orderTotal, totalOfAllOrders
   return Object.keys(allocated).length > 0 ? { amounts: allocated } : null;
 }
 
-export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '' }) {
+export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, onStatusChange, onCreateOrder, onRemoveAllOrders, tables, showSubtotalView = false, subtotalBreaks = [], onPaymentCompleted, selectedTable = null, currentUser = null, currentTime = '', onOpenTables, quantityInput = '', setQuantityInput }) {
   const { t } = useLanguage();
   const tr = (key, fallback) => {
     const translated = t(key);
     return translated === key ? fallback : translated;
   };
-  const [customAmount, setCustomAmount] = useState('');
+  const [fallbackQuantity, setFallbackQuantity] = useState('');
+  const displayQuantity = setQuantityInput ? (quantityInput ?? '') : fallbackQuantity;
+  const setDisplayQuantity = setQuantityInput || setFallbackQuantity;
   const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [showPayDifferentlyModal, setShowPayDifferentlyModal] = useState(false);
@@ -275,10 +277,10 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   const handleKeypad = (key) => {
     if (key === 'C') {
-      setCustomAmount('');
+      setDisplayQuantity('');
       return;
     }
-    setCustomAmount((prev) => prev + key);
+    setDisplayQuantity((prev) => String(prev || '') + key);
   };
 
   const openPayDifferentlyModal = (overrideTotal = null) => {
@@ -672,7 +674,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     setPayModalTargetTotal(0);
     setPayModalKeypadInput('');
     setSelectedItemIds([]);
-    setCustomAmount('');
+    setDisplayQuantity('');
     setShowDeleteAllModal(false);
     setShowSettlementSubtotalModal(false);
     setSettlementModalType('subtotal');
@@ -1030,7 +1032,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             tabIndex={0}
             className='w-[100px] h-full py-2 px-2 bg-pos-surface border-none rounded-md text-pos-text text-lg hover:bg-pos-surface-hover outline-none cursor-pointer'
             type='text'
-            value={customAmount}
+            value={displayQuantity}
             aria-label={t('enterAmountKeypad')}
           />
         </div>
@@ -1090,7 +1092,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </div>
         )
       ) : (
-        <div className="flex gap-2 text-md py-1">
+        <div className="flex flex-col gap-2 text-md py-1">
+          {hasOrderItems && onOpenTables ? (
+            <button
+              type="button"
+              className="w-full py-2 px-2 bg-pos-accent/20 border border-pos-accent/50 rounded-md text-pos-text hover:bg-pos-accent/30 text-sm font-medium"
+              onClick={onOpenTables}
+            >
+              {tr('orderPanel.assignToTable', 'Assign to table')}
+            </button>
+          ) : null}
+          <div className="flex gap-2">
           <button
             type="button"
             className="flex-1 py-1 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
@@ -1115,6 +1127,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           >
             €
           </button>
+          </div>
         </div>
       )}
 

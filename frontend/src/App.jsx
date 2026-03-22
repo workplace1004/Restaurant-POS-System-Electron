@@ -76,6 +76,7 @@ export default function App() {
   const [showSubtotalView, setShowSubtotalView] = useState(false);
   const [subtotalBreaks, setSubtotalBreaks] = useState([]); // after each click: item count at which we inserted a subtotal
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [quantityInput, setQuantityInput] = useState('');
   const UA_TIMEZONE = 'Europe/Kyiv';
 const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { timeZone: UA_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false }));
   const {
@@ -115,7 +116,8 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
     fetchSavedFunctionButtonsLayout,
     tableLayouts,
     fetchTableLayouts,
-    appendSubproductNoteToItem
+    appendSubproductNoteToItem,
+    setOrderTable
   } = usePos(API, socket, selectedTable?.id ?? null);
 
   useEffect(() => {
@@ -189,7 +191,12 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
   };
 
   const handleSelectTable = useCallback(
-    (table, options) => {
+    async (table, options) => {
+      // If current order has items but no table, assign it to the selected table
+      const orderWithItemsNoTable = currentOrder?.items?.length > 0 && !currentOrder?.tableId;
+      if (table != null && orderWithItemsNoTable && currentOrder?.id) {
+        await setOrderTable(currentOrder.id, table.id);
+      }
       setSelectedTable(table);
       if (table == null) {
         setSelectedTableLabel(null);
@@ -200,12 +207,16 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
       }
       setViewAndPersist('pos');
     },
-    [setViewAndPersist]
+    [setViewAndPersist, currentOrder, setOrderTable]
   );
 
   const handleAddProductWithSelectedTable = useCallback(
-    (product) => addItemToOrder(product, 1, selectedTable?.id || null),
-    [addItemToOrder, selectedTable?.id]
+    async (product) => {
+      const qty = Math.max(1, parseInt(quantityInput, 10) || 1);
+      setQuantityInput('');
+      return addItemToOrder(product, qty, selectedTable?.id || null);
+    },
+    [addItemToOrder, selectedTable?.id, quantityInput]
   );
 
   const handleOpenTables = useCallback(async () => {
@@ -261,6 +272,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         onBack={() => setViewAndPersist('pos')}
         fetchTableLayouts={fetchTableLayouts}
         fetchTables={fetchTables}
+        onFunctionButtonsSaved={fetchSavedFunctionButtonsLayout}
       />
     );
   }
@@ -274,10 +286,10 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         currentUser={user}
         onLogout={handleLogout}
         onControlClick={() => setViewAndPersist('control')}
+        time={time}
       />
       <div className="flex flex-col flex-1 min-h-0 w-2/4">
         <Header
-          time={time}
           webordersCount={webordersCount}
           inPlanningCount={inPlanningCount}
           functionButtonSlots={savedFunctionButtonsLayout}
@@ -333,6 +345,9 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         selectedTable={selectedTable}
         currentUser={user}
         currentTime={time}
+        onOpenTables={handleOpenTables}
+        quantityInput={quantityInput}
+        setQuantityInput={setQuantityInput}
       />
       <WebordersModal
         open={showOrdersModal}

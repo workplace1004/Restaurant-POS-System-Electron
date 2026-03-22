@@ -7,7 +7,7 @@ const LANG_OPTIONS = [
   { value: 'tr', label: 'TR' },
 ];
 
-export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, currentUser, onLogout, onControlClick }) {
+export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, currentUser, onLogout, onControlClick, time }) {
   const { t, lang, setLang } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -20,7 +20,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
     <aside className="w-[14%] shrink-0 flex flex-col bg-pos-bg p-4 px-2">
 
       <div className="flex items-center justify-center mb-4">
-        <div className="text-2xl font-semibold text-pos-text">{t('appName')}</div>
+        <div className="text-3xl font-semibold text-pos-text">{time != null ? time : '--:--'}</div>
       </div>
       <div className="flex flex-col text-sm gap-1 flex-1 overflow-auto">
         {categories.map((cat) => (

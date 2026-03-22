@@ -21,6 +21,7 @@ export function ProductArea({
   const [subproducts, setSubproducts] = useState([]);
   const [loadingSubproducts, setLoadingSubproducts] = useState(false);
   const [showSubproductModal, setShowSubproductModal] = useState(false);
+  const [addedSubproductIds, setAddedSubproductIds] = useState(() => new Set());
   const subproductsRequestIdRef = useRef(0);
   const getSubproductExtra = useCallback(() => {
     try {
@@ -59,6 +60,7 @@ export function ProductArea({
     setSelectedOrderItemId(null);
     setSubproducts([]);
     setShowSubproductModal(false);
+    setAddedSubproductIds(new Set());
     setLoadingSubproducts(false);
     setPage(0);
     setSubPage(0);
@@ -80,11 +82,12 @@ export function ProductArea({
       }
       const createdItemId = await onAddProduct(product);
       setSelectedOrderItemId(createdItemId || null);
-      const requestId = subproductsRequestIdRef.current + 1;
-      subproductsRequestIdRef.current = requestId;
       setSelectedProduct(product);
       setSubproducts([]);
+      setAddedSubproductIds(new Set());
       setLoadingSubproducts(true);
+      const requestId = subproductsRequestIdRef.current + 1;
+      subproductsRequestIdRef.current = requestId;
       try {
         const data = await fetchSubproductsForProduct(product.id);
         if (requestId !== subproductsRequestIdRef.current) return;
@@ -106,6 +109,7 @@ export function ProductArea({
         setSelectedProduct(null);
         setSelectedOrderItemId(null);
         setSubproducts([]);
+        setShowSubproductModal(false);
       } finally {
         if (requestId === subproductsRequestIdRef.current) {
           setLoadingSubproducts(false);
@@ -121,6 +125,7 @@ export function ProductArea({
       const note = subproduct?.name || '';
       if (!note) return;
       await appendSubproductNoteToItem?.(selectedOrderItemId, note, Number(subproduct?.price) || 0);
+      setAddedSubproductIds((prev) => new Set(prev).add(subproduct.id));
     },
     [appendSubproductNoteToItem, selectedOrderItemId, selectedProduct]
   );
@@ -129,6 +134,7 @@ export function ProductArea({
     setShowSubproductModal(false);
     setSelectedProduct(null);
     setSelectedOrderItemId(null);
+    setAddedSubproductIds(new Set());
   }, []);
 
   const subproductsByGroup = useMemo(() => {
@@ -225,6 +231,9 @@ export function ProductArea({
               </button>
             </div>
             <div className="space-y-6">
+              {loadingSubproducts && subproducts.length === 0 ? (
+                <div className="py-8 text-center text-pos-muted">{t('loading', 'Loading...')}</div>
+              ) : null}
               {subproductsByGroup.map(({ groupId, groupName, items }) => (
                 <div key={groupId} className='flex'>
                   <h4 className="text-md font-medium text-pos-text mb-2 min-w-[80px]">{groupName || t('other', 'Other')}</h4>
@@ -233,7 +242,11 @@ export function ProductArea({
                       <button
                         type="button"
                         key={sp.id}
-                        className="flex items-center justify-center p-1 min-h-[50px] max-h-[50px] bg-pos-panel rounded-lg text-pos-text hover:bg-pos-surface transition-colors"
+                        className={`flex items-center justify-center p-1 min-h-[50px] max-h-[50px] rounded-lg transition-colors ${
+                          addedSubproductIds.has(sp.id)
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-pos-panel text-pos-text hover:bg-pos-surface'
+                        }`}
                         onClick={() => handleSubproductPress(sp)}
                       >
                         {sp.kioskPicture ? (
@@ -241,7 +254,7 @@ export function ProductArea({
                         ) : null}
                         <div className="flex flex-col items-center justify-center">
                           <span className="text-sm font-medium truncate w-full text-center">{sp.name}</span>
-                          <span className="text-xs text-pos-muted">€{Number(sp.price ?? 0).toFixed(2)}</span>
+                          <span className={`text-xs ${addedSubproductIds.has(sp.id) ? 'text-white/90' : 'text-pos-muted'}`}>€{Number(sp.price ?? 0).toFixed(2)}</span>
                         </div>
                       </button>
                     ))}

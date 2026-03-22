@@ -285,7 +285,7 @@ const FUNCTION_BUTTON_ITEMS = [
   { id: 'verkopers', labelKey: 'control.functionButton.sellers', fallbackLabel: 'Verkopers' }
 ];
 
-const FUNCTION_BUTTON_SLOT_COUNT = 3;
+const FUNCTION_BUTTON_SLOT_COUNT = 4;
 const FUNCTION_BUTTON_ITEM_IDS = FUNCTION_BUTTON_ITEMS.map((item) => item.id);
 const FUNCTION_BUTTON_ITEM_BY_ID = Object.fromEntries(
   FUNCTION_BUTTON_ITEMS.map((item) => [item.id, item])
@@ -419,6 +419,10 @@ const TABLE_LOCATION_BACKGROUND_OPTIONS = [
   { value: 'blue', labelKey: 'control.tables.backgroundBlue', fallback: 'Blue' }
 ];
 
+const SET_TABLES_ZOOM_MIN = 50;
+const SET_TABLES_ZOOM_MAX = 150;
+const SET_TABLES_ZOOM_STEP = 10;
+
 const TABLE_TEMPLATE_OPTIONS = [
   { id: '4table', src: '/4table.svg', chairs: 4, width: 130, height: 155 },
   { id: '5table', src: '/5table.svg', chairs: 5, width: 145, height: 173 },
@@ -531,8 +535,8 @@ const normalizeLayoutEditorDraft = (raw, locationName = 'Restaurant') => {
     : [];
   return {
     floorName: String(raw?.floorName || locationName || 'Restaurant'),
-    floorWidth: Math.max(400, Number(raw?.floorWidth) || 2048),
-    floorHeight: Math.max(300, Number(raw?.floorHeight) || 654),
+    floorWidth: Math.min(979, Math.max(400, Number(raw?.floorWidth) ?? 979)),
+    floorHeight: Number(raw?.floorHeight) ?? 595.5,
     bookingCapacity: Math.max(0, Number(raw?.bookingCapacity) || 0),
     floors: Math.max(1, Number(raw?.floors) || 1),
     tables: hasTablesArray ? tables : [createDefaultLayoutTable(1)]
@@ -704,7 +708,7 @@ function TopNavIcon({ id, className }) {
   return null;
 }
 
-export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, fetchTables }) {
+export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, fetchTables, onFunctionButtonsSaved }) {
   const { lang, setLang, t } = useLanguage();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [toast, setToast] = useState(null);
@@ -931,6 +935,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [showSetBoardColorModal, setShowSetBoardColorModal] = useState(false);
   const setTablesCanvasRef = useRef(null);
   const setTablesDragRef = useRef(null);
+  const [setTablesCanvasZoom, setSetTablesCanvasZoom] = useState(100);
   const [setTablesDraggingId, setSetTablesDraggingId] = useState(null);
   const [setTablesDraggingType, setSetTablesDraggingType] = useState(null);
 
@@ -3123,13 +3128,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     const onMouseMove = (event) => {
       const drag = setTablesDragRef.current;
       if (!drag) return;
-      const dx = event.clientX - drag.startMouseX;
-      const dy = event.clientY - drag.startMouseY;
-      const canvas = setTablesCanvasRef.current;
-      const canvasWidth = canvas?.clientWidth || 0;
-      const canvasHeight = canvas?.clientHeight || 0;
+      const scale = setTablesCanvasZoom / 100;
+      const dx = (event.clientX - drag.startMouseX) / scale;
+      const dy = (event.clientY - drag.startMouseY) / scale;
 
-      setSetTablesDraft((prev) => ({
+      setSetTablesDraft((prev) => {
+        const canvasWidth = prev.floorWidth ?? 979;
+        const canvasHeight = prev.floorHeight ?? 595.5;
+        return {
         ...prev,
         tables: prev.tables.map((table) => {
           if (table.id !== drag.id) return table;
@@ -3165,7 +3171,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           const y = Math.min(maxY, Math.max(0, drag.startY + dy));
           return { ...table, x, y };
         })
-      }));
+        };
+      });
     };
 
     const onMouseUp = () => {
@@ -3180,7 +3187,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [setTablesDraggingId]);
+  }, [setTablesDraggingId, setTablesCanvasZoom]);
 
   const removeSetTable = () => {
     if (!setTablesSelectedTableId) return;
@@ -3366,6 +3373,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       setFunctionButtonSlots(normalizeFunctionButtonSlots(layoutData?.value));
       setSelectedFunctionButtonSlotIndex(null);
       setShowDeviceSettingsModal(false);
+      if (typeof onFunctionButtonsSaved === 'function') onFunctionButtonsSaved();
       showToast('success', 'Device settings saved.');
     } catch (err) {
       showToast('error', err?.message || 'Failed to save device settings.');
@@ -7375,7 +7383,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </svg>
             </button>
 
-            <div className="w-[420px] shrink-0 border-r border-pos-border bg-black px-6 py-6 overflow-auto text-sm">
+            <div className="w-[250px] shrink-0 border-r border-pos-border bg-black px-6 py-6 overflow-auto text-sm">
               <h3 className="text-pos-text text-lg font-semibold mb-4">
                 {tr('control.tables.setTables', 'Set tables')} - {setTablesLocationName || 'Restaurant'}
               </h3>
@@ -7426,12 +7434,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 {!selectedSetBoard && !selectedSetFlowerPot ? (
                   <>
                     <div className="flex items-center gap-3">
-                      <span className="w-[120px] shrink-0">{tr('name', 'Name')}</span>
+                      <span className="min-w-[70px] max-w-[70px] shrink-0">{tr('name', 'Name')}</span>
                       <input
                         type="text"
                         value={selectedSetTable?.name || ''}
                         onChange={(e) => updateSelectedSetTable({ name: e.target.value })}
-                        className="flex-1 px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                        className="min-w-[70px] max-w-[70px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
                       />
                     </div>
 
@@ -7442,7 +7450,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       ...(!selectedSetTable?.round ? [{ key: 'height', label: tr('control.tables.height', 'Height') }] : [])
                     ].map((field) => (
                       <div key={field.key} className="flex items-center gap-3">
-                        <span className="w-[120px] shrink-0">{field.label}</span>
+                        <span className="min-w-[70px] max-w-[70px] shrink-0">{field.label}</span>
                         <input
                           type="number"
                           value={selectedSetTable ? selectedSetTable[field.key] : 0}
@@ -7453,11 +7461,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             else if (field.key === 'height') updateSelectedSetTable({ height: Math.max(40, safe) });
                             else updateSelectedSetTable({ [field.key]: safe });
                           }}
-                          className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                          className="min-w-[50px] max-w-[50px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
                         />
                         <button
                           type="button"
-                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 px-3 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
                           onClick={() => {
                             const current = Number(selectedSetTable?.[field.key]) || 0;
                             const nextVal = current - 10;
@@ -7470,7 +7478,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </button>
                         <button
                           type="button"
-                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 px-3 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
                           onClick={() => {
                             const current = Number(selectedSetTable?.[field.key]) || 0;
                             const nextVal = current + 10;
@@ -7485,14 +7493,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     ))}
 
                     <div className="flex items-center gap-3 w-full justify-between">
-                      <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                      <span className="min-w-[70px] max-w-[70px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
                       <input
                         type="range"
                         min={0}
                         max={360}
                         value={selectedSetTable?.rotation ?? 0}
                         onChange={(e) => updateSelectedSetTable({ rotation: Number(e.target.value) || 0 })}
-                        className="flex-1"
+                        className="flex-1 max-w-[85px]"
                       />
                       <input
                         type="number"
@@ -7509,7 +7517,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
 
                     <label className="flex items-center gap-3">
-                      <span className="w-[120px] shrink-0">{tr('control.tables.round', 'Round')}</span>
+                      <span className="min-w-[70px] max-w-[70px] shrink-0">{tr('control.tables.round', 'Round')}</span>
                       <input
                         type="checkbox"
                         checked={!!selectedSetTable?.round}
@@ -7531,7 +7539,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       { key: 'height', label: tr('control.tables.height', 'Height') }
                     ].map((field) => (
                       <div key={`board-${field.key}`} className="flex items-center gap-3">
-                        <span className="w-[120px] shrink-0">{field.label}</span>
+                        <span className="min-w-[70px] max-w-[70px] shrink-0">{field.label}</span>
                         <input
                           type="number"
                           value={selectedSetBoard[field.key]}
@@ -7542,7 +7550,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             else if (field.key === 'height') updateSelectedSetBoard({ height: Math.max(10, safe) });
                             else updateSelectedSetBoard({ [field.key]: safe });
                           }}
-                          className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                          className="min-w-[70px] max-w-[70px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
                         />
                         <button
                           type="button"
@@ -7573,7 +7581,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                     ))}
                     <div className="flex items-center gap-3">
-                      <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                      <span className="min-w-[70px] max-w-[70px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
                       <input
                         type="range"
                         min={0}
@@ -7608,7 +7616,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       { key: 'height', label: tr('control.tables.height', 'Height') }
                     ].map((field) => (
                       <div key={`flowerpot-${field.key}`} className="flex items-center gap-3">
-                        <span className="w-[120px] shrink-0">{field.label}</span>
+                        <span className="min-w-[70px] max-w-[70px] shrink-0">{field.label}</span>
                         <input
                           type="number"
                           value={selectedSetFlowerPot[field.key]}
@@ -7619,7 +7627,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             else if (field.key === 'height') updateSelectedSetFlowerPot({ height: Math.max(10, safe) });
                             else updateSelectedSetFlowerPot({ [field.key]: safe });
                           }}
-                          className="w-[120px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
+                          className="min-w-[70px] max-w-[70px] px-3 py-2 rounded bg-pos-panel border border-pos-border text-pos-text"
                         />
                         <button
                           type="button"
@@ -7650,7 +7658,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                     ))}
                     <div className="flex items-center gap-3">
-                      <span className="w-[120px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
+                      <span className="min-w-[70px] max-w-[70px] shrink-0">{tr('control.tables.rotation', 'Rotation')}</span>
                       <input
                         type="range"
                         min={0}
@@ -7695,7 +7703,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             </div>
 
             <div className="flex-1 min-w-0 bg-[#1f2b36] p-6">
-              <div ref={setTablesCanvasRef} className="w-full h-full rounded-lg border border-pos-border bg-[#2f3e50] relative overflow-hidden">
+              <div ref={setTablesCanvasRef} className="w-full h-full rounded-lg border border-pos-border bg-[#2f3e50] relative overflow-auto">
+                <div
+                  style={{
+                    transform: `scale(${setTablesCanvasZoom / 100})`,
+                    transformOrigin: '0 0',
+                    width: `${setTablesDraft.floorWidth ?? 979}px`,
+                    height: `${setTablesDraft.floorHeight ?? 595.5}px`,
+                    minWidth: `${setTablesDraft.floorWidth ?? 979}px`,
+                    minHeight: `${setTablesDraft.floorHeight ?? 595.5}px`
+                  }}
+                  className="relative"
+                >
                 {setTablesDraft.tables.map((table) => {
                   const template = TABLE_TEMPLATE_OPTIONS.find((item) => item.id === table.templateType) || null;
                   const sizeStyle = table.round
@@ -7790,6 +7809,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     );
                   })
                 )}
+                </div>
+                <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-pos-border bg-pos-panel p-1 shadow-lg">
+                  <button
+                    type="button"
+                    className="w-9 h-9 rounded-md border border-pos-border bg-pos-bg hover:bg-pos-rowHover text-pos-text text-xl font-bold flex items-center justify-center"
+                    onClick={() => setSetTablesCanvasZoom((z) => Math.max(SET_TABLES_ZOOM_MIN, z - SET_TABLES_ZOOM_STEP))}
+                    aria-label="Zoom out"
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[3ch] text-center text-sm text-pos-text px-1">{setTablesCanvasZoom}%</span>
+                  <button
+                    type="button"
+                    className="w-9 h-9 rounded-md border border-pos-border bg-pos-bg hover:bg-pos-rowHover text-pos-text text-xl font-bold flex items-center justify-center"
+                    onClick={() => setSetTablesCanvasZoom((z) => Math.min(SET_TABLES_ZOOM_MAX, z + SET_TABLES_ZOOM_STEP))}
+                    aria-label="Zoom in"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -8188,12 +8227,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="px-8 py-2">
                   <div className="mx-auto max-w-[1300px] rounded-sm bg-[#7f7f84] p-6">
                     <div className="grid grid-cols-4 gap-6">
-                      <button
-                        type="button"
-                        className="h-[62px] border border-[#a8a8ad] bg-transparent text-3xl text-white"
-                      >
-                        19:00
-                      </button>
                       {Array.from({ length: FUNCTION_BUTTON_SLOT_COUNT }).map((_, slotIndex) => {
                         const assignedId = functionButtonSlots[slotIndex];
                         const assignedLabel = getFunctionButtonLabel(assignedId);

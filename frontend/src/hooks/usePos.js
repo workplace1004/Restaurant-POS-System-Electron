@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-const FUNCTION_BUTTON_SLOT_COUNT = 3;
+const FUNCTION_BUTTON_SLOT_COUNT = 4;
 const FUNCTION_BUTTON_ALLOWED_IDS = [
   'tables',
   'weborders',

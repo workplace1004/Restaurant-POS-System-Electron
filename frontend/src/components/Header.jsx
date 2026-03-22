@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
-const HEADER_FUNCTION_SLOT_COUNT = 3;
+const HEADER_FUNCTION_SLOT_COUNT = 4;
 
 function IconTable() {
   return (
@@ -42,7 +42,6 @@ function IconUser() {
 }
 
 export function Header({
-  time,
   webordersCount,
   inPlanningCount,
   onOpenTables,
@@ -56,7 +55,6 @@ export function Header({
 }) {
   const { t } = useLanguage();
   const slots = Array.from({ length: HEADER_FUNCTION_SLOT_COUNT }, (_, idx) => String(functionButtonSlots?.[idx] || '').trim());
-  const displayTime = String(time || '--:--');
 
   const tablesButtonLabel = (() => {
     if (selectedTable?.name != null && String(selectedTable.name).trim()) return String(selectedTable.name).trim();
@@ -93,9 +91,6 @@ export function Header({
   return (
     <header className="flex items-center w-full bg-pos-bg py-2 px-2 shrink-0">
       <nav className="flex-1 grid grid-cols-4 items-center gap-1 min-w-0">
-        <div className="rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-xl flex items-center justify-center font-semibold">
-          {displayTime}
-        </div>
         {slots.map((slotId, idx) => {
           const cfg = getButtonConfig(slotId);
           if (!cfg) {

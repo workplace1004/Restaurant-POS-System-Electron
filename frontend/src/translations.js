@@ -108,7 +108,7 @@ export const translations = {
     'control.systemSettingsTab.ticket': 'Ticket',
     'control.functionButton.tables': 'Tables',
     'control.functionButton.weborders': 'Weborders',
-    'control.functionButton.inWaiting': 'In waiting',
+    'control.functionButton.inWaiting': 'In planning',
     'control.functionButton.scheduledOrders': 'Scheduled orders',
     'control.functionButton.reservations': 'Reservations',
     'control.functionButton.sellers': 'Sellers',

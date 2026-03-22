@@ -342,7 +342,10 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
                 <button
                   key={id}
                   type="button"
-                  onClick={() => handleSelectAndClose(table)}
+                  onClick={() => handleSelectAndClose(table, {
+                    tableLabel: tableNumber,
+                    roomName: currentRoom?.name ?? null
+                  })}
                   className={`w-[200px] h-[200px] absolute overflow-hidden rounded-[4px] border-2 transition-colors ${
                     'border-transparent'
                   } cursor-pointer`}
