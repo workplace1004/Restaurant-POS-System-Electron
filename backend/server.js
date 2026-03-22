@@ -992,11 +992,11 @@ app.put('/api/products/:id/subproduct-links', async (req, res) => {
   }
 });
 
-// REST: orders (current/open)
+// REST: orders (current/open/in_waiting/in_planning)
 app.get('/api/orders', async (req, res) => {
   const orders = await prisma.order.findMany({
-    where: { status: { in: ['open', 'in_planning'] } },
-    include: { items: { include: { product: true } }, table: true, customer: true }
+    where: { status: { in: ['open', 'in_waiting', 'in_planning'] } },
+    include: { items: { include: { product: true } }, table: true, customer: true, user: true }
   });
   res.json(orders);
 });
@@ -1031,12 +1031,24 @@ app.post('/api/orders', async (req, res) => {
   res.json(order);
 });
 
-// REST: update order (add/remove items, set table, status, customer)
+// REST: update order (add/remove items, set table, status, customer, userId, printed, itemBatchBoundaries, itemBatchMeta)
 app.patch('/api/orders/:id', async (req, res) => {
-  const { tableId, status, items, paymentBreakdown, customerName } = req.body;
+  const { tableId, status, items, paymentBreakdown, customerName, userId, printed, itemBatchBoundaries, itemBatchMeta } = req.body;
   const updates = {};
   if (tableId !== undefined) updates.tableId = tableId;
   if (status !== undefined) updates.status = status;
+  if (userId !== undefined) updates.userId = userId || null;
+  if (printed !== undefined) updates.printed = !!printed;
+  if (itemBatchBoundaries !== undefined) {
+    updates.itemBatchBoundariesJson = Array.isArray(itemBatchBoundaries)
+      ? JSON.stringify(itemBatchBoundaries)
+      : null;
+  }
+  if (itemBatchMeta !== undefined) {
+    updates.itemBatchMetaJson = Array.isArray(itemBatchMeta)
+      ? JSON.stringify(itemBatchMeta)
+      : null;
+  }
   if (customerName !== undefined) {
     const name = String(customerName || '').trim();
     if (name) {
@@ -1070,7 +1082,7 @@ app.patch('/api/orders/:id', async (req, res) => {
   const order = await prisma.order.update({
     where: { id: req.params.id },
     data: updates,
-    include: { items: { include: { product: true } }, table: true, customer: true }
+    include: { items: { include: { product: true } }, table: true, customer: true, user: true }
   });
 
   // Save payment breakdown to OrderPayment for reports when order is marked paid
@@ -1187,10 +1199,10 @@ app.delete('/api/orders/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
-// REST: delete all orders (open + in_planning); OrderItem cascades
+// REST: delete only open orders (preserve in_waiting and in_planning); OrderItem cascades
 app.delete('/api/orders', async (req, res) => {
   await prisma.order.deleteMany({
-    where: { status: { in: ['open', 'in_planning'] } }
+    where: { status: 'open' }
   });
   io.emit('orders:cleared');
   res.json({ ok: true });
@@ -1363,6 +1375,12 @@ app.get('/api/weborders/count', async (req, res) => {
 // REST: in-planning count
 app.get('/api/orders/in-planning/count', async (req, res) => {
   const count = await prisma.order.count({ where: { status: 'in_planning' } });
+  res.json({ count });
+});
+
+// REST: in-waiting count (In waiting orders - saved in DB with status in_waiting)
+app.get('/api/orders/in-waiting/count', async (req, res) => {
+  const count = await prisma.order.count({ where: { status: 'in_waiting' } });
   res.json({ count });
 });
 
