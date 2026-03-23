@@ -22,7 +22,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
       <div className="flex items-center justify-center mb-4">
         <div className="text-3xl font-semibold text-pos-text">{time != null ? time : '--:--'}</div>
       </div>
-      <div className="flex flex-col text-sm gap-1 flex-1 overflow-auto">
+      <div className="flex flex-col text-sm gap-1 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
         {categories.map((cat) => (
           <button
             type="button"
