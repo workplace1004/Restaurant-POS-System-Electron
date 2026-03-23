@@ -124,10 +124,39 @@ export function ProductArea({
       if (!selectedProduct || !selectedOrderItemId) return;
       const note = subproduct?.name || '';
       if (!note) return;
-      await appendSubproductNoteToItem?.(selectedOrderItemId, note, Number(subproduct?.price) || 0);
-      setAddedSubproductIds((prev) => new Set(prev).add(subproduct.id));
+      const wasSelected = addedSubproductIds.has(subproduct.id);
+      // Optimistic UI: reflect toggle immediately, then sync with backend result.
+      setAddedSubproductIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(subproduct.id)) next.delete(subproduct.id);
+        else next.add(subproduct.id);
+        return next;
+      });
+      let wasAdded = !wasSelected;
+      try {
+        wasAdded = await appendSubproductNoteToItem?.(
+          selectedOrderItemId,
+          note,
+          Number(subproduct?.price) || 0
+        );
+      } catch {
+        // Revert on request failure.
+        setAddedSubproductIds((prev) => {
+          const next = new Set(prev);
+          if (wasSelected) next.add(subproduct.id);
+          else next.delete(subproduct.id);
+          return next;
+        });
+        return;
+      }
+      setAddedSubproductIds((prev) => {
+        const next = new Set(prev);
+        if (wasAdded) next.add(subproduct.id);
+        else next.delete(subproduct.id);
+        return next;
+      });
     },
-    [appendSubproductNoteToItem, selectedOrderItemId, selectedProduct]
+    [addedSubproductIds, appendSubproductNoteToItem, selectedOrderItemId, selectedProduct]
   );
 
   const closeSubproductModal = useCallback(() => {

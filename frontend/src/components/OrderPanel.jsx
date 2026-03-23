@@ -101,17 +101,33 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
   const savedTableOrderIds = savedTableOrders.map((entry) => entry.orderId).filter(Boolean);
   const savedOrderMetaById = new Map(savedTableOrders.map((entry) => [entry.orderId, entry]));
   const isSavedTableOrder = !!(hasSelectedTable && order?.id && savedTableOrderIds.includes(order.id));
+  /** Saved batches: show oldest first (API `orders` list is usually newest-first). */
   const savedOrdersForSelectedTable = hasSelectedTable
-    ? (orders || []).filter(
-      (o) =>
-        o?.status === 'open' &&
-        String(o?.tableId ?? '') === String(selectedTable?.id ?? '') &&
-        savedTableOrderIds.includes(o?.id) &&
-        o?.id !== order?.id
-    )
+    ? (() => {
+        const list = Array.from(
+          new Map(
+            (orders || [])
+              .filter(
+                (o) =>
+                  o?.id &&
+                  o?.status === 'open' &&
+                  String(o?.tableId ?? '') === String(selectedTable?.id ?? '') &&
+                  savedTableOrderIds.includes(o?.id)
+              )
+              .map((o) => [o.id, o])
+          ).values()
+        );
+        const batchTime = (o) => {
+          const meta = savedOrderMetaById.get(o.id);
+          const savedMs = meta?.savedAt ? new Date(meta.savedAt).getTime() : NaN;
+          const createdMs = new Date(o?.createdAt || 0).getTime();
+          return Number.isFinite(savedMs) && savedMs > 0 ? savedMs : createdMs;
+        };
+        return list.sort((a, b) => batchTime(a) - batchTime(b));
+      })()
     : [];
   const settlementOrder = savedOrdersForSelectedTable[savedOrdersForSelectedTable.length - 1] || null;
-  const showSettlementActions = hasSelectedTable && !hasOrderItems && !!settlementOrder;
+  const showSettlementActions = hasSelectedTable && (!!settlementOrder) && (!hasOrderItems || isSavedTableOrder);
   const settlementSubtotalLines = savedOrdersForSelectedTable.flatMap((savedOrder) =>
     (savedOrder?.items || []).map((item, itemIndex) => ({
       id: `${savedOrder.id}:${item?.id || itemIndex}`,
@@ -610,6 +626,26 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
     }
     return printData?.data || {};
   };
+  const printTableTicketAutomatically = async (targetOrderIds, paymentBreakdown = null) => {
+    if (!Array.isArray(targetOrderIds) || targetOrderIds.length === 0) {
+      throw new Error('No table orders selected for printing.');
+    }
+    const body = { orderIds: targetOrderIds };
+    if (paymentBreakdown && typeof paymentBreakdown === 'object') body.paymentBreakdown = paymentBreakdown;
+    const printRes = await fetch('/api/printers/receipt/table', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const printData = await printRes.json().catch(() => ({}));
+    if (!printRes.ok) {
+      throw new Error(printData?.error || 'Automatic table ticket print failed.');
+    }
+    if (printData?.success !== true || printData?.data?.printed !== true) {
+      throw new Error(printData?.error || 'Printer did not confirm successful table print.');
+    }
+    return printData?.data || {};
+  };
 
   const toApiOrderItem = (item) => {
     const productId = String(item?.productId || item?.product?.id || '').trim();
@@ -778,9 +814,16 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         let printedSuccessfully = true;
         let printResult = null;
         try {
-          for (const paidOrderId of paidOrderIds) {
-            // Split checkout prints only selected(right panel) items because paid split orders contain only those items.
-            printResult = await printTicketAutomatically(paidOrderId);
+          if (paidOrderIds.length === 1) {
+            const amounts = {};
+            for (const m of activePaymentMethods) {
+              const v = Number(paymentAmounts[m.id]) || 0;
+              if (v > 0.0001) amounts[m.id] = v;
+            }
+            printResult = await printTicketAutomatically(paidOrderIds[0], { amounts });
+          } else {
+            // Same table, one combined final ticket (was: loop printed one receipt per paid order).
+            printResult = await printTableTicketAutomatically(paidOrderIds, paymentBreakdown);
           }
         } catch (printErr) {
           printedSuccessfully = false;
@@ -846,10 +889,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           }
           printResult = await printTicketAutomatically(targetOrderIds[0], { amounts });
         } else {
-          for (const targetId of targetOrderIds) {
-            // Print each settled order ticket separately; backend computes each order total.
-            printResult = await printTicketAutomatically(targetId);
-          }
+          // For one table settlement, print one combined final receipt with all settled orders.
+          printResult = await printTableTicketAutomatically(targetOrderIds, paymentBreakdown);
         }
       } catch (printErr) {
         printedSuccessfully = false;
@@ -989,7 +1030,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </div>
               </div>
             ))}
-            {isViewedFromInWaiting && batchBoundaries.length > 0 ? (
+            {isSavedTableOrder ? null : (isViewedFromInWaiting && batchBoundaries.length > 0 ? (
               <>
                 {batchBoundaries.map((endIdx, batchIdx) => {
                   const startIdx = batchIdx === 0 ? 0 : batchBoundaries[batchIdx - 1];
@@ -1073,7 +1114,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   </div>
                 ))}
               </>
-            )}
+            ))}
           </div>
         )}
       </div>
@@ -1200,10 +1241,17 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   return;
                 }
                 try {
-                  await onCreateOrder?.(selectedTable?.id || null);
-                } catch (err) {
-                  setPaymentErrorMessage(err?.message || tr('orderPanel.failedCreateNewTableOrder', 'Failed to create new table order.'));
-                  return;
+                  const prodRes = await fetch('/api/printers/production', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: currentOrderId })
+                  });
+                  if (!prodRes.ok) {
+                    const data = await prodRes.json().catch(() => ({}));
+                    console.warn('Production print failed:', data?.error || prodRes.statusText);
+                  }
+                } catch (prodErr) {
+                  console.warn('Production print error:', prodErr?.message);
                 }
                 setSelectedItemIds([]);
               }}

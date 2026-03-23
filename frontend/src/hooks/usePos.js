@@ -216,6 +216,28 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     async (product, quantity = 1, tableId = null) => {
       const notes = product?.subproductName || undefined;
       let orderId = currentOrder?.id;
+      if (tableId && currentOrder?.id) {
+        try {
+          // If current table order is already saved to table, start a new open order on next product add.
+          const savedRes = await fetch(`${API}/settings/table-saved-orders`);
+          const savedData = await safeJson(savedRes);
+          const rawList = Array.isArray(savedData?.value) ? savedData.value : [];
+          const savedIds = new Set(
+            rawList
+              .map((entry) => {
+                if (typeof entry === 'string') return String(entry || '').trim();
+                if (entry && typeof entry === 'object') return String(entry.orderId ?? entry.id ?? '').trim();
+                return '';
+              })
+              .filter(Boolean)
+          );
+          if (savedIds.has(String(currentOrder.id))) {
+            orderId = null;
+          }
+        } catch {
+          // Keep current behavior if settings lookup fails.
+        }
+      }
       if (!orderId) {
         const createRes = await fetch(`${API}/orders`, {
           method: 'POST',
@@ -265,30 +287,47 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
     async (orderItemId, noteText, notePrice = 0) => {
       const orderId = currentOrder?.id;
       const note = String(noteText || '').trim();
-      if (!orderId || !orderItemId || !note) return;
+      if (!orderId || !orderItemId || !note) return false;
       const target = (currentOrder?.items || []).find((it) => it.id === orderItemId);
-      if (!target) return;
+      if (!target) return false;
       const extraPrice = Math.max(0, roundCurrency(notePrice));
       const noteToken = extraPrice > 0 ? `${note}::${extraPrice.toFixed(2)}` : note;
       const existingTokens = String(target.notes || '')
         .split(/[;,]/)
         .map((n) => n.trim())
         .filter(Boolean);
-      const existingLabels = existingTokens.map((token) => token.split('::')[0].trim());
-      if (existingLabels.includes(note)) return;
-      existingTokens.push(noteToken);
-      const nextPrice = extraPrice > 0 ? roundCurrency((Number(target.price) || 0) + extraPrice) : undefined;
+      const matchedIndex = existingTokens.findIndex((token) => token.split('::')[0].trim() === note);
+      let nextTokens = existingTokens;
+      let nextPrice;
+      let wasAdded = true;
+
+      if (matchedIndex >= 0) {
+        // Toggle off: remove existing subproduct note and subtract its stored extra price.
+        const matchedToken = existingTokens[matchedIndex];
+        const matchedPriceRaw = String(matchedToken).split('::')[1];
+        const matchedPrice = Math.max(0, roundCurrency(Number(matchedPriceRaw) || 0));
+        nextTokens = existingTokens.filter((_, idx) => idx !== matchedIndex);
+        nextPrice = matchedPrice > 0
+          ? Math.max(0, roundCurrency((Number(target.price) || 0) - matchedPrice))
+          : undefined;
+        wasAdded = false;
+      } else {
+        // Toggle on: append note and add extra price when configured.
+        nextTokens = [...existingTokens, noteToken];
+        nextPrice = extraPrice > 0 ? roundCurrency((Number(target.price) || 0) + extraPrice) : undefined;
+      }
       await fetch(`${API}/orders/${orderId}/items/${orderItemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          notes: existingTokens.join(', '),
+          notes: nextTokens.length > 0 ? nextTokens.join(', ') : null,
           ...(nextPrice !== undefined ? { price: nextPrice } : {})
         })
       });
       const res = await fetch(`${API}/orders`);
       const list = await safeJson(res);
       if (Array.isArray(list)) setOrders(list);
+      return wasAdded;
     },
     [API, currentOrder]
   );
@@ -369,12 +408,16 @@ export function usePos(API, socket, selectedTableId = null, focusedOrderId = nul
       }
       if (status === 'paid') {
         fetchWebordersCount();
+        fetchTables();
+      }
+      if (status === 'in_planning') {
+        fetchTables();
       }
       const res = await fetch(`${API}/orders`);
       const list = await safeJson(res);
       if (Array.isArray(list)) setOrders(list);
     },
-    [API, fetchInPlanningCount, fetchInWaitingCount, fetchWebordersCount]
+    [API, fetchInPlanningCount, fetchInWaitingCount, fetchWebordersCount, fetchTables]
   );
 
   const createOrder = useCallback(async (tableId = null) => {
