@@ -1795,6 +1795,45 @@ function formatEuroAmount(value) {
   return `€${(Math.round((Number(value) || 0) * 100) / 100).toFixed(2)}`;
 }
 
+function parseVatPercent(rawValue) {
+  const cleaned = String(rawValue || '')
+    .replace(',', '.')
+    .replace('%', '')
+    .trim();
+  const parsed = Number(cleaned);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.round(parsed * 100) / 100;
+}
+
+function buildReceiptVatSummary(itemLines, useEatInVat) {
+  const grossByRate = new Map();
+  for (const line of itemLines || []) {
+    const gross = Math.round((Number(line?.lineTotal) || 0) * 100) / 100;
+    if (gross <= 0) continue;
+    const vatRaw = useEatInVat ? line?.vatEatIn : line?.vatTakeOut;
+    const rate = parseVatPercent(vatRaw);
+    grossByRate.set(rate, Math.round(((grossByRate.get(rate) || 0) + gross) * 100) / 100);
+  }
+  const sortedRates = Array.from(grossByRate.keys()).sort((a, b) => a - b);
+  const lines = [];
+  let totalVat = 0;
+  sortedRates.forEach((rate, idx) => {
+    const gross = Math.round((grossByRate.get(rate) || 0) * 100) / 100;
+    const base = rate > 0 ? Math.round((gross * 100 / (100 + rate)) * 100) / 100 : gross;
+    const vat = Math.round((gross - base) * 100) / 100;
+    totalVat = Math.round((totalVat + vat) * 100) / 100;
+    const code = String.fromCharCode(65 + idx); // A, B, C...
+    lines.push({
+      code,
+      rate,
+      base,
+      vat,
+      display: `${code}  ${rate}%  ${formatEuroAmount(base)}`
+    });
+  });
+  return { lines, totalVat };
+}
+
 const PAYMENT_INTEGRATIONS = new Set(['manual_cash', 'cashmatic', 'payworld', 'generic']);
 
 function normalizePaymentIntegration(value) {
@@ -2163,6 +2202,89 @@ app.delete('/api/printers/:id', async (req, res) => {
   }
 });
 
+// Production print: order items without prices to printer1, printer2, printer3 (product-configured production printers)
+app.post('/api/printers/production', async (req, res) => {
+  try {
+    const orderId = String(req.body?.orderId || '').trim();
+    if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+    serverLog('printer', 'Production print requested', { orderId });
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: true } }, table: true, customer: true }
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!Array.isArray(order.items) || order.items.length === 0) {
+      return res.status(400).json({ error: 'Order has no items to print' });
+    }
+
+    const enabledPrinters = await prisma.printer.findMany({
+      where: { enabled: 1 },
+      orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }]
+    });
+    const printersById = new Map(enabledPrinters.map((p) => [p.id, p]));
+
+    const itemLines = order.items.map((item) => {
+      const productName = item?.product?.name || 'Unknown item';
+      const note = item?.notes ? ` (${String(item.notes).trim()})` : '';
+      const qty = Math.max(1, Number(item.quantity) || 1);
+      const printer1Id = String(item?.product?.printer1 || '').trim();
+      const printer2Id = String(item?.product?.printer2 || '').trim();
+      const printer3Id = String(item?.product?.printer3 || '').trim();
+      return {
+        product: `${productName}${note}`,
+        quantity: qty,
+        printer1Id: printer1Id && printersById.has(printer1Id) ? printer1Id : null,
+        printer2Id: printer2Id && printersById.has(printer2Id) ? printer2Id : null,
+        printer3Id: printer3Id && printersById.has(printer3Id) ? printer3Id : null
+      };
+    });
+
+    const printedAt = new Date().toISOString();
+    const productionByPrinterId = new Map();
+    for (const line of itemLines) {
+      const printerIds = new Set([line.printer1Id, line.printer2Id, line.printer3Id].filter(Boolean));
+      for (const pid of printerIds) {
+        if (!productionByPrinterId.has(pid)) productionByPrinterId.set(pid, []);
+        productionByPrinterId.get(pid).push(line);
+      }
+    }
+
+    const printJobs = [];
+    for (const [printerId, lines] of productionByPrinterId.entries()) {
+      const printer = printersById.get(printerId);
+      if (!printer) continue;
+      const validation = validatePrinterConnection(printer.type, printer.connectionString);
+      if (!validation.ok) continue;
+      const slipLines = [
+        `Order ${order.id}`,
+        `Printed at ${printedAt}`,
+        `Table: ${order.table?.name || '-'}`,
+        `Customer: ${order.customer?.name || '-'}`,
+        '------------------------------',
+        ...lines.map((line) => `${line.quantity}x ${line.product}`),
+        '------------------------------'
+      ];
+      try {
+        const sendResult = await sendToPrinter(printer, slipLines);
+        printJobs.push({ printerId: printer.id, printerName: printer.name, items: lines.length, ...sendResult });
+        serverLog('printer', 'Production slip sent', { orderId: order.id, printerId: printer.id, items: lines.length });
+      } catch (slipErr) {
+        serverLog('printer', 'Production slip failed', { orderId: order.id, printerId, error: slipErr?.message });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Production print sent for order "${order.id}"`,
+      data: { orderId: order.id, printJobs }
+    });
+  } catch (err) {
+    console.error('POST /api/printers/production', err);
+    res.status(500).json({ error: err.message || 'Production print failed' });
+  }
+});
+
 app.post('/api/printers/receipt', async (req, res) => {
   try {
     const orderId = String(req.body?.orderId || '').trim();
@@ -2185,7 +2307,6 @@ app.post('/api/printers/receipt', async (req, res) => {
       return res.status(400).json({ error: `Paid total (${formatEuroAmount(paidTotal)}) must match order total (${formatEuroAmount(dbTotal)}).` });
     }
 
-    const requestedPrinterId = req.body?.printerId ? String(req.body.printerId).trim() : null;
     const enabledPrinters = await prisma.printer.findMany({
       where: { enabled: 1 },
       orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }]
@@ -2194,21 +2315,12 @@ app.post('/api/printers/receipt', async (req, res) => {
       return res.status(400).json({ error: 'No enabled printer configured for receipt printing.' });
     }
     const printersById = new Map(enabledPrinters.map((p) => [p.id, p]));
-    const defaultPrinter = requestedPrinterId
-      ? printersById.get(requestedPrinterId) || null
-      : enabledPrinters[0] || null;
-    if (requestedPrinterId && !defaultPrinter) {
-      return res.status(400).json({ error: 'Requested printer is not enabled or not found.' });
-    }
-    if (!defaultPrinter) {
-      return res.status(400).json({ error: 'No fallback printer available.' });
-    }
-    serverLog('printer', 'Receipt default/fallback printer selected', {
+    const mainPrinter = enabledPrinters.find((p) => p.isMain === 1) || enabledPrinters[0];
+    serverLog('printer', 'Main printer selected for final ticket', {
       orderId,
-      printerId: defaultPrinter.id,
-      printerName: defaultPrinter.name,
-      printerType: defaultPrinter.type,
-      requestedPrinterId: requestedPrinterId || null,
+      printerId: mainPrinter.id,
+      printerName: mainPrinter.name,
+      isMain: mainPrinter.isMain === 1,
     });
 
     const itemLines = order.items.map((item) => {
@@ -2217,7 +2329,7 @@ app.post('/api/printers/receipt', async (req, res) => {
       const qty = Math.max(1, Number(item.quantity) || 1);
       const unitPrice = Math.round((Number(item.price) || 0) * 100) / 100;
       const lineTotal = Math.round(unitPrice * qty * 100) / 100;
-      const preferredPrinterId = String(item?.product?.printer1 || '').trim();
+      const printer1Id = String(item?.product?.printer1 || '').trim();
       const printer2Id = String(item?.product?.printer2 || '').trim();
       const printer3Id = String(item?.product?.printer3 || '').trim();
       return {
@@ -2225,67 +2337,67 @@ app.post('/api/printers/receipt', async (req, res) => {
         quantity: qty,
         unitPrice,
         lineTotal,
-        preferredPrinterId,
+        vatEatIn: item?.product?.vatEatIn || null,
+        vatTakeOut: item?.product?.vatTakeOut || null,
+        printer1Id: printer1Id && printersById.has(printer1Id) ? printer1Id : null,
         printer2Id: printer2Id && printersById.has(printer2Id) ? printer2Id : null,
         printer3Id: printer3Id && printersById.has(printer3Id) ? printer3Id : null
       };
     });
 
     const printedAt = new Date().toISOString();
-    const groupedByPrinterId = new Map();
-    for (const line of itemLines) {
-      const preferred = line.preferredPrinterId;
-      const targetPrinter = (preferred && printersById.get(preferred)) || defaultPrinter;
-      if (!groupedByPrinterId.has(targetPrinter.id)) groupedByPrinterId.set(targetPrinter.id, []);
-      groupedByPrinterId.get(targetPrinter.id).push(line);
-    }
 
+    // Final ticket (with prices): always only to main printer
+    const validation = validatePrinterConnection(mainPrinter.type, mainPrinter.connectionString);
+    if (!validation.ok) return res.status(400).json({ error: validation.error });
+    const useEatInVat = !!(order.tableId && String(order.tableId).trim() !== '');
+    const vatSummary = buildReceiptVatSummary(itemLines, useEatInVat);
+    const receiptLines = [
+      `Receipt ${order.id}`,
+      `Printed at ${printedAt}`,
+      `Table: ${order.table?.name || '-'}`,
+      `Customer: ${order.customer?.name || '-'}`,
+      `Printer: ${mainPrinter.name || mainPrinter.id}`,
+      '------------------------------',
+      ...itemLines.map((line) => `${line.quantity}x ${line.product}  ${formatEuroAmount(line.lineTotal)}`),
+      '------------------------------',
+      `SUBTOTAL: ${formatEuroAmount(dbTotal)}`,
+      ...vatSummary.lines.map((entry) => entry.display),
+      `BTW: ${formatEuroAmount(vatSummary.totalVat)}`,
+      `TOTAL: ${formatEuroAmount(dbTotal)}`,
+      `PAID: ${formatEuroAmount(paidTotal)}`,
+      ...paymentMethodLines
+    ];
     const printJobs = [];
-    for (const [printerId, lines] of groupedByPrinterId.entries()) {
-      const printer = printersById.get(printerId) || defaultPrinter;
-      const validation = validatePrinterConnection(printer.type, printer.connectionString);
-      if (!validation.ok) return res.status(400).json({ error: validation.error });
-      const groupSubtotal = Math.round(lines.reduce((sum, line) => sum + (Number(line.lineTotal) || 0), 0) * 100) / 100;
-      const receiptLines = [
-        `Receipt ${order.id}`,
-        `Printed at ${printedAt}`,
-        `Table: ${order.table?.name || '-'}`,
-        `Customer: ${order.customer?.name || '-'}`,
-        `Printer: ${printer.name || printer.id}`,
-        '------------------------------',
-        ...lines.map((line) => `${line.quantity}x ${line.product}  ${formatEuroAmount(line.lineTotal)}`),
-        '------------------------------',
-        `SUBTOTAL: ${formatEuroAmount(groupSubtotal)}`,
-        `TOTAL: ${formatEuroAmount(dbTotal)}`,
-        `PAID: ${formatEuroAmount(paidTotal)}`,
-        ...paymentMethodLines
-      ];
-      const sendResult = await sendToPrinter(printer, receiptLines);
-      printJobs.push({
-        printerId: printer.id,
-        printerName: printer.name,
-        items: lines.length,
-        subtotal: groupSubtotal,
-        receipt_text: receiptLines.join('\n'),
-        ...sendResult
-      });
-      serverLog('printer', 'Receipt sent to printer', {
-        orderId: order.id,
-        printerId: printer.id,
-        printerName: printer.name,
-        items: lines.length,
-        transport: sendResult?.transport || 'unknown',
-        sentBytes: sendResult?.sentBytes ?? 0,
-        receivedBytes: sendResult?.receivedBytes ?? 0,
-      });
-    }
+    const sendResult = await sendToPrinter(mainPrinter, receiptLines);
+    printJobs.push({
+      printerId: mainPrinter.id,
+      printerName: mainPrinter.name,
+      items: itemLines.length,
+      subtotal: dbTotal,
+      receipt_text: receiptLines.join('\n'),
+      ...sendResult
+    });
+    serverLog('printer', 'Final ticket sent to main printer', {
+      orderId: order.id,
+      printerId: mainPrinter.id,
+      printerName: mainPrinter.name,
+      items: itemLines.length,
+      transport: sendResult?.transport || 'unknown',
+      sentBytes: sendResult?.sentBytes ?? 0,
+      receivedBytes: sendResult?.receivedBytes ?? 0,
+    });
 
+    // Production slips (no prices): only for NO-TABLE orders (table orders get production at add-to-table)
+    const isNoTableOrder = !order.tableId || String(order.tableId).trim() === '';
     const noPriceSlipsByPrinterId = new Map();
-    for (const line of itemLines) {
-      const printerIds = new Set([line.printer2Id, line.printer3Id].filter(Boolean));
-      for (const pid of printerIds) {
-        if (!noPriceSlipsByPrinterId.has(pid)) noPriceSlipsByPrinterId.set(pid, []);
-        noPriceSlipsByPrinterId.get(pid).push(line);
+    if (isNoTableOrder) {
+      for (const line of itemLines) {
+        const printerIds = new Set([line.printer1Id, line.printer2Id, line.printer3Id].filter(Boolean));
+        for (const pid of printerIds) {
+          if (!noPriceSlipsByPrinterId.has(pid)) noPriceSlipsByPrinterId.set(pid, []);
+          noPriceSlipsByPrinterId.get(pid).push(line);
+        }
       }
     }
     for (const [printerId, lines] of noPriceSlipsByPrinterId.entries()) {
@@ -2340,10 +2452,11 @@ app.post('/api/printers/receipt', async (req, res) => {
       message: `Receipt print request sent for order "${order.id}"`,
       data: {
         orderId: order.id,
-        printerId: defaultPrinter.id,
-        printerName: defaultPrinter.name,
+        printerId: mainPrinter.id,
+        printerName: mainPrinter.name,
         total: dbTotal,
         paidTotal,
+        vatSummary,
         paymentMethods: paymentMethodsSummary,
         items: itemLines,
         printJobs,
@@ -2353,6 +2466,129 @@ app.post('/api/printers/receipt', async (req, res) => {
   } catch (err) {
     console.error('POST /api/printers/receipt', err);
     return res.status(500).json({ error: err.message || 'Failed to print receipt' });
+  }
+});
+
+app.post('/api/printers/receipt/table', async (req, res) => {
+  try {
+    const rawOrderIds = Array.isArray(req.body?.orderIds) ? req.body.orderIds : [];
+    const orderIds = Array.from(new Set(rawOrderIds.map((id) => String(id || '').trim()).filter(Boolean)));
+    if (!orderIds.length) return res.status(400).json({ error: 'orderIds are required' });
+
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      include: { items: { include: { product: true } }, table: true, customer: true }
+    });
+    if (!orders.length) return res.status(404).json({ error: 'Orders not found' });
+
+    const ordersById = new Map(orders.map((o) => [o.id, o]));
+    const missingOrderIds = orderIds.filter((id) => !ordersById.has(id));
+    if (missingOrderIds.length > 0) {
+      return res.status(404).json({ error: `Orders not found: ${missingOrderIds.join(', ')}` });
+    }
+
+    const tableIds = Array.from(new Set(orders.map((o) => String(o?.tableId || '').trim()).filter(Boolean)));
+    if (tableIds.length !== 1) {
+      return res.status(400).json({ error: 'All orders must belong to the same table for combined receipt printing.' });
+    }
+    if (orders.some((o) => !Array.isArray(o.items) || o.items.length === 0)) {
+      return res.status(400).json({ error: 'One or more orders have no items to print.' });
+    }
+
+    const enabledPrinters = await prisma.printer.findMany({
+      where: { enabled: 1 },
+      orderBy: [{ isMain: 'desc' }, { createdAt: 'asc' }]
+    });
+    if (!enabledPrinters.length) {
+      return res.status(400).json({ error: 'No enabled printer configured for receipt printing.' });
+    }
+    const mainPrinter = enabledPrinters.find((p) => p.isMain === 1) || enabledPrinters[0];
+    const validation = validatePrinterConnection(mainPrinter.type, mainPrinter.connectionString);
+    if (!validation.ok) return res.status(400).json({ error: validation.error });
+
+    const allItemLines = [];
+    for (const order of orders) {
+      for (const item of order.items) {
+        const productName = item?.product?.name || 'Unknown item';
+        const note = item?.notes ? ` (${String(item.notes).trim()})` : '';
+        const qty = Math.max(1, Number(item.quantity) || 1);
+        const unitPrice = Math.round((Number(item.price) || 0) * 100) / 100;
+        const lineTotal = Math.round(unitPrice * qty * 100) / 100;
+        allItemLines.push({
+          orderId: order.id,
+          product: `${productName}${note}`,
+          quantity: qty,
+          lineTotal,
+          vatEatIn: item?.product?.vatEatIn || null,
+          vatTakeOut: item?.product?.vatTakeOut || null
+        });
+      }
+    }
+
+    const dbTotal = Math.round(allItemLines.reduce((sum, line) => sum + line.lineTotal, 0) * 100) / 100;
+    const paymentBreakdown = req.body?.paymentBreakdown || {};
+    const { paidTotal, paymentMethodLines, paymentMethodsSummary } = await resolveReceiptPaymentBreakdown(paymentBreakdown, dbTotal);
+    if (Math.abs(paidTotal - dbTotal) > 0.009) {
+      return res.status(400).json({ error: `Paid total (${formatEuroAmount(paidTotal)}) must match order total (${formatEuroAmount(dbTotal)}).` });
+    }
+
+    const firstOrder = ordersById.get(orderIds[0]);
+    const printedAt = new Date().toISOString();
+    const vatSummary = buildReceiptVatSummary(allItemLines, true);
+    const receiptLines = [
+      `Table Receipt ${tableIds[0]}`,
+      `Orders: ${orderIds.join(', ')}`,
+      `Printed at ${printedAt}`,
+      `Table: ${firstOrder?.table?.name || '-'}`,
+      `Printer: ${mainPrinter.name || mainPrinter.id}`,
+      '------------------------------',
+      ...allItemLines.map((line) => `${line.quantity}x ${line.product}  ${formatEuroAmount(line.lineTotal)}`),
+      '------------------------------',
+      `SUBTOTAL: ${formatEuroAmount(dbTotal)}`,
+      ...vatSummary.lines.map((entry) => entry.display),
+      `BTW: ${formatEuroAmount(vatSummary.totalVat)}`,
+      `TOTAL: ${formatEuroAmount(dbTotal)}`,
+      `PAID: ${formatEuroAmount(paidTotal)}`,
+      ...paymentMethodLines
+    ];
+
+    const sendResult = await sendToPrinter(mainPrinter, receiptLines);
+    for (const orderId of orderIds) {
+      const updatedOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: { printed: true },
+        include: { items: { include: { product: true } }, table: true, customer: true, user: true, payments: true }
+      });
+      io.emit('order:updated', updatedOrder);
+    }
+
+    return res.json({
+      success: true,
+      message: `Combined receipt print sent for table "${firstOrder?.table?.name || tableIds[0]}"`,
+      data: {
+        orderIds,
+        tableId: tableIds[0],
+        printerId: mainPrinter.id,
+        printerName: mainPrinter.name,
+        total: dbTotal,
+        paidTotal,
+        vatSummary,
+        paymentMethods: paymentMethodsSummary,
+        items: allItemLines,
+        printJobs: [{
+          printerId: mainPrinter.id,
+          printerName: mainPrinter.name,
+          items: allItemLines.length,
+          subtotal: dbTotal,
+          receipt_text: receiptLines.join('\n'),
+          ...sendResult
+        }],
+        printed: true
+      }
+    });
+  } catch (err) {
+    console.error('POST /api/printers/receipt/table', err);
+    return res.status(500).json({ error: err.message || 'Failed to print combined table receipt' });
   }
 });
 
