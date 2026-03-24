@@ -1122,8 +1122,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         <button
           type="button"
           disabled={!hasSelection}
-          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-xl ${!hasSelection || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
-            }`}
+          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-xl ${
+            !hasSelection || isSavedTableOrder
+              ? 'bg-black/10 opacity-50 cursor-not-allowed'
+              : 'bg-black/10 hover:opacity-90 active:bg-green-500'
+          }`}
           onClick={() => {
             if (isSavedTableOrder) return;
             if (order && selectedItems.length > 0) {
@@ -1140,8 +1143,11 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         <button
           type="button"
           disabled={!canDecreaseAll || isSavedTableOrder}
-          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${!canDecreaseAll || isSavedTableOrder ? 'bg-black/10 opacity-50 cursor-not-allowed' : 'bg-black/10 hover:opacity-90'
-            }`}
+          className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${
+            !canDecreaseAll || isSavedTableOrder
+              ? 'bg-black/10 opacity-50 cursor-not-allowed'
+              : 'bg-black/10 hover:opacity-90 active:bg-rose-500'
+          }`}
           onClick={() => {
             if (isSavedTableOrder) return;
             if (order && canDecreaseAll) {
@@ -1173,7 +1179,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           disabled={!hasSelection || isSavedTableOrder}
           aria-label={t('remove')}
         >
-          <img src="/delete.svg" alt="" className="w-8 h-8 brightness-0 invert" />
+          <img src="/delete.svg" alt="" className="w-8 h-8 [filter:brightness(0)_saturate(100%)_invert(45%)_sepia(70%)_saturate(2000%)_hue-rotate(310deg)]" />
         </button>
         <button
           type="button"
@@ -1183,7 +1189,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           onClick={() => setShowDeleteAllModal(true)}
           aria-label={t('clear')}
         >
-          <img src="/clear.svg" alt="" className="w-8 h-8 brightness-0 invert" />
+          <img src="/clear.svg" alt="" className="w-8 h-8 [filter:brightness(0)_saturate(100%)_invert(85%)_sepia(40%)_saturate(10000%)_hue-rotate(0deg)]" />
         </button>
       </div>
 
@@ -1276,7 +1282,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <button
             type="button"
             disabled={!order?.id || !hasOrderItems || inWaitingButtonDisabled}
-            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
+            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'}`}
             onClick={async () => {
               if (!order?.id || !hasOrderItems || inWaitingButtonDisabled) return;
               if (isViewedFromInWaiting) {
@@ -1304,7 +1310,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <button
               type="button"
               disabled={!order?.id || !hasOrderItems || (!hasSelectedTable && !isViewedFromInWaiting)}
-              className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-500 cursor-not-allowed opacity-70'}`}
+              className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'}`}
               onClick={() => {
                 if (!order?.id || !hasOrderItems) return;
                 if (isViewedFromInWaiting) {

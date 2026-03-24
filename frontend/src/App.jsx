@@ -331,7 +331,6 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         selectedCategoryId={selectedCategoryId}
         onSelectCategory={setSelectedCategoryId}
         currentUser={user}
-        onLogout={handleLogout}
         onControlClick={() => setViewAndPersist('control')}
         time={time}
       />
@@ -507,7 +506,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
           aria-modal="true"
         >
           <div
-            className="h-[96vh] w-[96vw] max-w-[1410px] rounded-xl overflow-hidden border border-pos-border shadow-2xl"
+            className="h-[96vh] w-[96vw] rounded-xl overflow-hidden border border-pos-border shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <CustomersView onBack={() => setShowCustomersModal(false)} />
