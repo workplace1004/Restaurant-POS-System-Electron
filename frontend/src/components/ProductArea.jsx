@@ -21,8 +21,12 @@ export function ProductArea({
   const [subproducts, setSubproducts] = useState([]);
   const [loadingSubproducts, setLoadingSubproducts] = useState(false);
   const [showSubproductModal, setShowSubproductModal] = useState(false);
+  const [productPressLocked, setProductPressLocked] = useState(false);
   const [addedSubproductIds, setAddedSubproductIds] = useState(() => new Set());
   const subproductsRequestIdRef = useRef(0);
+  const productPressLockRef = useRef(false);
+  const subproductsCacheRef = useRef(new Map());
+  const SUBPRODUCTS_CACHE_TTL_MS = 60 * 1000;
   const getSubproductExtra = useCallback(() => {
     try {
       const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_subproduct_extra') : null;
@@ -32,6 +36,13 @@ export function ProductArea({
       return {};
     }
   }, []);
+  const hydrateSubproducts = useCallback((list) => {
+    const extraMap = getSubproductExtra();
+    return (Array.isArray(list) ? list : []).map((sp) => ({
+      ...sp,
+      kioskPicture: extraMap?.[sp.id]?.kioskPicture || ''
+    }));
+  }, [getSubproductExtra]);
   const productById = new Map(products.map((p) => [p.id, p]));
   const layoutForCategory = Array.isArray(positioningLayoutByCategory?.[selectedCategoryId])
     ? positioningLayoutByCategory[selectedCategoryId]
@@ -62,6 +73,8 @@ export function ProductArea({
     setShowSubproductModal(false);
     setAddedSubproductIds(new Set());
     setLoadingSubproducts(false);
+    productPressLockRef.current = false;
+    setProductPressLocked(false);
     setPage(0);
     setSubPage(0);
   }, [selectedCategoryId]);
@@ -76,31 +89,62 @@ export function ProductArea({
 
   const handleProductPress = useCallback(
     async (product) => {
+      if (productPressLockRef.current) return;
+      productPressLockRef.current = true;
+      setProductPressLocked(true);
+
       if (!fetchSubproductsForProduct) {
-        await onAddProduct(product);
+        try {
+          await onAddProduct(product);
+        } finally {
+          productPressLockRef.current = false;
+          setProductPressLocked(false);
+        }
         return;
       }
-      const createdItemId = await onAddProduct(product);
-      setSelectedOrderItemId(createdItemId || null);
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const runWithRetry = async (runner, retries = 1) => {
+        let lastError;
+        for (let attempt = 0; attempt <= retries; attempt += 1) {
+          try {
+            return await runner();
+          } catch (error) {
+            lastError = error;
+            if (attempt < retries) await wait(120);
+          }
+        }
+        throw lastError;
+      };
+
       setSelectedProduct(product);
-      setSubproducts([]);
+      setSelectedOrderItemId(null);
+      const now = Date.now();
+      const cached = subproductsCacheRef.current.get(product.id);
+      const hasFreshCache = !!(cached && Array.isArray(cached.list) && (now - cached.at) < SUBPRODUCTS_CACHE_TTL_MS);
+      const cachedList = hasFreshCache ? cached.list : [];
+      setSubproducts(hydrateSubproducts(cachedList));
       setAddedSubproductIds(new Set());
+      // Open immediately only when we already know this product has subproducts.
+      // Prevents wrong "open then close" flicker for products without subproducts.
+      setShowSubproductModal(cachedList.length > 0);
       setLoadingSubproducts(true);
       const requestId = subproductsRequestIdRef.current + 1;
       subproductsRequestIdRef.current = requestId;
       try {
-        const data = await fetchSubproductsForProduct(product.id);
+        // Run both requests together so the subproduct modal can appear faster.
+        const [createdItemId, data] = await Promise.all([
+          runWithRetry(() => onAddProduct(product), 1),
+          runWithRetry(() => fetchSubproductsForProduct(product.id), 1)
+        ]);
         if (requestId !== subproductsRequestIdRef.current) return;
+        setSelectedOrderItemId(createdItemId || null);
         const list = Array.isArray(data) ? data : [];
-        const extraMap = getSubproductExtra();
-        const withExtras = list.map((sp) => ({
-          ...sp,
-          kioskPicture: extraMap?.[sp.id]?.kioskPicture || ''
-        }));
-        setSubproducts(withExtras);
+        subproductsCacheRef.current.set(product.id, { at: Date.now(), list });
+        setSubproducts(hydrateSubproducts(list));
         if (list.length > 0) {
           setShowSubproductModal(true);
         } else {
+          setShowSubproductModal(false);
           setSelectedProduct(null);
           setSelectedOrderItemId(null);
         }
@@ -111,12 +155,12 @@ export function ProductArea({
         setSubproducts([]);
         setShowSubproductModal(false);
       } finally {
-        if (requestId === subproductsRequestIdRef.current) {
-          setLoadingSubproducts(false);
-        }
+        if (requestId === subproductsRequestIdRef.current) setLoadingSubproducts(false);
+        productPressLockRef.current = false;
+        setProductPressLocked(false);
       }
     },
-    [fetchSubproductsForProduct, getSubproductExtra, onAddProduct]
+    [fetchSubproductsForProduct, hydrateSubproducts, onAddProduct]
   );
 
   const handleSubproductPress = useCallback(
@@ -218,8 +262,9 @@ export function ProductArea({
                   <button
                     type="button"
                     key={`${product.id}-${idx}`}
+                    disabled={productPressLocked || loadingSubproducts}
                     style={tileStyle}
-                    className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                    className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] ${tileStyle ? '' : 'bg-pos-panel'} ${(productPressLocked || loadingSubproducts) ? 'opacity-70 cursor-not-allowed' : ''} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                       }`}
                     onClick={() => handleProductPress(product)}
                   >

@@ -928,7 +928,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
 
   return (
     <aside className="w-1/4 shrink-0 flex flex-col px-2 py-1 bg-pos-bg border-l border-pos-border">
-      <div className="flex flex-col bg-pos-surface rounded-lg overflow-hidden min-h-[50%]">
+      <div className="flex flex-col bg-white rounded-lg overflow-hidden min-h-[50%]">
         {customerDisplayName ? (
           <div className="px-2 py-2 text-center border-b border-pos-border">
             <span className="text-pos-bg font-medium truncate block">{customerDisplayName}</span>
@@ -1199,7 +1199,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <input
             readOnly
             tabIndex={0}
-            className='w-[100px] h-full py-2 px-2 bg-pos-surface border-none rounded-md text-pos-text text-lg active:bg-green-500 outline-none cursor-pointer focus:border-green-500 focus:outline-none'
+            className='w-[100px] h-full py-2 px-2 bg-white border-none rounded-md text-black text-lg outline-none cursor-pointer focus:border-green-500 focus:outline-none'
             type='text'
             value={displayQuantity}
             aria-label={t('enterAmountKeypad')}

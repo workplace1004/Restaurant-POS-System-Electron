@@ -882,6 +882,22 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
   const [extraPricesRows, setExtraPricesRows] = useState([]);
   const [extraPricesSelectedIndex, setExtraPricesSelectedIndex] = useState(0);
+  const extraPricesScrollRef = useRef(null);
+  const [extraPricesScrollEdges, setExtraPricesScrollEdges] = useState({ atTop: true, atBottom: true });
+
+  const syncExtraPricesScrollEdges = useCallback(() => {
+    const el = extraPricesScrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollHeight <= clientHeight + 1) {
+      setExtraPricesScrollEdges({ atTop: true, atBottom: true });
+      return;
+    }
+    setExtraPricesScrollEdges({
+      atTop: scrollTop <= 1,
+      atBottom: scrollTop + clientHeight >= scrollHeight - 1
+    });
+  }, []);
 
   const [purchaseVat, setPurchaseVat] = useState('');
   const [purchasePriceExcl, setPurchasePriceExcl] = useState('0.00');
@@ -1702,6 +1718,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   }, [showProductPositioningModal, positioningCategoryId, categories, selectedCategoryId]);
 
   useEffect(() => {
+    if (!showProductModal || productTab !== 'extra_prices') return;
+    const id = requestAnimationFrame(() => {
+      syncExtraPricesScrollEdges();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [showProductModal, productTab, extraPricesRows.length, syncExtraPricesScrollEdges]);
+
+  useEffect(() => {
     let alive = true;
     const loadSavedPositioningLayout = async () => {
       try {
@@ -2361,7 +2385,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setProductPrinter3('');
     setProductActiveField('name');
     setProductFieldErrors({ name: false, keyName: false, productionName: false, vatTakeOut: false, vatEatIn: false });
-    setProductTabsUnlocked(false);
+    setProductTabsUnlocked(true);
     setProductDisplayNumber(null);
     setAdvancedKassaPhotoPreview(null);
     setShowProductModal(true);
@@ -2391,7 +2415,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     setProductPrinter3(product.printer3 || '');
     setProductActiveField('name');
     setProductFieldErrors({ name: false, keyName: false, productionName: false, vatTakeOut: false, vatEatIn: false });
-    setProductTabsUnlocked(false);
+    setProductTabsUnlocked(true);
     setProductDisplayNumber(product.number != null ? product.number : null);
 
     setAdvancedOpenPrice(!!product.openPrice);
@@ -9195,20 +9219,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex w-full justify-center gap-4">
-                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium active:bg-green-500" onClick={async () => {
-                      if (!validateProductRequired()) return;
-                      setProductTabsUnlocked(true);
-                      if (!editingProductId) {
-                        try {
-                          const res = await fetch(`${API}/products/next-number`);
-                          const data = await res.json();
-                          if (data.nextNumber != null) setProductDisplayNumber(data.nextNumber);
-                        } catch { /* keep — */ }
-                      }
-                    }}>
-                      <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                      {tr('control.productModal.completeFurther', 'Complete further')}
-                    </button>
                     <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingProduct} onClick={handleSaveProduct}>
                       <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.productModal.addAndClose', 'Add and close')}
@@ -9299,7 +9309,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                       <div className="flex items-center">
                         <label className="block min-w-[150px] text-pos-text">{tr('control.productModal.advanced.prepackExpiryType', 'Pre-pack expiry type')}:</label>
-                        <Dropdown options={VERVALTYPE_OPTIONS} value={advancedVoorverpakVervaltype} onChange={setAdvancedVoorverpakVervaltype} placeholder={tr('control.productModal.select', 'Select…')} className="border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text min-w-[160px]" />
+                        <Dropdown options={VERVALTYPE_OPTIONS} value={advancedVoorverpakVervaltype} onChange={setAdvancedVoorverpakVervaltype} placeholder={tr('control.productModal.select', 'Select…')} className="bg-pos-bg text-pos-text min-w-[160px]" />
                       </div>
                       <div className="flex items-center">
                         <label className="block min-w-[150px] text-pos-text">{tr('control.productModal.advanced.shelfLife', 'Shelf life')}:</label>
@@ -9327,41 +9337,49 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="font-medium">{tr('control.productModal.extraPrices.otherPrinter', 'Other printer')}</div>
                     <div className="font-medium">{tr('control.productModal.extraPrices.otherPrice', 'Other price')}</div>
                   </div>
-                  <div className="overflow-x-auto text-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                    <table className="w-full h-[260px] border-collapse border border-pos-border rounded-lg text-pos-text">
-                      <tbody className='h-[50px] flex flex-col w-full'>
+                  <div
+                    ref={extraPricesScrollRef}
+                    onScroll={syncExtraPricesScrollEdges}
+                    className="max-h-[200px] overflow-x-auto overflow-y-auto text-sm border-collapse border border-pos-border scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden]"
+                  >
+                    <table className="w-full h-full rounded-lg text-pos-text">
+                      <tbody className="w-full">
                         {extraPricesRows.map((row, idx) => (
                           <tr key={idx} className="bg-pos-bg">
-                            <td className="min-w-[200px] px-4 py-2">
-                              <span className="px-3 max-w-[200px] py-2 block flex justify-center rounded-lg text-pos-text">{row.priceGroupLabel}</span>
+                            <td className="min-w-[200px] px-4 py-1">
+                              <span className="px-3 max-w-[200px] min-h-[40px] max-h-[40px] py-2 block flex justify-center rounded-lg text-pos-text">{row.priceGroupLabel}</span>
                             </td>
-                            <td className=" min-w-[250px] px-4 py-2">
+                            <td className=" min-w-[250px] min-h-[40px] max-h-[40px] px-4 py-1">
                               <div className='w-full flex justify-center items-center'>
                                 <input
                                   type="text"
                                   value={row.otherName}
                                   onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherName: e.target.value } : r))}
                                   onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherName'); }}
-                                  className="w-full max-w-[150px] rounded-lg px-3 py-2 border border-pos-border flex justify-center bg-pos-panel text-pos-text"
+                                  className="w-full max-w-[150px] min-h-[40px] max-h-[40px] rounded-lg px-3 py-2 border border-pos-border flex justify-center bg-pos-panel text-pos-text"
                                 />
                               </div>
                             </td>
-                            <td className="min-w-[200px] px-4 py-2">
-                              <Dropdown
-                                options={EXTRA_PRICE_PRINTER_OPTIONS}
-                                value={row.otherPrinter}
-                                onChange={(v) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrinter: v } : r))}
-                                placeholder="--"
-                                className="w-full rounded-lg px-3 py-2 bg-pos-bg text-pos-text"
-                              />
+                            <td className="min-w-[200px] min-h-[40px] max-h-[40px] px-4 py-1">
+                              <div className="w-full flex justify-center items-center">
+                                <div className="w-full max-w-[150px] min-w-0">
+                                  <Dropdown
+                                    options={EXTRA_PRICE_PRINTER_OPTIONS}
+                                    value={row.otherPrinter}
+                                    onChange={(v) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrinter: v } : r))}
+                                    placeholder="--"
+                                    className="w-full min-h-[40px] max-h-[40px] bg-pos-bg text-pos-text"
+                                  />
+                                </div>
+                              </div>
                             </td>
-                            <td className="min-w-[200px] px-4 py-2">
+                              <td className="min-w-[200px] min-h-[40px] max-h-[40px] px-4 py-1">
                               <input
                                 type="text"
                                 value={row.otherPrice}
                                 onChange={(e) => setExtraPricesRows((prev) => prev.map((r, i) => i === idx ? { ...r, otherPrice: e.target.value } : r))}
                                 onFocus={() => { setExtraPricesSelectedIndex(idx); setProductActiveField('extraOtherPrice'); }}
-                                className="w-full rounded-lg ml-[50px] max-w-[120px] px-3 py-2 border border-pos-border bg-pos-panel text-pos-text"
+                                className="w-full min-h-[40px] max-h-[40px] rounded-lg ml-[50px] max-w-[120px] px-3 py-2 border border-pos-border bg-pos-panel text-pos-text"
                               />
                             </td>
                           </tr>
@@ -9370,8 +9388,34 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </table>
                   </div>
                   <div className="flex items-center justify-around px-[200px]">
-                    <button type="button" className="p-2 px-4 bg-pos-panel rounded-lg text-white active:bg-green-500 disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
-                    <button type="button" className="p-2 px-4 rounded-lg bg-pos-panel text-white active:bg-green-500 disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
+                    <button
+                      type="button"
+                      className="p-2 px-4 bg-pos-panel rounded-lg text-white active:bg-green-500 disabled:opacity-50 text-lg font-medium"
+                      disabled={extraPricesScrollEdges.atTop}
+                      onClick={() => {
+                        const el = extraPricesScrollRef.current;
+                        if (!el) return;
+                        const step = Math.min(56, Math.max(40, Math.round(el.clientHeight * 0.45)));
+                        el.scrollBy({ top: -step, behavior: 'smooth' });
+                      }}
+                      aria-label={tr('control.productModal.extraPrices.scrollUp', 'Scroll up')}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="p-2 px-4 rounded-lg bg-pos-panel text-white active:bg-green-500 disabled:opacity-50 text-lg font-medium"
+                      disabled={extraPricesScrollEdges.atBottom}
+                      onClick={() => {
+                        const el = extraPricesScrollRef.current;
+                        if (!el) return;
+                        const step = Math.min(56, Math.max(40, Math.round(el.clientHeight * 0.45)));
+                        el.scrollBy({ top: step, behavior: 'smooth' });
+                      }}
+                      aria-label={tr('control.productModal.extraPrices.scrollDown', 'Scroll down')}
+                    >
+                      ↓
+                    </button>
                   </div>
                   <div className="flex justify-center text-md">
                     <button type="button" className="flex text-md items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
@@ -9387,7 +9431,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex flex-col gap-3">
                       <div className='flex items-center'>
                         <label className="block min-w-[150px] text-pos-text text-md">{tr('control.productModal.purchase.purchaseVat', 'Purchase VAT')}:</label>
-                        <Dropdown options={VAT_PERCENT_OPTIONS} value={purchaseVat} onChange={setPurchaseVat} placeholder="--" className="border min-w-[120px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                        <Dropdown options={VAT_PERCENT_OPTIONS} value={purchaseVat} onChange={setPurchaseVat} placeholder="--" className="min-w-[120px] bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center'>
                         <label className="block text-pos-text min-w-[150px] text-md">{tr('control.productModal.purchase.purchasePriceExcl', 'Purchase price excl')}:</label>
@@ -9405,7 +9449,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex flex-col gap-3">
                       <div className='flex items-center'>
                         <label className="block min-w-[110px] text-pos-text text-md">{tr('control.productModal.purchase.unit', 'Unit')}:</label>
-                        <Dropdown options={PURCHASE_UNIT_OPTIONS} value={purchaseUnit} onChange={setPurchaseUnit} placeholder="--" className="border border-pos-border min-w-[150px] rounded-lg px-3 py-2 bg-pos-bg text-pos-text text-md" />
+                        <Dropdown options={PURCHASE_UNIT_OPTIONS} value={purchaseUnit} onChange={setPurchaseUnit} placeholder="--" className="min-w-[150px] bg-pos-bg text-pos-text text-md" />
                       </div>
                       <div className='flex items-center'>
                         <label className="block min-w-[110px] text-pos-text text-md">{tr('control.productModal.purchase.unitContent', 'Unit content')}:</label>
@@ -9419,7 +9463,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex flex-col gap-3">
                       <div className='flex items-center'>
                         <label className="block text-pos-text min-w-[105px]">{tr('control.productModal.purchase.supplier', 'Supplier')}:</label>
-                        <Dropdown options={PURCHASE_SUPPLIER_OPTIONS} value={purchaseSupplier} onChange={setPurchaseSupplier} placeholder="--" className="border min-w-[150px] border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <Dropdown options={PURCHASE_SUPPLIER_OPTIONS} value={purchaseSupplier} onChange={setPurchaseSupplier} placeholder="--" className="min-w-[150px] bg-pos-bg text-pos-text" />
                       </div>
                       <div className='flex items-center'>
                         <label className="block text-pos-text min-w-[105px]">{tr('control.productModal.purchase.supplierCode', 'Supplier code')}:</label>
@@ -9529,11 +9573,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                       <div className='flex items-center'>
                         <label className="block text-pos-text w-[150px]">{tr('control.productModal.kiosk.kioskMinSubs', 'Kiosk min. subs')}:</label>
-                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMinSubs} onChange={setKioskMinSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMinSubs} onChange={setKioskMinSubs} className="min-w-[200px] bg-pos-bg text-pos-text" />
                       </div>
                       <div className='flex items-center'>
                         <label className="block text-pos-text w-[150px]">{tr('control.productModal.kiosk.kioskMaxSubs', 'Kiosk max. subs')}:</label>
-                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMaxSubs} onChange={setKioskMaxSubs} className="min-w-[200px] border border-pos-border rounded-lg px-3 py-2 bg-pos-bg text-pos-text" />
+                        <Dropdown options={KIOSK_SUBS_OPTIONS} value={kioskMaxSubs} onChange={setKioskMaxSubs} className="min-w-[200px] bg-pos-bg text-pos-text" />
                       </div>
                     </div>
                     <div className='flex items-start gap-2'>
