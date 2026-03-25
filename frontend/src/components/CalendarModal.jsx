@@ -78,11 +78,11 @@ export function CalendarModal({ open, onClose, value, onChange }) {
     >
       <div className="bg-white rounded-lg shadow-xl overflow-hidden min-w-[800px] h-[700px]" onClick={(e) => e.stopPropagation()}>
         <div className="bg-pos-bg px-4 py-5 flex items-center justify-between">
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={goPrev} aria-label="Previous month">
+          <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={goPrev} aria-label="Previous month">
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
           <span className="text-white text-5xl font-medium capitalize">{monthName}</span>
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={goNext} aria-label="Next month">
+          <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={goNext} aria-label="Next month">
             <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
           </button>
         </div>
@@ -101,11 +101,7 @@ export function CalendarModal({ open, onClose, value, onChange }) {
                 <button
                   key={i}
                   type="button"
-                  className={`py-6 rounded flex flex-col items-center justify-center text-5xl relative ${
-                    grey ? 'text-gray-400 hover:bg-gray-100' : 'text-gray-800 hover:bg-gray-100'
-                  } ${todayCell ? 'bg-pos-bg text-white hover:bg-pos-bg hover:opacity-90' : ''} ${
-                    selectedCell && !todayCell ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
-                  } ${selectedCell && todayCell ? 'ring-2 ring-blue-400 ring-offset-2' : ''}`}
+                  className={`py-6 rounded flex flex-col items-center justify-center text-5xl relative ${ grey ? 'text-gray-400 active:bg-green-500' : 'text-gray-800 active:bg-green-500' } ${todayCell ? 'bg-pos-bg text-white active:bg-green-500 active:opacity-90' : ''} ${ selectedCell && !todayCell ? 'bg-blue-600 text-white active:bg-green-500' : '' } ${selectedCell && todayCell ? 'ring-2 ring-blue-400 ring-offset-2' : ''}`}
                   onClick={() => handleSelect(cell)}
                 >
                   {todayCell && <span className="absolute -mt-[72px] text-[20px] font-medium text-white leading-tight">{t('calendarToday')}</span>}

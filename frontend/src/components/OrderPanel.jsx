@@ -1043,7 +1043,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       {batchItems.map((item) => (
                         <div
                           key={item.id}
-                          className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                          className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded active:bg-green-500 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
                           onClick={() => toggleItemSelection(item.id)}
                         >
                           <div className="w-full">
@@ -1073,7 +1073,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 {items.slice(lastSavedBoundary).map((item) => (
                   <div
                     key={item.id}
-                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded active:bg-green-500 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
                     onClick={() => toggleItemSelection(item.id)}
                   >
                     <div className="w-full">
@@ -1096,7 +1096,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded hover:bg-white/30 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
+                    className={`flex flex-wrap items-center gap-1 p-2 py-1 text-sm text-pos-bg rounded active:bg-green-500 cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-white/50' : ''}`}
                     onClick={() => toggleItemSelection(item.id)}
                   >
                     <div className="w-full">
@@ -1125,7 +1125,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-xl ${
             !hasSelection || isSavedTableOrder
               ? 'bg-black/10 opacity-50 cursor-not-allowed'
-              : 'bg-black/10 hover:opacity-90 active:bg-green-500'
+              : 'bg-black/10 active:bg-green-500'
           }`}
           onClick={() => {
             if (isSavedTableOrder) return;
@@ -1146,7 +1146,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           className={`w-12 h-12 p-0 flex items-center justify-center border-none rounded text-3xl ${
             !canDecreaseAll || isSavedTableOrder
               ? 'bg-black/10 opacity-50 cursor-not-allowed'
-              : 'bg-black/10 hover:opacity-90 active:bg-rose-500'
+              : 'bg-black/10 active:bg-rose-500'
           }`}
           onClick={() => {
             if (isSavedTableOrder) return;
@@ -1167,7 +1167,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           type="button"
           className={`flex-1 py-2 flex items-center justify-center border-none rounded ${!hasSelection || isSavedTableOrder
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-gray-600'
+            : 'active:bg-green-500'
             }`}
           onClick={() => {
             if (isSavedTableOrder) return;
@@ -1184,12 +1184,12 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
         <button
           type="button"
           disabled={isSavedTableOrder}
-          className={`flex-1 py-2 flex items-center justify-center border-none rounded ${isSavedTableOrder ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'
+          className={`flex-1 py-2 flex items-center justify-center border-none rounded ${isSavedTableOrder ? 'opacity-50 cursor-not-allowed' : 'active:bg-green-500'
             }`}
           onClick={() => setShowDeleteAllModal(true)}
           aria-label={t('clear')}
         >
-          <img src="/clear.svg" alt="" className="w-8 h-8 [filter:brightness(0)_saturate(100%)_invert(85%)_sepia(40%)_saturate(10000%)_hue-rotate(0deg)]" />
+          <img src="/clear.svg" alt="" className="w-8 h-8 [filter:brightness(0)_saturate(100%)_invert(94%)_sepia(20%)_saturate(3000%)_hue-rotate(0deg)]" />
         </button>
       </div>
 
@@ -1199,7 +1199,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <input
             readOnly
             tabIndex={0}
-            className='w-[100px] h-full py-2 px-2 bg-pos-surface border-none rounded-md text-pos-text text-lg hover:bg-pos-surface-hover outline-none cursor-pointer'
+            className='w-[100px] h-full py-2 px-2 bg-pos-surface border-none rounded-md text-pos-text text-lg active:bg-green-500 outline-none cursor-pointer focus:border-green-500 focus:outline-none'
             type='text'
             value={displayQuantity}
             aria-label={t('enterAmountKeypad')}
@@ -1212,14 +1212,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <div className="flex gap-2 text-sm py-1 min-h-[59px]">
             <button
               type="button"
-              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
+              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text active:bg-green-500"
               onClick={() => settlementOrder && onStatusChange?.(settlementOrder.id, 'in_planning')}
             >
               {t('interimAccount')}
             </button>
             <button
               type="button"
-              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text hover:bg-pos-surface-hover"
+              className="flex-1 py-3 px-2 bg-pos-surface border-none rounded-md text-pos-text active:bg-green-500"
               onClick={() => setShowFinalSettlementModal(true)}
             >
               {t('finalSettlement')}
@@ -1230,7 +1230,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <button
               type="button"
               className={`w-full py-3 px-2 border-none rounded-md text-md ${hasOrderItems
-                ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                ? 'bg-pos-surface text-pos-text active:bg-green-500'
                 : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
                 }`}
               onClick={async () => {
@@ -1272,7 +1272,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           {hasOrderItems && onOpenTables && hasSelectedTable ? (
             <button
               type="button"
-              className="w-full py-2 px-2 bg-pos-accent/20 border border-pos-accent/50 rounded-md text-pos-text hover:bg-pos-accent/30 text-sm font-medium"
+              className="w-full py-2 px-2 bg-pos-accent/20 border border-pos-accent/50 rounded-md text-pos-text active:bg-green-500 text-sm font-medium"
               onClick={onOpenTables}
             >
               {tr('orderPanel.assignToTable', 'Assign to table')}
@@ -1282,7 +1282,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           <button
             type="button"
             disabled={!order?.id || !hasOrderItems || inWaitingButtonDisabled}
-            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'}`}
+            className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && !inWaitingButtonDisabled ? 'bg-pos-surface text-pos-text active:bg-green-500' : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'}`}
             onClick={async () => {
               if (!order?.id || !hasOrderItems || inWaitingButtonDisabled) return;
               if (isViewedFromInWaiting) {
@@ -1310,7 +1310,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <button
               type="button"
               disabled={!order?.id || !hasOrderItems || (!hasSelectedTable && !isViewedFromInWaiting)}
-              className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover' : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'}`}
+              className={`flex-1 py-1 border-none rounded-md ${order?.id && hasOrderItems && (hasSelectedTable || isViewedFromInWaiting) ? 'bg-pos-surface text-pos-text active:bg-green-500' : 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'}`}
               onClick={() => {
                 if (!order?.id || !hasOrderItems) return;
                 if (isViewedFromInWaiting) {
@@ -1328,7 +1328,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             disabled={payableTotalForPaymentModal <= 0.009 && !((isViewedFromInWaiting || isViewedFromInPlanning) && hasOrderItems) && !(hasOrderItems && order?.id)}
             className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009 && !((isViewedFromInWaiting || isViewedFromInPlanning) && hasOrderItems) && !(hasOrderItems && order?.id)
               ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
-              : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+              : 'bg-pos-surface text-pos-text active:bg-green-500'
               }`}
             onClick={() => openPayDifferentlyModal()}
           >
@@ -1336,7 +1336,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </button>
           <button
             type="button"
-            className="px-4 bg-pos-surface border-none rounded-md text-pos-text text-2xl hover:bg-pos-surface-hover"
+            className="px-4 bg-pos-surface border-none rounded-md text-pos-text text-2xl active:bg-green-500"
           >
             €
           </button>
@@ -1416,7 +1416,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <div className="flex justify-center mt-2">
                   <input
                     readOnly
-                    className="w-[160px] py-2 px-3 bg-gray-200 rounded-lg text-base mb-3 outline-none cursor-default"
+                    className="w-[160px] py-2 px-3 bg-gray-200 rounded-lg text-base mb-3 outline-none cursor-default focus:border-green-500 focus:outline-none"
                     value={payModalKeypadInput}
                     aria-label={t('amountKeypad')}
                   />
@@ -1430,7 +1430,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                             key={key}
                             type="button"
                             disabled={payModalSplitComplete}
-                            className={`py-4 rounded-lg text-lg font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
+                            className={`py-4 rounded-lg text-lg font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 active:bg-green-500'}`}
                             onClick={() => handlePayModalKeypad(key)}
                           >
                             {key}
@@ -1445,7 +1445,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <button
                   type="button"
                   disabled={payModalSplitComplete}
-                  className={`py-2 px-4 w-full max-w-[200px] rounded-lg text-sm font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
+                  className={`py-2 px-4 w-full max-w-[200px] rounded-lg text-sm font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 active:bg-green-500'}`}
                   onClick={handlePayHalfAmount}
                 >
                   {t('halfAmount')}
@@ -1453,14 +1453,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <button
                   type="button"
                   disabled={payModalSplitComplete}
-                  className={`py-2 px-4 w-full max-w-[200px] rounded-lg text-sm font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 hover:bg-gray-400'}`}
+                  className={`py-2 px-4 w-full max-w-[200px] rounded-lg text-sm font-medium ${payModalSplitComplete ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-300 text-gray-800 active:bg-green-500'}`}
                   onClick={handlePayRemaining}
                 >
                   {t('remainingAmount')}
                 </button>
                 <button
                   type="button"
-                  className="py-2 px-4 bg-gray-300 w-full max-w-[200px] rounded-lg text-gray-800 text-sm font-medium hover:bg-gray-400"
+                  className="py-2 px-4 bg-gray-300 w-full max-w-[200px] rounded-lg text-gray-800 text-sm font-medium active:bg-green-500"
                   onClick={handlePayReset}
                 >
                   {t('reset')}
@@ -1470,7 +1470,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex justify-around px-6 gap-4 w-full pt-6 pb-6">
               <button
                 type="button"
-                className="w-[140px] py-2 px-4 rounded-lg text-sm font-medium bg-gray-300 text-gray-800 hover:bg-gray-400"
+                className="w-[140px] py-2 px-4 rounded-lg text-sm font-medium bg-gray-300 text-gray-800 active:bg-green-500"
                 onClick={handleCancelPayDifferentlyModal}
               >
                 {t('cancel')}
@@ -1485,7 +1485,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 }
                 className={`w-[140px] py-2 px-4 rounded-lg text-sm font-medium ${Math.abs(payModalTotalAssigned - payModalTargetTotal) > 0.009 || payConfirmLoading || paymentMethodsLoading || activePaymentMethods.length === 0
                   ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+                  : 'bg-gray-300 text-gray-800 active:bg-green-500'
                   }`}
                 onClick={handleConfirmPayment}
               >
@@ -1526,7 +1526,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               {String(payworldStatus.state || '').toUpperCase() === 'IN_PROGRESS' ? (
                 <button
                   type="button"
-                  className="min-w-[220px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                  className="min-w-[220px] py-4 bg-pos-surface text-pos-text rounded text-2xl active:bg-green-500"
                   onClick={handleAbortPayworld}
                 >
                   {tr('orderPanel.cancelPayworld', 'Cancel Payment')}
@@ -1534,7 +1534,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               ) : (
                 <button
                   type="button"
-                  className="min-w-[220px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                  className="min-w-[220px] py-4 bg-pos-surface text-pos-text rounded text-2xl active:bg-green-500"
                   onClick={() => setShowPayworldStatusModal(false)}
                 >
                   {tr('orderPanel.closePayworldModal', 'Close')}
@@ -1562,7 +1562,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="grid grid-cols-3 gap-10 items-start">
               <button
                 type="button"
-                className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
+                className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 active:bg-green-500"
                 onClick={() => {
                   setShowFinalSettlementModal(false);
                   openPayDifferentlyModal();
@@ -1573,7 +1573,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <div className="flex flex-col gap-6">
                 <button
                   type="button"
-                  className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
+                  className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 active:bg-green-500"
                   onClick={() => {
                     setShowFinalSettlementModal(false);
                     setShowSettlementSubtotalModal(true);
@@ -1587,7 +1587,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </button>
                 <button
                   type="button"
-                  className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
+                  className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 active:bg-green-500"
                   onClick={() => setShowFinalSettlementModal(false)}
                 >
                   {t('cancel')}
@@ -1595,7 +1595,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               </div>
               <button
                 type="button"
-                className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 hover:bg-gray-300"
+                className="h-14 bg-gray-200 border-none rounded text-xl font-semibold text-gray-700 active:bg-green-500"
                 onClick={() => {
                   setShowFinalSettlementModal(false);
                   setShowSettlementSubtotalModal(true);
@@ -1635,7 +1635,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     <button
                       key={line.id}
                       type="button"
-                      className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-sm text-pos-text flex items-center justify-between ${subtotalSelectedLeftIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                      className={`w-full text-left px-4 py-2 border-b border-pos-border/40 text-sm text-pos-text flex items-center justify-between ${subtotalSelectedLeftIds.includes(line.id) ? 'bg-pos-surface-hover' : 'active:bg-green-500'
                         }`}
                       onClick={() => {
                         setSubtotalSelectedLeftIds((prev) =>
@@ -1655,7 +1655,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     disabled={settlementSubtotalLeftLines.length === 0}
                     className={`min-w-[100px] py-1 px-6 rounded text-pos-text text-md ${settlementSubtotalLeftLines.length === 0
                       ? 'bg-pos-surface opacity-50 cursor-not-allowed'
-                      : 'bg-pos-surface hover:bg-pos-surface-hover'
+                      : 'bg-pos-surface active:bg-green-500'
                       }`}
                     onClick={() => {
                       setSubtotalSelectedLeftIds(settlementSubtotalLeftLines.map((line) => line.id));
@@ -1670,7 +1670,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <div className="w-16 flex flex-col items-center justify-between py-16 text-pos-text mb-20">
                 <button
                   type="button"
-                  className="text-6xl leading-none hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="text-6xl leading-none active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed active:bg-green-500"
                   disabled={subtotalSelectedLeftIds.length === 0}
                   onClick={() => {
                     if (subtotalSelectedLeftIds.length === 0) return;
@@ -1690,7 +1690,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </button>
                 <button
                   type="button"
-                  className="text-6xl leading-none hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="text-6xl leading-none active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed active:bg-green-500"
                   disabled={subtotalSelectedRightIds.length === 0}
                   onClick={() => {
                     if (subtotalSelectedRightIds.length === 0) return;
@@ -1728,7 +1728,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                           <button
                             key={line.id}
                             type="button"
-                            className={`w-full text-left px-2 py-1 text-sm text-pos-text flex items-center justify-between ${subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'hover:bg-pos-surface-hover/60'
+                            className={`w-full text-left px-2 py-1 text-sm text-pos-text flex items-center justify-between ${subtotalSelectedRightIds.includes(line.id) ? 'bg-pos-surface-hover' : 'active:bg-green-500'
                               }`}
                             onClick={() => {
                               setSubtotalSelectedRightIds((prev) =>
@@ -1750,7 +1750,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   <div className="py-1 flex items-center justify-around gap-5">
                     <button
                       type="button"
-                      className="w-10 h-10 rounded bg-pos-surface text-pos-text text-xl leading-none hover:bg-pos-surface-hover"
+                      className="w-10 h-10 rounded bg-pos-surface text-pos-text text-xl leading-none active:bg-green-500"
                       onClick={() => scrollSplitRightPanel(-1)}
                       aria-label={t('scrollUp')}
                     >
@@ -1758,7 +1758,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     </button>
                     <button
                       type="button"
-                      className="min-w-[100px] py-2 px-6 rounded bg-pos-surface text-pos-text text-md hover:bg-pos-surface-hover"
+                      className="min-w-[100px] py-2 px-6 rounded bg-pos-surface text-pos-text text-md active:bg-green-500"
                       onClick={() => {
                         setSubtotalLineGroups([]);
                         setSubtotalSelectedLeftIds([]);
@@ -1769,7 +1769,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                     </button>
                     <button
                       type="button"
-                      className="w-10 h-10 rounded bg-pos-surface text-pos-text text-xl leading-none hover:bg-pos-surface-hover"
+                      className="w-10 h-10 rounded bg-pos-surface text-pos-text text-xl leading-none active:bg-green-500"
                       onClick={() => scrollSplitRightPanel(1)}
                       aria-label={t('scrollDown')}
                     >
@@ -1780,7 +1780,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 <div className="pt-4 flex items-center justify-center gap-12">
                   <button
                     type="button"
-                    className="min-w-[100px] py-1 px-6 rounded bg-pos-surface text-pos-text text-md hover:bg-pos-surface-hover"
+                    className="min-w-[100px] py-1 px-6 rounded bg-pos-surface text-pos-text text-md active:bg-green-500"
                     onClick={() => {
                       setShowSettlementSubtotalModal(false);
                       setSettlementModalType('subtotal');
@@ -1798,7 +1798,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                         disabled={!hasSplitBillSelection}
                         className={`min-w-[150px] py-1 px-6 rounded text-md ${!hasSplitBillSelection
                           ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                          : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                          : 'bg-pos-surface text-pos-text active:bg-green-500'
                           }`}
                         onClick={() => {
                           if (!hasSplitBillSelection) return;
@@ -1818,7 +1818,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                         disabled={!hasSplitBillSelection}
                         className={`min-w-[170px] py-1 px-6 rounded text-md ${!hasSplitBillSelection
                           ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                          : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                          : 'bg-pos-surface text-pos-text active:bg-green-500'
                           }`}
                         onClick={() => {
                           if (!hasSplitBillSelection) return;
@@ -1840,7 +1840,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                       disabled={settlementSubtotalLeftLines.length > 0}
                       className={`min-w-[100px] py-1 px-6 rounded text-md ${settlementSubtotalLeftLines.length > 0
                         ? 'bg-pos-surface text-pos-text opacity-50 cursor-not-allowed'
-                        : 'bg-pos-surface text-pos-text hover:bg-pos-surface-hover'
+                        : 'bg-pos-surface text-pos-text active:bg-green-500'
                         }`}
                       onClick={() => {
                         if (settlementSubtotalLeftLines.length > 0) return;
@@ -1878,7 +1878,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex justify-center">
               <button
                 type="button"
-                className="w-[200px] py-4 bg-green-600 text-white rounded text-2xl hover:bg-green-700"
+                className="w-[200px] py-4 bg-green-600 text-white rounded text-2xl active:bg-green-500"
                 onClick={() => setPaymentSuccessMessage('')}
               >
                 {t('ok')}
@@ -1905,7 +1905,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex gap-4 justify-center">
               <button
                 type="button"
-                className="flex-1 py-3 px-10 bg-pos-surface text-pos-text rounded text-xl hover:bg-pos-surface-hover"
+                className="flex-1 py-3 px-10 bg-pos-surface text-pos-text rounded text-xl active:bg-green-500"
                 onClick={() => {
                   setShowPayNowOrLaterModal(false);
                   setInPlanningCalendarAction('payNow');
@@ -1916,7 +1916,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               </button>
               <button
                 type="button"
-                className="flex-1 py-3 px-10 bg-pos-surface text-pos-text rounded text-xl hover:bg-pos-surface-hover"
+                className="flex-1 py-3 px-10 bg-pos-surface text-pos-text rounded text-xl active:bg-green-500"
                 onClick={() => {
                   setShowPayNowOrLaterModal(false);
                   setInPlanningCalendarAction('inPlanning');
@@ -1986,14 +1986,14 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex gap-3 justify-between">
               <button
                 type="button"
-                className="py-3 px-10 bg-pos-surface text-pos-text rounded text-xl hover:bg-pos-surface-hover"
+                className="py-3 px-10 bg-pos-surface text-pos-text rounded text-xl active:bg-green-500"
                 onClick={() => setShowDeleteAllModal(false)}
               >
                 {t('cancel')}
               </button>
               <button
                 type="button"
-                className="py-3 px-10 bg-pos-danger text-white rounded text-xl hover:bg-pos-danger/90"
+                className="py-3 px-10 bg-pos-danger text-white rounded text-xl active:bg-green-500"
                 onClick={async () => {
                   if (isSavedTableOrder) {
                     setShowDeleteAllModal(false);
@@ -2038,7 +2038,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             <div className="flex justify-center">
               <button
                 type="button"
-                className="w-[200px] py-4 bg-pos-surface text-pos-text rounded text-2xl hover:bg-pos-surface-hover"
+                className="w-[200px] py-4 bg-pos-surface text-pos-text rounded text-2xl active:bg-green-500"
                 onClick={() => setPaymentErrorMessage('')}
               >
                 {t('ok')}
@@ -2055,7 +2055,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
               <button
                 key={key}
                 type="button"
-                className="py-3 bg-pos-panel border-none rounded-md text-pos-text text-xl active:bg-pos-surface-hover"
+                className="py-3 bg-pos-panel border-none rounded-md text-pos-text text-xl active:bg-green-500"
                 onClick={() => handleKeypad(key)}
               >
                 {key}

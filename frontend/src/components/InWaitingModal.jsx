@@ -105,7 +105,7 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
                     {displayedOrders.map((order) => (
                       <tr
                         key={order.id}
-                        className={`border-b flex w-full border-pos-border cursor-pointer ${selectedOrderId === order.id ? 'bg-green-500' : 'hover:bg-pos-rowHover'}`}
+                        className={`border-b flex w-full border-pos-border cursor-pointer ${selectedOrderId === order.id ? 'bg-green-500' : 'active:bg-green-500'}`}
                         onClick={() => setSelectedOrderId(order.id)}
                       >
                         <td className="p-2 flex items-center justify-center min-w-[130px] max-w-[130px]">
@@ -136,12 +136,12 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
             </div>
             {/* Scroll arrows */}
             <div className="flex gap-2 py-2 justify-center">
-              <button type="button" className="p-1 text-pos-muted hover:text-pos-text" onClick={() => scroll(-1)} aria-label={t('scrollUp')}>
+              <button type="button" className="p-1 text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => scroll(-1)} aria-label={t('scrollUp')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                   <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="currentColor" />
                 </svg>
               </button>
-              <button type="button" className="p-1 text-pos-muted hover:text-pos-text" onClick={() => scroll(1)} aria-label={t('scrollDown')}>
+              <button type="button" className="p-1 text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => scroll(1)} aria-label={t('scrollDown')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
                   <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="currentColor" />
                 </svg>
@@ -162,14 +162,14 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2.5 px-3 bg-pos-panel border border-pos-border rounded-md font-medium text-sm text-pos-text hover:bg-pos-rowHover"
+              className="w-full py-2.5 px-3 bg-pos-panel border border-pos-border rounded-md font-medium text-sm text-pos-text active:bg-green-500"
             >
               {tr('inWaitingModal.backToCounterSale', 'Back to counter sale')}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2.5 px-3 bg-pos-panel border border-pos-border rounded-md font-medium text-sm text-pos-text hover:bg-pos-rowHover"
+              className="w-full py-2.5 px-3 bg-pos-panel border border-pos-border rounded-md font-medium text-sm text-pos-text active:bg-green-500"
             >
               {tr('inWaitingModal.back', 'Back')}
             </button>
@@ -177,7 +177,7 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
               type="button"
               disabled={!selectedOrderId}
               onClick={handleView}
-              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
+              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border active:bg-green-500 text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
             >
               {tr('inWaitingModal.view', 'View')}
             </button>
@@ -185,7 +185,7 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
               type="button"
               disabled={!selectedOrderId}
               onClick={handlePrint}
-              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
+              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border active:bg-green-500 text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
             >
               {tr('inWaitingModal.print', 'Print')}
             </button>
@@ -193,7 +193,7 @@ export function InWaitingModal({ open, onClose, orders = [], onViewOrder, onDele
               type="button"
               disabled={!selectedOrderId}
               onClick={handleDelete}
-              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
+              className={`w-full py-2.5 px-3 rounded-md font-medium text-sm ${selectedOrderId ? 'bg-pos-panel border border-pos-border active:bg-green-500 text-pos-text' : 'bg-pos-panel border border-pos-border text-pos-muted cursor-not-allowed'}`}
             >
               {tr('inWaitingModal.delete', 'Delete')}
             </button>

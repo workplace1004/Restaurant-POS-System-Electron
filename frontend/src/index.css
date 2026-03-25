@@ -36,6 +36,10 @@
   input, textarea {
     caret-color: #22c55e;
   }
+  input:focus {
+    outline: none;
+    border-color: #22c55e;
+  }
 }
 
 /* Hide scrollbar while keeping scroll functionality */

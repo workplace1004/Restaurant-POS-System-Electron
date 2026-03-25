@@ -29,14 +29,14 @@ export function DeleteConfirmModal({ open, onClose, onConfirm, message = 'Are yo
         <div className="flex justify-around mt-10 gap-12">
           <button
             type="button"
-            className="px-8 py-4 rounded-lg text-lg font-semibold bg-rose-500 text-white hover:bg-rose-600 focus:outline-none transition-colors"
+            className="px-8 py-4 rounded-lg text-lg font-semibold bg-rose-500 text-white active:bg-rose-600 focus:outline-none transition-colors"
             onClick={() => onConfirm?.()}
           >
             {t('yes')}
           </button>
           <button
             type="button"
-            className="px-8 py-4 rounded-lg bg-pos-panel text-lg font-semibold text-white hover:text-gray-400 focus:outline-none"
+            className="px-8 py-4 rounded-lg bg-pos-panel text-lg font-semibold text-white active:text-gray-400 focus:outline-none active:bg-green-500"
             onClick={onClose}
           >
             {t('no')}

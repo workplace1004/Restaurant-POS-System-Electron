@@ -219,7 +219,7 @@ export function ProductArea({
                     type="button"
                     key={`${product.id}-${idx}`}
                     style={tileStyle}
-                    className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] hover:bg-pos-rowHover ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
+                    className={`flex relative flex-row items-center gap-1 justify-center px-1 border-none rounded-lg text-sm min-h-[70px] max-h-[70px] ${tileStyle ? '' : 'bg-pos-panel'} ${selectedProduct?.id === product.id ? 'ring-2 ring-pos-text' : ''
                       }`}
                     onClick={() => handleProductPress(product)}
                   >
@@ -252,7 +252,7 @@ export function ProductArea({
               </h3>
               <button
                 type="button"
-                className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+                className="p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500"
                 onClick={closeSubproductModal}
                 aria-label={t('close', 'Close')}
               >
@@ -273,8 +273,8 @@ export function ProductArea({
                         key={sp.id}
                         className={`flex items-center justify-center p-1 min-h-[50px] max-h-[50px] rounded-lg transition-colors ${
                           addedSubproductIds.has(sp.id)
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-pos-panel text-pos-text hover:bg-pos-surface'
+                            ? 'bg-green-600 text-white active:bg-green-500'
+                            : 'bg-pos-panel text-pos-text active:bg-green-500'
                         }`}
                         onClick={() => handleSubproductPress(sp)}
                       >
@@ -294,14 +294,14 @@ export function ProductArea({
             <div className="w-full px-5 pb-2 flex justify-end gap-2 absolute bottom-0 right-0">
               <button
                 type="button"
-                className="px-4 py-2 w-full rounded-lg border border-pos-border bg-pos-panel text-pos-text hover:bg-pos-bg"
+                className="px-4 py-2 w-full rounded-lg border border-pos-border bg-pos-panel text-pos-text active:bg-green-500"
                 onClick={closeSubproductModal}
               >
                 {t('cancel', 'Cancel')}
               </button>
               <button
                 type="button"
-                className="px-4 py-2 w-full rounded-lg bg-green-600 text-white hover:bg-green-700"
+                className="px-4 py-2 w-full rounded-lg bg-green-600 text-white active:bg-green-500"
                 onClick={closeSubproductModal}
               >
                 {t('ok', 'OK')}

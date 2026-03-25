@@ -29,11 +29,11 @@ function MonthPickerModal({ open, onClose, value, onChange, prevYearLabel, nextY
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-[#1e3a5f] flex items-center justify-between px-4 py-3">
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y - 1)} aria-label={prevYearLabel}>
+          <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={() => setViewYear((y) => y - 1)} aria-label={prevYearLabel}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" /></svg>
           </button>
           <span className="text-white py-5 text-5xl font-medium">{viewYear}</span>
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={() => setViewYear((y) => y + 1)} aria-label={nextYearLabel}>
+          <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={() => setViewYear((y) => y + 1)} aria-label={nextYearLabel}>
             <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" /></svg>
           </button>
         </div>
@@ -44,8 +44,7 @@ function MonthPickerModal({ open, onClose, value, onChange, prevYearLabel, nextY
               <button
                 key={label}
                 type="button"
-                className={`py-16 px-3 rounded text-2xl font-medium transition-colors ${isSelected ? 'bg-[#1e3a5f] text-white' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                className={`py-16 px-3 rounded text-2xl font-medium transition-colors ${isSelected ? 'bg-[#1e3a5f] text-white' : 'text-gray-700 active:bg-green-500' }`}
                 onClick={() => {
                   onChange(new Date(viewYear, i, 1));
                   onClose();
@@ -228,7 +227,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
             <div className="flex items-center justify-around w-full px-4 py-2 min-h-[64px] max-h-[64px]">
               <button
                 type="button"
-                className="text-left"
+                className="text-left active:bg-green-500"
                 onClick={() => setDateViewActive((prev) => !prev)}
               >
                 <div className={`font-semibold text-xl ${dateViewActive ? 'text-white' : 'text-green-400'}`}>{t('inPlanningDate')}</div>
@@ -241,7 +240,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
                       type="text"
                       readOnly
                       value={formatMonthYear(historyMonthDate)}
-                      className="w-48 px-3 py-2 text-md font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400"
+                      className="w-48 px-3 py-2 text-md font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer active:border-white/50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-500"
                       onClick={() => setShowMonthPickerModal(true)}
                       aria-label={t('selectMonthYear')}
                     />
@@ -250,7 +249,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
                       type="text"
                       readOnly
                       value={formatDate(fromDate)}
-                      className="w-48 px-3 py-2 text-md font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer hover:border-white/50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      className="w-48 px-3 py-2 text-md font-medium text-white bg-pos-panel border border-white/30 rounded cursor-pointer active:border-white/50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-green-500"
                       onClick={() => setCalendarFor('from')}
                       aria-label={t('fromDate')}
                     />
@@ -270,7 +269,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               />
               <button
                 type="button"
-                className={`px-3 py-1.5 rounded text-md font-medium ${historyMode ? 'text-green-400' : 'text-white'}`}
+                className={`px-3 py-1.5 rounded text-md font-medium ${historyMode ? 'text-green-400' : 'text-white'} active:bg-green-500`}
                 onClick={() => {
                   if (historyMode) {
                     setHistoryMode(false);
@@ -304,7 +303,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
                     {displayedOrders.map((order) => (
                       <tr
                         key={order.id}
-                        className={`border-b border-gray-100 cursor-pointer ${selectedOrderId === order.id ? 'bg-gray-400' : 'hover:bg-gray-300'
+                        className={`border-b border-gray-100 cursor-pointer ${selectedOrderId === order.id ? 'bg-gray-400' : 'active:bg-green-500'
                           }`}
                         onClick={() => setSelectedOrderId(order.id)}
                       >
@@ -366,10 +365,10 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               )}
             </div>
             <div className="flex justify-around w-full gap-2 py-2">
-              <button type="button" className="p-1 bg-pos-panel text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, -1)} aria-label={t('scrollUp')}>
+              <button type="button" className="p-1 bg-pos-panel text-gray-500 active:text-gray-700 active:opacity-70 active:scale-95 transition-transform active:bg-green-500" onClick={() => scroll(leftListRef, -1)} aria-label={t('scrollUp')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
               </button>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(leftListRef, 1)} aria-label={t('scrollDown')}>
+              <button type="button" className="p-1 text-gray-500 active:text-gray-700 active:opacity-70 active:scale-95 transition-transform active:bg-green-500" onClick={() => scroll(leftListRef, 1)} aria-label={t('scrollDown')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
               </button>
             </div>
@@ -381,20 +380,19 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               <button
                 type="button"
                 disabled={!selectedOrderId}
-                className={`px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded text-md ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70'
-                  }`}
+                className={`px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded text-md ${selectedOrderId ? 'bg-gray-200 text-gray-800 active:bg-green-500' : 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70' }`}
               >
                 {t('inPlanningProductionPrint')}
               </button>
               <button
                 type="button"
                 disabled={historyMode}
-                className={`px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded text-md ${historyMode ? 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                className={`px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded text-md ${historyMode ? 'bg-gray-400 text-gray-500 cursor-not-allowed opacity-70' : 'bg-gray-200 text-gray-800 active:bg-green-500'}`}
                 onClick={() => !historyMode && setShowPrintOptionsModal(true)}
               >
                 {t('inPlanningPrintAllProduction')}
               </button>
-              <button type="button" className="px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded bg-gray-200 text-gray-800 text-md hover:bg-gray-300">{t('inPlanningPrintTotals')}</button>
+              <button type="button" className="px-1.5 py-1.5 w-[100px] min-h-[57px] max-h-[57px] rounded bg-gray-200 text-gray-800 text-md active:bg-green-500">{t('inPlanningPrintTotals')}</button>
             </div>
             <div ref={rightListRef} className="h-[400px] overflow-auto border rounded-lg mx-2 border-white p-2">
               {selectedOrder ? (
@@ -431,10 +429,10 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               )}
             </div>
             <div className="flex justify-around w-full gap-2 py-2">
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, -1)} aria-label={t('scrollUp')}>
+              <button type="button" className="p-1 text-gray-500 active:text-gray-700 active:opacity-70 active:scale-95 transition-transform active:bg-green-500" onClick={() => scroll(rightListRef, -1)} aria-label={t('scrollUp')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="#ffffff" /></svg>
               </button>
-              <button type="button" className="p-1 text-gray-500 hover:text-gray-700 active:opacity-70 active:scale-95 transition-transform" onClick={() => scroll(rightListRef, 1)} aria-label={t('scrollDown')}>
+              <button type="button" className="p-1 text-gray-500 active:text-gray-700 active:opacity-70 active:scale-95 transition-transform active:bg-green-500" onClick={() => scroll(rightListRef, 1)} aria-label={t('scrollDown')}>
                 <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="#ffffff" /></svg>
               </button>
             </div>
@@ -449,35 +447,35 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               <div className="flex flex-col gap-1 text-3xl">
                 <div className="flex gap-1 justify-center">
                   {qwertyTop.map((k) => (
-                    <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
+                    <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
                   ))}
                 </div>
                 <div className="flex gap-1 justify-center">
                   {qwertyMid.map((k) => (
-                    <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
+                    <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
                   ))}
                 </div>
                 <div className="flex gap-1 justify-center">
                   {qwertyBot.map((k) => (
-                    <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
+                    <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendLetterOrSymbol(k)}>{keyDisplay(k)}</button>
                   ))}
-                  <button type="button" className="w-[104px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('Backspace')}>←</button>
+                  <button type="button" className="w-[104px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendKey('Backspace')}>←</button>
                 </div>
                 <div className="flex gap-1 justify-center">
                   <button
                     type="button"
-                    className={`w-[50px] h-[50px] border rounded text-pos-text hover:bg-pos-rowHover ${keyboardUppercase ? 'bg-pos-rowHover ring-2 ring-green-400' : 'bg-pos-panel'}`}
+                    className={`w-[50px] h-[50px] border rounded text-pos-text active:bg-green-500 ${keyboardUppercase ? 'bg-pos-rowHover ring-2 ring-green-400' : 'bg-pos-panel'}`}
                     onClick={() => setKeyboardUppercase((prev) => !prev)}
                     title="Toggle uppercase"
                   >
                     ↑
                   </button>
-                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('@')}>@</button>
-                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('/')}>/</button>
-                  <button type="button" className="w-[212px] h-[50px] border rounded bg-pos-panel hover:bg-pos-rowHover" aria-label={t('space')} onClick={() => sendKey(' ')} />
-                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('_')}>_</button>
-                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey('Backspace')}>←</button>
-                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover">→</button>
+                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendKey('@')}>@</button>
+                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendKey('/')}>/</button>
+                  <button type="button" className="w-[212px] h-[50px] border rounded bg-pos-panel active:bg-green-500" aria-label={t('space')} onClick={() => sendKey(' ')} />
+                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendKey('_')}>_</button>
+                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendKey('Backspace')}>←</button>
+                  <button type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500">→</button>
                 </div>
               </div>
               {/* Numeric keypad */}
@@ -485,7 +483,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
                 {numPad.map((row, i) => (
                   <div key={i} className="flex gap-1">
                     {row.map((k) => (
-                      <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text hover:bg-pos-rowHover" onClick={() => sendKey(k)}>{k}</button>
+                      <button key={k} type="button" className="w-[50px] h-[50px] border rounded bg-pos-panel text-pos-text active:bg-green-500" onClick={() => sendKey(k)}>{k}</button>
                     ))}
                   </div>
                 ))}
@@ -495,7 +493,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
             <div className="flex flex-col gap-2 text-md w-[242px] justify-center items-center ml-2">
               <button
                 type="button"
-                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 active:bg-green-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                 disabled={!selectedOrderId}
                 onClick={() => {
                   if (selectedOrderId && onLoadOrder) {
@@ -508,7 +506,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               </button>
               <button
                 type="button"
-                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 active:bg-green-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                 disabled={!selectedOrderId}
                 onClick={() => selectedOrderId && setShowAddRecurringModal(true)}
               >
@@ -516,7 +514,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               </button>
               <button
                 type="button"
-                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                className={`w-48 h-[40px] px-3 rounded font-medium ${selectedOrderId ? 'bg-gray-200 text-gray-800 active:bg-green-500' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                 disabled={!selectedOrderId}
                 onClick={async () => {
                   if (selectedOrderId && onDeleteOrder) {
@@ -528,7 +526,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
               >
                 {t('webordersCancelOrder')}
               </button>
-              <button type="button" className="w-48 h-[40px] px-3 rounded bg-gray-400 text-gray-800 font-medium hover:bg-gray-500" onClick={onClose}>{t('webordersClose')}</button>
+              <button type="button" className="w-48 h-[40px] px-3 rounded bg-gray-400 text-gray-800 font-medium active:bg-green-500" onClick={onClose}>{t('webordersClose')}</button>
             </div>
           </div>
         </div>
@@ -577,14 +575,14 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
             <div className="flex gap-4 justify-center items-center">
               <button
                 type="button"
-                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300 text-center"
+                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium active:bg-green-500 text-center"
                 onClick={() => setShowPrintOptionsModal(false)}
               >
                 {t('inPlanningPrintAll')}
               </button>
               <button
                 type="button"
-                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300 text-center"
+                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium active:bg-green-500 text-center"
                 onClick={() => setShowPrintOptionsModal(false)}
               >
                 {t('inPlanningPrintNewOrders')}
@@ -593,7 +591,7 @@ export function InPlanningModal({ open, onClose, orders = [], onDeleteOrder, onL
             <div className="flex justify-center items-center">
               <button
                 type="button"
-                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium hover:bg-gray-300"
+                className="h-[80px] w-[200px] rounded-lg bg-gray-200 text-gray-800 text-lg font-medium active:bg-green-500"
                 onClick={() => setShowPrintOptionsModal(false)}
               >
                 {t('cancel')}

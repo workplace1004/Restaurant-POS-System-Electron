@@ -12,7 +12,7 @@ const API = '/api';
 
 const CONTROL_SIDEBAR_ITEMS = [
   { id: 'personalize', label: 'Personalize Cash Register', icon: 'monitor' },
-  { id: 'reports', label: 'Reports', icon: 'chart' },
+  // { id: 'reports', label: 'Reports', icon: 'chart' },
   { id: 'users', label: 'Users', icon: 'users' },
   { id: 'language', label: 'Language', icon: 'language' }
 ];
@@ -808,9 +808,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [canCategoriesScrollUp, setCanCategoriesScrollUp] = useState(false);
   const [canCategoriesScrollDown, setCanCategoriesScrollDown] = useState(false);
   const productsListRef = useRef(null);
+  const productsCategoryTabsRef = useRef(null);
   const [canProductsScrollUp, setCanProductsScrollUp] = useState(false);
   const [canProductsScrollDown, setCanProductsScrollDown] = useState(false);
   const subproductsListRef = useRef(null);
+  const subproductsGroupTabsRef = useRef(null);
   const [canSubproductsScrollUp, setCanSubproductsScrollUp] = useState(false);
   const [canSubproductsScrollDown, setCanSubproductsScrollDown] = useState(false);
 
@@ -818,6 +820,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const [productHasSubproductsById, setProductHasSubproductsById] = useState({});
   const [showProductSubproductsModal, setShowProductSubproductsModal] = useState(false);
   const [productSubproductsProduct, setProductSubproductsProduct] = useState(null);
   const [productSubproductsGroupId, setProductSubproductsGroupId] = useState('');
@@ -1057,6 +1060,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [editingProductionMessageId, setEditingProductionMessageId] = useState(null);
   const [deleteConfirmProductionMessageId, setDeleteConfirmProductionMessageId] = useState(null);
   const productionMessagesListRef = useRef(null);
+  const [canProductionMessagesScrollUp, setCanProductionMessagesScrollUp] = useState(false);
+  const [canProductionMessagesScrollDown, setCanProductionMessagesScrollDown] = useState(false);
 
   const [printerTab, setPrinterTab] = useState('General');
   const [printers, setPrinters] = useState(() => {
@@ -1127,6 +1132,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [labelMarginBottom, setLabelMarginBottom] = useState('0');
   const [labelMarginTop, setLabelMarginTop] = useState('0');
   const [deleteConfirmLabelId, setDeleteConfirmLabelId] = useState(null);
+  const labelsListRef = useRef(null);
+  const [canLabelsScrollUp, setCanLabelsScrollUp] = useState(false);
+  const [canLabelsScrollDown, setCanLabelsScrollDown] = useState(false);
   const [labelsListPage, setLabelsListPage] = useState(0);
 
   const [priceDisplayType, setPriceDisplayType] = useState('disabled');
@@ -1201,6 +1209,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   const [selectedManageGroupId, setSelectedManageGroupId] = useState(null);
   const manageGroupsListRef = useRef(null);
   const manageGroupsDragRef = useRef({ active: false, startY: 0, startScrollTop: 0, pointerId: null });
+  const positioningCategoryTabsRef = useRef(null);
   const [canManageGroupsPageUp, setCanManageGroupsPageUp] = useState(false);
   const [canManageGroupsPageDown, setCanManageGroupsPageDown] = useState(false);
   const LOCALE_BY_LANG = { en: 'en-US', nl: 'nl-NL', fr: 'fr-FR', tr: 'tr-TR' };
@@ -1355,6 +1364,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updateProductionMessagesScrollState = useCallback(() => {
+    const el = productionMessagesListRef.current;
+    if (!el) {
+      setCanProductionMessagesScrollUp(false);
+      setCanProductionMessagesScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanProductionMessagesScrollUp(el.scrollTop > 0);
+    setCanProductionMessagesScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
   const updateDiscountTargetScrollState = useCallback(() => {
     const el = discountTargetListRef.current;
     if (!el) {
@@ -1435,6 +1456,26 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     el.scrollBy({ top: delta, behavior: 'smooth' });
   }, []);
 
+  const updateLabelsScrollState = useCallback(() => {
+    const el = labelsListRef.current;
+    if (!el) {
+      setCanLabelsScrollUp(false);
+      setCanLabelsScrollDown(false);
+      return;
+    }
+    const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+    setCanLabelsScrollUp(el.scrollTop > 0);
+    setCanLabelsScrollDown(el.scrollTop < maxScrollTop - 1);
+  }, []);
+
+  const scrollLabelsByPage = useCallback((direction) => {
+    const el = labelsListRef.current;
+    if (!el) return;
+    const pageHeight = Math.max(120, Math.floor(el.clientHeight * 0.92));
+    const delta = direction === 'down' ? pageHeight : -pageHeight;
+    el.scrollBy({ top: delta, behavior: 'smooth' });
+  }, []);
+
   const formatDateForCurrentLanguage = useCallback((isoDate) => {
     if (!isoDate) return '';
     const d = new Date(isoDate);
@@ -1495,6 +1536,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     if (topNavId !== 'tables') return;
     updateTableLocationsScrollState();
   }, [topNavId, tableLocations, updateTableLocationsScrollState]);
+
+  useEffect(() => {
+    if (!showProductionMessagesModal) return;
+    updateProductionMessagesScrollState();
+  }, [showProductionMessagesModal, productionMessages, updateProductionMessagesScrollState]);
+
+  useEffect(() => {
+    if (topNavId !== 'cash-register' || subNavId !== 'Printer' || printerTab !== 'Labels') return;
+    updateLabelsScrollState();
+  }, [topNavId, subNavId, printerTab, labelsList, updateLabelsScrollState]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1597,10 +1648,51 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
   }, [subNavId, selectedCategoryId, fetchProducts]);
 
   useEffect(() => {
+    if (subNavId !== 'Products') return;
+    if (!Array.isArray(products) || products.length === 0) return;
+
+    let cancelled = false;
+    const toCheck = products
+      .map((p) => p?.id)
+      .filter((id) => id != null && productHasSubproductsById[id] == null);
+    if (toCheck.length === 0) return;
+
+    (async () => {
+      for (const id of toCheck) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(`${API}/products/${id}/subproduct-links`);
+          const data = await res.json().catch(() => ({}));
+          const links = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+          const hasAny = links.length > 0;
+          if (!cancelled) {
+            setProductHasSubproductsById((prev) => (prev[id] === hasAny ? prev : { ...prev, [id]: hasAny }));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [subNavId, products, productHasSubproductsById]);
+
+  useEffect(() => {
     if (subNavId === 'Products' && categories.length > 0 && !selectedCategoryId) {
       setSelectedCategoryId(categories[0].id);
     }
   }, [subNavId, categories, selectedCategoryId]);
+
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Products') return;
+    if (!selectedCategoryId || !productsCategoryTabsRef.current) return;
+    const selectedTab = productsCategoryTabsRef.current.querySelector(`[data-category-id="${String(selectedCategoryId)}"]`);
+    if (selectedTab && typeof selectedTab.scrollIntoView === 'function') {
+      selectedTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [topNavId, subNavId, selectedCategoryId, categories]);
 
   useEffect(() => {
     if (!showProductPositioningModal) return;
@@ -1752,6 +1844,16 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     });
   }, [showProductPositioningModal, positioningCategoryId, selectedCategoryId, categories]);
 
+  useEffect(() => {
+    if (!showProductPositioningModal) return;
+    const categoryId = positioningCategoryId || selectedCategoryId || categories[0]?.id || null;
+    if (!categoryId || !positioningCategoryTabsRef.current) return;
+    const selectedTab = positioningCategoryTabsRef.current.querySelector(`[data-category-id="${String(categoryId)}"]`);
+    if (selectedTab && typeof selectedTab.scrollIntoView === 'function') {
+      selectedTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [showProductPositioningModal, positioningCategoryId, selectedCategoryId, categories]);
+
   const openProductPositioningModal = () => {
     setPositioningCategoryId(selectedCategoryId || categories[0]?.id || null);
     setPositioningSelectedProductId(null);
@@ -1879,8 +1981,18 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     }
   }, [subNavId, subproductGroups, selectedSubproductGroupId]);
 
+  useEffect(() => {
+    if (topNavId !== 'categories-products' || subNavId !== 'Subproducts') return;
+    if (!selectedSubproductGroupId || !subproductsGroupTabsRef.current) return;
+    const selectedTab = subproductsGroupTabsRef.current.querySelector(`[data-group-id="${String(selectedSubproductGroupId)}"]`);
+    if (selectedTab && typeof selectedTab.scrollIntoView === 'function') {
+      selectedTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [topNavId, subNavId, selectedSubproductGroupId, subproductGroups]);
+
   const openProductSubproductsModal = useCallback(async (product) => {
     setProductSubproductsProduct(product);
+    setShowProductSubproductsModal(true);
     let groups = subproductGroups;
     if (!groups.length) {
       try {
@@ -1918,7 +2030,6 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
     } finally {
       setLoadingProductSubproductsLinked(false);
     }
-    setShowProductSubproductsModal(true);
   }, [subproductGroups]);
 
   const closeProductSubproductsModal = useCallback(() => {
@@ -5156,7 +5267,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               type="button"
               className={`flex items-center gap-3 px-2 py-3 rounded-lg text-left text-md transition-colors ${controlSidebarId === item.id
                 ? 'bg-pos-bg text-pos-text font-medium'
-                : 'text-pos-muted hover:bg-pos-bg/50 hover:text-pos-text'
+                : 'text-pos-muted active:bg-green-500 active:text-pos-text'
                 }`}
               onClick={() => setControlSidebarId(item.id)}
             >
@@ -5172,14 +5283,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           <div className="flex flex-col">
             <button
               type="button"
-              className="px-3 py-1 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-xl"
+              className="px-3 py-1 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 text-xl"
               onClick={() => onBack?.()}
             >
               {tr('backName', 'Back')}
             </button>
             <button
               type="button"
-              className="px-3 py-1 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-bg/50 text-xl"
+              className="px-3 py-1 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 text-xl"
               onClick={() => setShowLogoutModal(true)}
             >
               {tr('logOut', 'Log out')}
@@ -5199,7 +5310,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 type="button"
                 className={`flex items-center gap-2 px-2 py-3 rounded-lg text-lg transition-colors ${topNavId === item.id
                   ? 'bg-pos-panel text-pos-text font-medium border border-pos-border'
-                  : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50 border border-transparent'
+                  : 'text-pos-muted active:text-pos-text active:bg-green-500 border border-transparent'
                   }`}
                 onClick={() => {
                   setTopNavId(item.id);
@@ -5224,7 +5335,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 type="button"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${reportTabId === item.id
                   ? 'bg-pos-panel text-pos-text font-medium border border-pos-border'
-                  : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50 border border-transparent'
+                  : 'text-pos-muted active:text-pos-text active:bg-green-500 border border-transparent'
                   }`}
                 onClick={() => setReportTabId(item.id)}
               >
@@ -5244,7 +5355,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 type="button"
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${subNavId === label
                   ? 'bg-pos-panel text-pos-text font-medium'
-                  : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50'
+                  : 'text-pos-muted active:text-pos-text active:bg-green-500'
                   }`}
                 onClick={() => setSubNavId(label)}
               >
@@ -5263,7 +5374,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 type="button"
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${subNavId === label
                   ? 'bg-pos-panel text-pos-text font-medium'
-                  : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50'
+                  : 'text-pos-muted active:text-pos-text active:bg-green-500'
                   }`}
                 onClick={() => {
                   setSubNavId(label);
@@ -5287,7 +5398,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 type="button"
                 className={`px-4 py-2 rounded-lg text-sm transition-colors ${subNavId === label
                   ? 'bg-pos-panel text-pos-text font-medium'
-                  : 'text-pos-muted hover:text-pos-text hover:bg-pos-panel/50'
+                  : 'text-pos-muted active:text-pos-text active:bg-green-500'
                   }`}
                 onClick={() => setSubNavId(label)}
               >
@@ -5306,7 +5417,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="shrink-0 flex justify-around gap-2 h-[46px] w-full items-center">
                     <span className="text-pos-text text-sm font-medium">Z</span>
                     <span className="text-pos-text text-sm font-medium">X</span>
-                    <button type="button" className="text-pos-text hover:underline text-sm">{tr('control.reports.history', 'History')}</button>
+                    <button type="button" className="text-pos-text active:underline text-sm active:bg-green-500">{tr('control.reports.history', 'History')}</button>
                   </div>
                   <div className="relative grid grid-cols-2 flex-1 px-4 min-h-0 gap-4">
                     <div className="flex flex-col min-h-0 gap-3">
@@ -5403,7 +5514,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         <label className="text-pos-text text-sm shrink-0">{tr('control.reports.createTo', 'Create to :')}</label>
                         <Dropdown options={mapTranslatedOptions(REPORT_GENERATE_UNTIL_OPTIONS)} value={reportGenerateUntil} onChange={setReportGenerateUntil} placeholder={tr('control.reports.currentTime', 'Current time')} className="text-sm min-w-[180px] max-w-[180px]" />
                       </div>
-                      <button type="button" className="flex mt-4 items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm justify-center w-[120px]">
+                      <button type="button" className="flex mt-4 items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm justify-center w-[120px]">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                         {tr('control.reports.print', 'Print')}
                       </button>
@@ -5432,7 +5543,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </div>
                     </div>
                     <div className='flex justify-center items-center'>
-                      <button type="button" className="flex items-center h-[40px] w-[120px] gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm">
+                      <button type="button" className="flex items-center h-[40px] w-[120px] gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                         {tr('control.reports.print', 'Print')}
                       </button>
@@ -5449,7 +5560,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <span className="text-pos-text text-sm">{tr('control.reports.to', 'to')}</span>
                     <Dropdown options={PERIODIC_REPORT_TIME_OPTIONS} value={periodicReportEndTime} onChange={setPeriodicReportEndTime} placeholder="24:00" className="text-sm min-w-[80px]" />
                     <input type="text" value={periodicReportEndDate} onChange={(e) => setPeriodicReportEndDate(e.target.value)} placeholder="dd-mm-yyyy" className="w-[120px] px-3 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text text-sm" />
-                    <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium">
+                    <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm font-medium">
                       {tr('control.reports.makeReport', 'Make report')}
                     </button>
                   </div>
@@ -5463,7 +5574,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         <div className="flex-1" />
                         <PaginationArrows canPrev={true} canNext={true} onPrev={() => { }} onNext={() => { }} className="relative py-0" />
                         <div className="flex-1 flex justify-end">
-                          <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm">
+                          <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                             {tr('control.reports.print', 'Print')}
                           </button>
@@ -5530,7 +5641,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex justify-center mt-6">
                     <button
                       type="button"
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-sm"
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-sm"
                       disabled={savingReportSettings}
                       onClick={handleSaveReportSettings}
                     >
@@ -5542,11 +5653,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
             </div>
           ) : controlSidebarId === 'users' ? (
-            <div className="relative min-h-[650px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+            <div className="relative min-h-[750px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
               <div className="flex items-center w-full justify-center mb-2">
                 <button
                   type="button"
-                  className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                  className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                   disabled={usersLoading}
                   onClick={openNewUserModal}
                 >
@@ -5561,7 +5672,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <>
                   <div
                     ref={usersListRef}
-                    className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                    className="max-h-[610px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                     onScroll={updateUsersScrollState}
                   >
                     <ul className="w-full flex flex-col">
@@ -5574,7 +5685,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
+                              className="p-2 rounded text-pos-text mr-5 active:text-green-500"
                               onClick={() => openEditUserModal(u)}
                               aria-label={tr('control.edit', 'Edit')}
                             >
@@ -5582,7 +5693,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             </button>
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                              className="p-2 rounded text-pos-text active:text-rose-500"
                               onClick={() => setDeleteConfirmUserId(u.id)}
                               aria-label={tr('delete', 'Delete')}
                             >
@@ -5603,7 +5714,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
             </div>
           ) : controlSidebarId === 'language' ? (
-            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[700px]">
+            <div className="rounded-xl border border-pos-border bg-pos-panel/30 p-8 min-h-[750px]">
               <h2 className="text-pos-text text-2xl font-medium mb-6">{tr('control.languageTitle', 'Language')}</h2>
               <p className="text-pos-muted text-xl mb-8">{tr('control.languageDescription', 'Select the language for the application.')}</p>
               <div className="flex flex-wrap gap-4 w-full flex justify-center min-h-[200px] items-center">
@@ -5614,7 +5725,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     onClick={() => setAppLanguage(opt.value)}
                     className={`px-8 py-4 rounded-xl text-xl font-medium border-2 transition-colors ${appLanguage === opt.value
                       ? 'bg-pos-panel border-green-500 text-green-400'
-                      : 'bg-pos-bg border-pos-border text-pos-text hover:border-pos-muted hover:bg-pos-panel/50'
+                      : 'bg-pos-bg border-pos-border text-pos-text active:border-pos-muted active:bg-green-500'
                       }`}
                   >
                     {tr(`control.languageOption.${opt.value}`, opt.label)}
@@ -5624,7 +5735,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <div className="mt-10 flex w-full justify-center">
                 <button
                   type="button"
-                  className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
+                  className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-2xl"
                   disabled={savingAppLanguage || appLanguage === lang}
                   onClick={handleSaveAppLanguage}
                 >
@@ -5644,7 +5755,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       onClick={() => setTemplateTheme('light')}
                       className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors min-w-[150px] ${templateTheme === 'light'
                         ? 'bg-pos-panel border-2 border-green-500 text-green-400'
-                        : 'bg-pos-bg border border-pos-border text-pos-muted hover:text-pos-text hover:border-pos-border'
+                        : 'bg-pos-bg border border-pos-border text-pos-muted active:text-pos-text active:border-pos-border'
                         }`}
                     >
                       Light
@@ -5654,7 +5765,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       onClick={() => setTemplateTheme('dark')}
                       className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors min-w-[150px] ${templateTheme === 'dark'
                         ? 'bg-gray-900 border-2 border-green-500 text-green-400'
-                        : 'bg-[#1a1a1a] border border-pos-border text-pos-muted hover:text-pos-text'
+                        : 'bg-[#1a1a1a] border border-pos-border text-pos-muted active:text-pos-text'
                         }`}
                     >
                       Dark
@@ -5672,7 +5783,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           setSavingTemplateSettings(false);
                         }
                       }}
-                      className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                      className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                     >
                     <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
                       <path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" />
@@ -5687,7 +5798,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex items-center justify-center mb-2">
                     <button
                       type="button"
-                      className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                      className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                       disabled={paymentTypesLoading}
                       onClick={openNewPaymentTypeModal}
                     >
@@ -5721,7 +5832,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             {sorted.map((pt) => (
                               <li
                                 key={pt.id}
-                                className="flex items-center w-full px-4 py-1 border-b border-pos-border last:border-b-0 bg-pos-bg hover:bg-pos-panel/50 transition-colors"
+                                className="flex items-center w-full px-4 py-1 border-b border-pos-border last:border-b-0 bg-pos-bg active:bg-green-500 transition-colors"
                               >
                                 <span className="flex-1 text-pos-text text-sm font-medium">{pt.name}</span>
                                 <span className="w-[160px] shrink-0 text-pos-muted text-xs mr-2">
@@ -5729,7 +5840,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 </span>
                                 <button
                                   type="button"
-                                  className="p-2 rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                  className="p-2 rounded text-pos-text active:bg-green-500 shrink-0"
                                   aria-label={pt.active ? tr('control.paymentTypes.deactivate', 'Deactivate') : tr('control.paymentTypes.activate', 'Activate')}
                                   onClick={() => togglePaymentTypeActive(pt.id)}
                                 >
@@ -5741,7 +5852,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 </button>
                                 <button
                                   type="button"
-                                  className="p-2 rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                  className="p-2 rounded text-pos-text active:bg-green-500 shrink-0"
                                   onClick={() => openEditPaymentTypeModal(pt)}
                                   aria-label={tr('control.edit', 'Edit')}
                                 >
@@ -5749,7 +5860,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                 </button>
                                 <button
                                   type="button"
-                                  className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                  className="p-2 mr-5 rounded text-pos-text active:bg-green-500 shrink-0"
                                   onClick={() => setDeleteConfirmPaymentTypeId(pt.id)}
                                   aria-label={tr('delete', 'Delete')}
                                 >
@@ -5776,7 +5887,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <div className="flex items-center w-full justify-center mb-2">
                 <button
                   type="button"
-                  className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                  className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                   disabled={priceGroupsLoading}
                   onClick={openPriceGroupModal}
                 >
@@ -5807,7 +5918,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
+                                className="p-2 rounded text-pos-text mr-5 active:text-green-500"
                                 onClick={() => openEditPriceGroupModal(pg)}
                                 aria-label="Edit"
                               >
@@ -5815,7 +5926,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </button>
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                className="p-2 rounded text-pos-text active:text-rose-500"
                                 onClick={() => setDeleteConfirmId(pg.id)}
                                 aria-label="Delete"
                               >
@@ -5843,7 +5954,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex items-center w-full justify-center mb-2">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                     disabled={categoriesLoading}
                     onClick={openCategoryModal}
                   >
@@ -5874,7 +5985,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="p-2 rounded text-pos-text active:text-rose-500 disabled:opacity-30 disabled:cursor-not-allowed"
                                 onClick={() => handleMoveCategory(cat.id, 'down')}
                                 disabled={index >= sortedCategories.length - 1}
                                 aria-label="Move down"
@@ -5883,7 +5994,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </button>
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text hover:bg-pos-panel disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="p-2 rounded text-pos-text active:text-rose-500 disabled:opacity-30 disabled:cursor-not-allowed"
                                 onClick={() => handleMoveCategory(cat.id, 'up')}
                                 disabled={index <= 0}
                                 aria-label="Move up"
@@ -5895,7 +6006,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
+                                className="p-2 mr-5 rounded text-pos-text active:bg-green-500"
                                 onClick={() => openEditCategoryModal(cat)}
                                 aria-label="Edit"
                               >
@@ -5903,7 +6014,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </button>
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                className="p-2 rounded text-pos-text active:text-rose-500"
                                 onClick={() => setDeleteConfirmCategoryId(cat.id)}
                                 aria-label="Delete"
                               >
@@ -5935,14 +6046,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     type="button"
                     disabled={!selectedCategoryId || productsLoading}
                     onClick={openProductModal}
-                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                   >
                     {tr('control.products.new', 'New Product')}
                   </button>
                   <button
                     type="button"
                     onClick={openProductPositioningModal}
-                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                   >
                     {tr('control.products.positioning', 'Positioning')}
                   </button>
@@ -5961,26 +6072,29 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex items-center gap-2 mb-2 overflow-hidden">
                     <button
                       type="button"
-                      className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
+                      className="p-2 rounded text-pos-text active:bg-green-500 shrink-0"
                       onClick={() => {
-                        const el = document.getElementById('products-category-scroll');
-                        if (el) el.scrollBy({ left: -200, behavior: 'smooth' });
+                        const currentIndex = categories.findIndex((cat) => cat.id === selectedCategoryId);
+                        if (currentIndex <= 0) return;
+                        setSelectedCategoryId(categories[currentIndex - 1].id);
+                        setSelectedProductId(null);
                       }}
                       aria-label="Scroll left"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                     </button>
                     <div
-                      id="products-category-scroll"
+                      ref={productsCategoryTabsRef}
                       className="flex gap-2 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                     >
                       {categories.map((cat) => (
                         <button
                           key={cat.id}
+                          data-category-id={String(cat.id)}
                           type="button"
                           className={`px-4 py-2 text-sm font-medium whitespace-nowrap shrink-0 transition-colors border-b-2 ${selectedCategoryId === cat.id
                             ? 'bg-pos-bg/80 text-pos-text border-green-500'
-                            : 'text-pos-muted hover:text-pos-text bg-transparent border-transparent hover:bg-pos-panel/50'
+                            : 'text-pos-muted active:text-pos-text bg-transparent border-transparent active:bg-green-500'
                             }`}
                           onClick={() => { setSelectedCategoryId(cat.id); setSelectedProductId(null); }}
                         >
@@ -5990,10 +6104,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <button
                       type="button"
-                      className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
+                      className="p-2 rounded text-pos-text active:bg-green-500 shrink-0"
                       onClick={() => {
-                        const el = document.getElementById('products-category-scroll');
-                        if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
+                        const currentIndex = categories.findIndex((cat) => cat.id === selectedCategoryId);
+                        if (currentIndex < 0 || currentIndex >= categories.length - 1) return;
+                        setSelectedCategoryId(categories[currentIndex + 1].id);
+                        setSelectedProductId(null);
                       }}
                       aria-label="Scroll right"
                     >
@@ -6018,7 +6134,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       {filteredProducts.map((product) => (
                         <li
                           key={product.id}
-                          className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedProductId === product.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
+                          className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedProductId === product.id ? 'bg-pos-panel/70' : 'bg-pos-bg'}`}
                           onClick={(e) => { if (!e.target.closest('button')) setSelectedProductId(product.id); }}
                         >
                           <span className="min-w-[30%] text-left font-medium truncate" title={product.name}>
@@ -6027,7 +6143,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           <span className="flex-shrink-0 min-w-[30%] text-center text-pos-muted text-sm">
                             <button
                               type="button"
-                              className="px-2 py-1 rounded text-sm text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+                              className={`px-2 py-1 rounded text-sm active:text-pos-text active:bg-green-500 ${productHasSubproductsById[product.id] ? 'text-white font-medium' : 'text-pos-muted'}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openProductSubproductsModal(product);
@@ -6039,7 +6155,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           <div className="flex items-center justify-end min-w-[40%] gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
+                              className="p-2 rounded text-pos-text mr-5 active:text-green-500"
                               onClick={() => openEditProductModal(product)}
                               aria-label="Edit"
                             >
@@ -6047,7 +6163,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             </button>
                             <button
                               type="button"
-                              className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                              className="p-2 rounded text-pos-text active:text-rose-500"
                               onClick={() => setDeleteConfirmProductId(product.id)}
                               aria-label="Delete"
                             >
@@ -6075,7 +6191,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex items-center w-full justify-center gap-4 mb-2 flex-wrap">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                     disabled={subproductsLoading}
                     onClick={openSubproductModal}
                   >
@@ -6083,7 +6199,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors"
                     onClick={() => setShowManageGroupsModal(true)}
                   >
                     {tr('control.subproducts.manageGroups', 'Manage Groups')}
@@ -6093,23 +6209,29 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex items-center gap-2 mb-2 overflow-hidden">
                     <button
                       type="button"
-                      className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
-                      onClick={() => { const el = document.getElementById('subproducts-group-scroll'); if (el) el.scrollBy({ left: -200, behavior: 'smooth' }); }}
+                      className="p-2 rounded text-pos-text active:bg-green-500 shrink-0"
+                      onClick={() => {
+                        const currentIndex = subproductGroups.findIndex((grp) => grp.id === selectedSubproductGroupId);
+                        if (currentIndex <= 0) return;
+                        setSelectedSubproductGroupId(subproductGroups[currentIndex - 1].id);
+                        setSelectedSubproductId(null);
+                      }}
                       aria-label="Scroll left"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                     </button>
                     <div
-                      id="subproducts-group-scroll"
+                      ref={subproductsGroupTabsRef}
                       className="flex gap-2 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                     >
                       {subproductGroups.map((grp) => (
                         <button
                           key={grp.id}
+                          data-group-id={String(grp.id)}
                           type="button"
                           className={`px-4 py-2 text-sm font-medium whitespace-nowrap shrink-0 transition-colors border-b-2 ${selectedSubproductGroupId === grp.id
                             ? 'bg-pos-bg/80 text-pos-text border-green-500'
-                            : 'text-pos-muted hover:text-pos-text bg-transparent border-transparent hover:bg-pos-panel/50'
+                            : 'text-pos-muted active:text-pos-text bg-transparent border-transparent active:bg-green-500'
                             }`}
                           onClick={() => setSelectedSubproductGroupId(grp.id)}
                         >
@@ -6119,8 +6241,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                     <button
                       type="button"
-                      className="p-2 rounded text-pos-text hover:bg-pos-bg shrink-0"
-                      onClick={() => { const el = document.getElementById('subproducts-group-scroll'); if (el) el.scrollBy({ left: 200, behavior: 'smooth' }); }}
+                      className="p-2 rounded text-pos-text active:bg-green-500 shrink-0"
+                      onClick={() => {
+                        const currentIndex = subproductGroups.findIndex((grp) => grp.id === selectedSubproductGroupId);
+                        if (currentIndex < 0 || currentIndex >= subproductGroups.length - 1) return;
+                        setSelectedSubproductGroupId(subproductGroups[currentIndex + 1].id);
+                        setSelectedSubproductId(null);
+                      }}
                       aria-label="Scroll right"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -6145,15 +6272,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       {subproducts.map((sp) => (
                         <li
                           key={sp.id}
-                          className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedSubproductId === sp.id ? 'bg-pos-panel/70' : 'bg-pos-bg hover:bg-pos-panel/40'}`}
+                          className={`flex items-center w-full justify-between px-4 py-2 border-y border-pos-panel text-pos-text text-sm cursor-pointer ${selectedSubproductId === sp.id ? 'bg-pos-panel/70' : 'bg-pos-bg'}`}
                           onClick={(e) => { if (!e.target.closest('button')) setSelectedSubproductId(sp.id); }}
                         >
                           <span className="flex-1 font-medium truncate" title={sp.name}>{sp.name}</span>
                           <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button type="button" className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel" onClick={() => openEditSubproductModal(sp)} aria-label="Edit">
+                            <button type="button" className="p-2 rounded text-pos-text mr-5 active:bg-green-500" onClick={() => openEditSubproductModal(sp)} aria-label="Edit">
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
-                            <button type="button" className="p-2 rounded text-pos-text hover:bg-pos-panel" onClick={() => setDeleteConfirmSubproductId(sp.id)} aria-label="Delete">
+                            <button type="button" className="p-2 rounded text-pos-text active:text-rose-500" onClick={() => setDeleteConfirmSubproductId(sp.id)} aria-label="Delete">
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
@@ -6184,7 +6311,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex items-center justify-center mb-6">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                    className="px-6 py-3 rounded-lg text-xl font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors"
                     onClick={openNewKitchenMessageModal}
                   >
                     New kitchen message
@@ -6198,12 +6325,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       {paginatedKitchenMessages.map((m) => (
                         <li
                           key={m.id}
-                          className="flex items-center w-full px-20 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 hover:bg-pos-panel/50 transition-colors"
+                          className="flex items-center w-full px-20 py-4 border-b border-pos-border last:border-b-0 bg-pos-panel/30 active:bg-green-500 transition-colors"
                         >
                           <span className="flex-1 text-pos-text text-xl font-medium">{m.name || '—'}</span>
                           <button
                             type="button"
-                            className="p-2 rounded text-pos-text mr-10 hover:bg-pos-bg"
+                            className="p-2 rounded text-pos-text mr-10 active:bg-green-500"
                             onClick={() => openEditKitchenMessageModal(m)}
                             aria-label="Edit"
                           >
@@ -6211,7 +6338,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           </button>
                           <button
                             type="button"
-                            className="p-2 rounded text-pos-text hover:bg-pos-bg"
+                            className="p-2 rounded text-pos-text active:text-rose-500"
                             onClick={() => setDeleteConfirmKitchenMessageId(m.id)}
                             aria-label="Delete"
                           >
@@ -6236,7 +6363,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex items-center w-full justify-center mb-2">
                   <button
                     type="button"
-                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors"
+                    className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors"
                     onClick={openNewDiscountModal}
                   >
                     {tr('control.discounts.new', 'New discount')}
@@ -6263,7 +6390,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text mr-5 hover:bg-pos-panel"
+                                className="p-2 rounded text-pos-text mr-5 active:text-green-500"
                                 onClick={() => openEditDiscountModal(d)}
                                 aria-label="Edit"
                               >
@@ -6271,7 +6398,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </button>
                               <button
                                 type="button"
-                                className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                className="p-2 rounded text-pos-text active:text-rose-500"
                                 onClick={() => setDeleteConfirmDiscountId(d.id)}
                                 aria-label="Delete"
                               >
@@ -6307,7 +6434,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <button
                         key={id}
                         type="button"
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${printerTab === id ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${printerTab === id ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted active:text-pos-text'} active:bg-green-500`}
                         onClick={() => setPrinterTab(id)}
                       >
                         {tr(labelKey, fallback)}
@@ -6319,7 +6446,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="flex items-center w-full justify-center mb-2">
                         <button
                           type="button"
-                          className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                          className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                           onClick={openNewPrinterModal}
                         >
                           {tr('control.printer.addPrinter', 'Add printer')}
@@ -6350,7 +6477,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                     <div className="flex items-center gap-2 shrink-0">
                                       <button
                                         type="button"
-                                        className="p-2 flex justify-center rounded text-pos-text hover:bg-pos-panel shrink-0"
+                                        className="p-2 flex justify-center rounded text-pos-text active:bg-green-500 shrink-0"
                                         onClick={() => setDefaultPrinter(p.id)}
                                         aria-label={p.isDefault ? tr('control.printer.defaultPrinter', 'Default printer') : tr('control.printer.setAsDefault', 'Set as default')}
                                       >
@@ -6365,7 +6492,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                     <div className="flex items-center gap-2 shrink-0">
                                       <button
                                         type="button"
-                                        className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
+                                        className="p-2 mr-5 rounded text-pos-text active:bg-green-500"
                                         onClick={() => openEditPrinterModal(p)}
                                         aria-label={tr('control.edit', 'Edit')}
                                       >
@@ -6373,7 +6500,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                       </button>
                                       <button
                                         type="button"
-                                        className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                        className="p-2 rounded text-pos-text active:text-rose-500"
                                         onClick={() => setDeleteConfirmPrinterId(p.id)}
                                         aria-label={tr('delete', 'Delete')}
                                       >
@@ -6439,7 +6566,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </div>
                       </div>
                       <div className="flex justify-center pt-5 pb-5">
-                        <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingFinalTickets} onClick={handleSaveFinalTickets}>
+                        <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingFinalTickets} onClick={handleSaveFinalTickets}>
                           <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                           {tr('control.save', 'Save')}
                         </button>
@@ -6510,7 +6637,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </div>
                       </div>
                       <div className="flex justify-center pt-5 pb-5 text-md">
-                        <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProdTickets} onClick={handleSaveProductionTickets}>
+                        <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingProdTickets} onClick={handleSaveProductionTickets}>
                           <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                           {tr('control.save', 'Save')}
                         </button>
@@ -6518,19 +6645,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   )}
                   {printerTab === 'Labels' && (() => {
-                    const LABELS_PER_PAGE = 8;
                     const sortedLabels = [...labelsList].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-                    const totalLabelsPages = Math.max(1, Math.ceil(sortedLabels.length / LABELS_PER_PAGE));
-                    const page = Math.min(labelsListPage, totalLabelsPages - 1);
-                    const paginatedLabels = sortedLabels.slice(page * LABELS_PER_PAGE, (page + 1) * LABELS_PER_PAGE);
-                    const canPrev = page > 0;
-                    const canNext = page < totalLabelsPages - 1;
                     return (
-                      <div className="relative min-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
+                      <div className="relative min-h-[400px] max-h-[580px] rounded-xl border border-pos-border bg-pos-panel/30 p-4 pb-[60px]">
                         <div className="flex flex-wrap items-center justify-center w-full gap-4 mb-2">
                           <Dropdown options={labelsTypeOptions} value={labelsType} onChange={(v) => saveLabelsSettings({ type: v })} placeholder={tr('control.labels.selectPlaceholder', 'Select')} className="text-sm min-w-[200px]" />
                           <Dropdown options={labelsPrinterOptions} value={labelsPrinter} onChange={(v) => saveLabelsSettings({ printer: v })} placeholder={tr('control.labels.selectPrinter', 'Select printer')} className="text-sm min-w-[200px]" />
-                          <button type="button" className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50" onClick={openNewLabelModal}>
+                          <button type="button" className="px-6 py-3 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50" onClick={openNewLabelModal}>
                             {tr('control.labels.new', 'New label')}
                           </button>
                         </div>
@@ -6540,9 +6661,13 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           </ul>
                         ) : (
                           <>
-                            <div className="max-h-[510px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                            <div
+                              ref={labelsListRef}
+                              onScroll={updateLabelsScrollState}
+                              className="max-h-[450px] overflow-y-auto rounded-lg [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                            >
                               <ul className="w-full flex flex-col">
-                                {paginatedLabels.map((item) => (
+                                {sortedLabels.map((item) => (
                                   <li
                                     key={item.id}
                                     className="flex items-center w-full justify-between px-4 py-2 bg-pos-bg border-y border-pos-panel text-pos-text text-sm"
@@ -6551,7 +6676,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                     <div className="flex items-center gap-2 shrink-0">
                                       <button
                                         type="button"
-                                        className="p-2 mr-5 rounded text-pos-text hover:bg-pos-panel"
+                                        className="p-2 mr-5 rounded text-pos-text active:bg-green-500"
                                         onClick={() => openEditLabelModal(item)}
                                         aria-label={tr('control.edit', 'Edit')}
                                       >
@@ -6559,7 +6684,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                       </button>
                                       <button
                                         type="button"
-                                        className="p-2 rounded text-pos-text hover:bg-pos-panel"
+                                        className="p-2 rounded text-pos-text active:text-rose-500"
                                         onClick={() => setDeleteConfirmLabelId(item.id)}
                                         aria-label={tr('delete', 'Delete')}
                                       >
@@ -6571,10 +6696,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </ul>
                             </div>
                             <PaginationArrows
-                              canPrev={canPrev}
-                              canNext={canNext}
-                              onPrev={() => setLabelsListPage((p) => Math.max(0, p - 1))}
-                              onNext={() => setLabelsListPage((p) => Math.min(totalLabelsPages - 1, p + 1))}
+                              canPrev={canLabelsScrollUp}
+                              canNext={canLabelsScrollDown}
+                              onPrev={() => scrollLabelsByPage('up')}
+                              onNext={() => scrollLabelsByPage('down')}
                             />
                           </>
                         )}
@@ -6594,7 +6719,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <Dropdown options={mapTranslatedOptions(PRICE_DISPLAY_TYPE_OPTIONS)} value={priceDisplayType} onChange={setPriceDisplayType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
                     <div className="flex justify-center mt-[100px] text-md">
-                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingPriceDisplay} onClick={handleSavePriceDisplay}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         {tr('control.save', 'Save')}
                       </button>
@@ -6610,7 +6735,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <Dropdown options={mapTranslatedOptions(RFID_READER_TYPE_OPTIONS)} value={rfidReaderType} onChange={setRfidReaderType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
                     <div className="flex justify-center mt-[100px] text-md">
-                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingRfidReader} onClick={handleSaveRfidReader}>
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingRfidReader} onClick={handleSaveRfidReader}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         {tr('control.save', 'Save')}
                       </button>
@@ -6626,7 +6751,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <Dropdown options={mapTranslatedOptions(BARCODE_SCANNER_TYPE_OPTIONS)} value={barcodeScannerType} onChange={setBarcodeScannerType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
                     <div className="flex justify-center mt-[100px] text-md">
-                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingBarcodeScanner} onClick={handleSaveBarcodeScanner}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         {tr('control.save', 'Save')}
                       </button>
@@ -6642,7 +6767,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <Dropdown options={mapTranslatedOptions(CREDIT_CARD_TYPE_OPTIONS)} value={creditCardType} onChange={setCreditCardType} placeholder={tr('control.external.disabled', 'Disabled')} className="text-sm min-w-[220px]" />
                     </div>
                     <div className="flex justify-center mt-[100px] text-md">
-                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCreditCard} onClick={handleSaveCreditCard}>
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingCreditCard} onClick={handleSaveCreditCard}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         {tr('control.save', 'Save')}
                       </button>
@@ -6662,7 +6787,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <Dropdown options={SCALE_PORT_OPTIONS} value={scalePort} onChange={setScalePort} placeholder={tr('control.external.selectPort', 'Select port')} className="text-sm min-w-[220px]" />
                     </div>
                     <div className="flex justify-center mt-[100px] text-md">
-                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingScale} onClick={handleSaveScale}>
+                      <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingScale} onClick={handleSaveScale}>
                         <svg fill="currentColor" width="14" height="14" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                         {tr('control.save', 'Save')}
                       </button>
@@ -6690,14 +6815,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          className={`px-6 py-2 text-sm font-medium rounded-lg ${cashmaticConnectionType === 'tcp' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text border border-gray-300'}`}
+                          className={`px-6 py-2 text-sm font-medium rounded-lg ${cashmaticConnectionType === 'tcp' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text border border-gray-300'} active:bg-green-500`}
                           onClick={() => setCashmaticConnectionType('tcp')}
                         >
                           {tr('control.cashmatic.tcpIp', 'TCP/IP')}
                         </button>
                         <button
                           type="button"
-                          className={`px-6 py-2 text-sm font-medium rounded-lg ${cashmaticConnectionType === 'api' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text border border-gray-300'}`}
+                          className={`px-6 py-2 text-sm font-medium rounded-lg ${cashmaticConnectionType === 'api' ? 'bg-cyan-500 text-white' : 'bg-pos-panel text-pos-text border border-gray-300'} active:bg-green-500`}
                           onClick={() => setCashmaticConnectionType('api')}
                         >
                           {tr('control.cashmatic.api', 'API')}
@@ -6770,7 +6895,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     )}
                   </div>
                   <div className="flex justify-center pt-5 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingCashmatic} onClick={handleSaveCashmatic}>
                       <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -6822,7 +6947,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex justify-center pt-5 pb-5">
-                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingPayworld} onClick={handleSavePayworld}>
+                    <button type="button" className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingPayworld} onClick={handleSavePayworld}>
                       <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -6839,7 +6964,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex items-center w-full justify-center mb-4">
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg hover:border-white/30 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 active:border-white/30 transition-colors disabled:opacity-50"
                     disabled={tableLocationsLoading}
                     onClick={openTableLocationModal}
                   >
@@ -6876,7 +7001,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div className="flex absolute right-1/2 items-center justify-center">
                               <button
                                 type="button"
-                                className={`w-full text-center px-3 py-1 rounded-lg text-sm hover:bg-pos-panel ${hasSavedLayout ? 'text-white' : 'text-pos-muted hover:text-pos-text'
+                                className={`w-full text-center px-3 py-1 rounded-lg text-sm active:bg-green-500 ${hasSavedLayout ? 'text-white' : 'text-pos-muted active:text-pos-text'
                                   }`}
                                 onClick={() => openSetTablesModal(loc)}
                               >
@@ -6886,7 +7011,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
-                                className="p-1 rounded text-pos-text hover:bg-pos-panel"
+                                className="p-1 rounded text-pos-text active:bg-green-500"
                                 onClick={() => openEditTableLocationModal(loc)}
                                 aria-label="Edit"
                               >
@@ -6894,7 +7019,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </button>
                               <button
                                 type="button"
-                                className="p-1 rounded text-pos-text hover:bg-pos-panel"
+                                className="p-1 rounded text-pos-text active:bg-green-500"
                                 onClick={() => setDeleteConfirmTableLocationId(loc.id)}
                                 aria-label="Delete"
                               >
@@ -7003,50 +7128,50 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {/* New / Edit user modal — General + Privileges tabs, keyboard like other modals */}
       {showUserModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] w-full h-[1050px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeUserModal} aria-label="Close">
-              <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeUserModal} aria-label="Close">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div className="flex justify-around mt-[50px] shrink-0">
-              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'general' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('general')}>{tr('control.userModal.general', 'General')}</button>
-              <button type="button" className={`px-8 py-4 text-xl font-medium border-b-2 transition-colors ${userModalTab === 'privileges' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text hover:bg-pos-panel/30'}`} onClick={() => setUserModalTab('privileges')}>{tr('control.userModal.privileges', 'Privileges')}</button>
+            <div className="flex justify-around mt-[20px] shrink-0">
+              <button type="button" className={`px-8 py-4 text-md font-medium border-b-2 transition-colors ${userModalTab === 'general' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text active:bg-green-500'}`} onClick={() => setUserModalTab('general')}>{tr('control.userModal.general', 'General')}</button>
+              <button type="button" className={`px-8 py-4 text-md font-medium border-b-2 transition-colors ${userModalTab === 'privileges' ? 'border-blue-500 text-blue-500 bg-pos-panel/50' : 'border-transparent text-pos-text active:bg-green-500'}`} onClick={() => setUserModalTab('privileges')}>{tr('control.userModal.privileges', 'Privileges')}</button>
             </div>
-            <div className="flex-1 overflow-hidden px-14 py-8">
+            <div className="flex-1 overflow-hidden px-6 py-4">
               {userModalTab === 'general' ? (
-                <div className="grid grid-cols-2 gap-16 max-w-[1100px] mx-auto">
-                  <div className="flex flex-col gap-6">
-                    <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">{tr('control.userModal.name', 'Name')}:</label>
+                <div className="grid grid-cols-2 mx-auto">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center">
+                      <label className="text-pos-text text-sm font-medium shrink-0 min-w-[100px] max-w-[100px]">{tr('control.userModal.name', 'Name')}:</label>
                       <input
                         type="text"
                         value={userName}
                         onChange={(e) => setUserName(e.target.value)}
                         onFocus={() => setUserModalActiveField('name')}
                         placeholder=""
-                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                        className="px-4 py-3 rounded-lg max-w-[150px] bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-sm"
                       />
                     </div>
-                    <div className="flex items-center gap-6">
-                      <label className="text-pos-text text-xl font-medium shrink-0 w-[200px]">{tr('control.userModal.pincode', 'Pincode')}:</label>
+                    <div className="flex items-center">
+                      <label className="text-pos-text text-sm font-medium shrink-0 min-w-[100px] max-w-[100px]">{tr('control.userModal.pincode', 'Pincode')}:</label>
                       <input
                         type="text"
                         value={userPin}
                         onChange={(e) => setUserPin(e.target.value)}
                         onFocus={() => setUserModalActiveField('pincode')}
                         placeholder=""
-                        className="flex-1 px-4 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-xl"
+                        className="px-4 py-3 rounded-lg max-w-[150px] bg-pos-panel border border-pos-border text-pos-text placeholder-pos-muted focus:outline-none focus:border-green-500 text-sm"
                         autoComplete="new-password"
                       />
                     </div>
                   </div>
                   <div className="flex flex-col gap-4">
-                    <div className="text-pos-text text-xl font-medium mb-2">{tr('control.userModal.privileges', 'Privileges')}</div>
+                    <div className="text-pos-text text-sm font-medium mb-2">{tr('control.userModal.privileges', 'Privileges')}</div>
                     <div className="grid grid-cols-3 gap-4">
                       {USER_PRIVILEGE_AVATAR_COLORS.map((color, idx) => (
                         <button
                           key={idx}
                           type="button"
-                          className={`w-20 h-20 rounded-full border-4 transition-colors ${userAvatarColorIndex === idx ? 'border-gray-400 ring-2 ring-offset-2 ring-offset-pos-bg ring-gray-300' : 'border-transparent hover:opacity-90'}`}
+                          className={`w-14 h-14 rounded-full border-4 transition-colors ${userAvatarColorIndex === idx ? 'border-gray-400 ring-2 ring-offset-2 ring-offset-pos-bg ring-gray-300' : 'border-transparent active:opacity-90'} active:bg-green-500`}
                           style={{ backgroundColor: color }}
                           onClick={() => setUserAvatarColorIndex(idx)}
                           aria-label={tr('control.userModal.avatarColor', 'Avatar color {n}').replace('{n}', String(idx + 1))}
@@ -7057,10 +7182,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 </div>
               ) : (
                 <div className="">
-                  <div className="grid grid-cols-3 gap-x-12 w-full gap-y-10">
+                  <div className="grid grid-cols-3 gap-x-12 w-full gap-y-5">
                     {USER_PRIVILEGE_OPTIONS.map((p) => (
                       <label key={p.id} className="flex items-center gap-3 cursor-pointer">
-                        <span className="text-pos-text min-w-[350px] max-w-[300px] text-xl">{tr(`control.userModal.privilege.${p.id}`, p.label)}</span>
+                        <span className="text-pos-text min-w-[200px] max-w-[200px]">{tr(`control.userModal.privilege.${p.id}`, p.label)}</span>
                         <input
                           type="checkbox"
                           checked={!!userPrivileges[p.id]}
@@ -7071,8 +7196,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     ))}
                   </div>
                   <div className="flex justify-center mt-20">
-                    <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingUser} onClick={handleSaveUser}>
-                      <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                    <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-md" disabled={savingUser} onClick={handleSaveUser}>
+                      <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
                   </div>
@@ -7080,8 +7205,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
               {userModalTab === 'general' && (
                 <div className="flex justify-center mt-14">
-                  <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl" disabled={savingUser} onClick={handleSaveUser}>
-                    <svg fill="currentColor" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
+                  <button type="button" className="flex items-center gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-md" disabled={savingUser} onClick={handleSaveUser}>
+                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                     {tr('control.save', 'Save')}
                   </button>
                 </div>
@@ -7107,7 +7232,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
               <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-                <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeDiscountModal} aria-label="Close">
+                <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeDiscountModal} aria-label="Close">
                   <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
                 <div className="flex-1 min-h-0 overflow-auto w-full">
@@ -7157,10 +7282,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             readOnly
                             value={formatDateForCurrentLanguage(discountStartDate)}
                             placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
-                            className="flex-1 px-4 h-[40px] w-[150px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
+                            className="flex-1 px-4 h-[40px] w-[150px] py-3 border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer focus:border-green-500 focus:outline-none"
                             onClick={() => setDiscountCalendarField('start')}
                           />
-                          <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('start')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
+                          <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 active:bg-green-500 shrink-0" onClick={() => setDiscountCalendarField('start')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                           </button>
                         </div>
@@ -7173,10 +7298,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             readOnly
                             value={formatDateForCurrentLanguage(discountEndDate)}
                             placeholder={tr('control.discounts.modal.datePlaceholder', 'MM/DD/YYYY')}
-                            className="flex-1 px-4 h-[40px] py-3 w-[150px] border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer"
+                            className="flex-1 px-4 h-[40px] py-3 w-[150px] border border-gray-300 rounded-lg bg-pos-panel text-gray-200 cursor-pointer focus:border-green-500 focus:outline-none"
                             onClick={() => setDiscountCalendarField('end')}
                           />
-                          <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 hover:bg-pos-bg shrink-0" onClick={() => setDiscountCalendarField('end')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
+                          <button type="button" className="p-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 active:bg-green-500 shrink-0" onClick={() => setDiscountCalendarField('end')} aria-label={tr('control.discounts.modal.openCalendar', 'Open calendar')}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                           </button>
                         </div>
@@ -7201,11 +7326,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       >
                         <ul className="p-2">
                           {discountTargetIds.map((id) => (
-                            <li key={id} className="text-md py-1.5 px-2 flex items-center justify-between gap-2 text-gray-200 hover:bg-pos-panel/70 rounded">
+                            <li key={id} className="text-md py-1.5 px-2 flex items-center justify-between gap-2 text-gray-200 active:bg-green-500 rounded">
                               <span className="truncate">{discountTargetOptionMap.get(String(id)) || String(id)}</span>
                               <button
                                 type="button"
-                                className="p-1 rounded hover:bg-pos-panel"
+                                className="p-1 rounded active:bg-green-500"
                                 onClick={() => setDiscountTargetIds((prev) => prev.filter((x) => x !== id))}
                                 aria-label="Remove"
                               >
@@ -7218,7 +7343,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className="flex w-full justify-around gap-2 items-center pt-2">
                         <button
                           type="button"
-                          className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                          className="p-2 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
                           aria-label="Scroll up"
                           disabled={!canDiscountTargetScrollUp}
                           onClick={() => scrollDiscountTargetByPage('up')}
@@ -7227,7 +7352,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </button>
                         <button
                           type="button"
-                          className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                          className="p-2 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
                           aria-label="Scroll down"
                           disabled={!canDiscountTargetScrollDown}
                           onClick={() => scrollDiscountTargetByPage('down')}
@@ -7241,7 +7366,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex justify-center pb-5 shrink-0">
                   <button
                     type="button"
-                    className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                    className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                     disabled={savingDiscount}
                     onClick={handleSaveDiscount}
                   >
@@ -7277,7 +7402,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showKitchenMessageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative justify-between bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[1430px] h-[1000px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeKitchenMessageModal} aria-label="Close">
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeKitchenMessageModal} aria-label="Close">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-6 flex flex-col gap-4 mt-[220px]">
@@ -7294,7 +7419,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <div className="flex justify-center absolute left-0 right-0 top-[50%]">
                 <button
                   type="button"
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-2xl"
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-2xl"
                   disabled={savingKitchenMessage}
                   onClick={handleSaveKitchenMessage}
                 >
@@ -7314,7 +7439,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showTableLocationModal && topNavId === 'tables' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeTableLocationModal} aria-label="Close">
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeTableLocationModal} aria-label="Close">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
@@ -7370,7 +7495,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center pt-5 pb-5">
               <button
                 type="button"
-                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                 disabled={savingTableLocation}
                 onClick={handleSaveTableLocation}
               >
@@ -7399,7 +7524,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl w-full overflow-hidden flex">
             <button
               type="button"
-              className="absolute top-4 right-4 z-20 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+              className="absolute top-4 right-4 z-20 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500"
               onClick={closeSetTablesModal}
               aria-label="Close"
             >
@@ -7415,15 +7540,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
 
               <div className="space-y-3 text-pos-text">
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm" onClick={addSetTable}>
+                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel active:bg-green-500 text-sm" onClick={addSetTable}>
                     + {tr('control.tables.table', 'table')}
                   </button>
-                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm" onClick={removeSetTable}>
+                  <button type="button" className="px-3 py-2 rounded border border-pos-border bg-pos-panel active:bg-green-500 text-sm" onClick={removeSetTable}>
                     - {tr('control.tables.table', 'table')}
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel active:bg-green-500 text-sm"
                     onClick={handleAddBoard}
                     disabled={!setTablesSelectedTableId}
                   >
@@ -7431,7 +7556,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel active:bg-green-500 text-sm"
                     onClick={handleRemoveBoard}
                     disabled={!setTablesSelectedTableId || boards.length === 0}
                   >
@@ -7439,7 +7564,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel active:bg-green-500 text-sm"
                     onClick={handleAddFlowerPot}
                     disabled={!setTablesSelectedTableId}
                   >
@@ -7447,7 +7572,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </button>
                   <button
                     type="button"
-                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel hover:bg-pos-bg text-sm"
+                    className="px-3 py-2 rounded border border-pos-border bg-pos-panel active:bg-green-500 text-sm"
                     onClick={handleRemoveFlowerPot}
                     disabled={!setTablesSelectedTableId || flowerPots.length === 0}
                   >
@@ -7490,7 +7615,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         />
                         <button
                           type="button"
-                          className="w-10 h-10 px-3 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 px-3 rounded bg-pos-panel border border-pos-border active:bg-green-500"
                           onClick={() => {
                             const current = Number(selectedSetTable?.[field.key]) || 0;
                             const nextVal = current - 10;
@@ -7503,7 +7628,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </button>
                         <button
                           type="button"
-                          className="w-10 h-10 px-3 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 px-3 rounded bg-pos-panel border border-pos-border active:bg-green-500"
                           onClick={() => {
                             const current = Number(selectedSetTable?.[field.key]) || 0;
                             const nextVal = current + 10;
@@ -7579,7 +7704,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         />
                         <button
                           type="button"
-                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border active:bg-green-500"
                           onClick={() => {
                             const current = Number(selectedSetBoard[field.key]) || 0;
                             const nextVal = current - 10;
@@ -7592,7 +7717,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </button>
                         <button
                           type="button"
-                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border active:bg-green-500"
                           onClick={() => {
                             const current = Number(selectedSetBoard[field.key]) || 0;
                             const nextVal = current + 10;
@@ -7656,7 +7781,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         />
                         <button
                           type="button"
-                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border active:bg-green-500"
                           onClick={() => {
                             const current = Number(selectedSetFlowerPot[field.key]) || 0;
                             const nextVal = current - 10;
@@ -7669,7 +7794,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         </button>
                         <button
                           type="button"
-                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                          className="w-10 h-10 rounded bg-pos-panel border border-pos-border active:bg-green-500"
                           onClick={() => {
                             const current = Number(selectedSetFlowerPot[field.key]) || 0;
                             const nextVal = current + 10;
@@ -7711,14 +7836,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="pt-3 flex gap-3 w-full justify-center">
                   <button
                     type="button"
-                    className="px-5 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm"
+                    className="px-5 py-2 rounded-lg bg-green-600 text-white active:bg-green-500 text-sm"
                     onClick={saveSetTablesLayout}
                   >
                     {tr('control.save', 'Save')}
                   </button>
                   <button
                     type="button"
-                    className="px-5 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm"
+                    className="px-5 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm"
                     onClick={closeSetTablesModal}
                   >
                     {tr('cancel', 'Cancel')}
@@ -7752,7 +7877,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       className={`absolute flex items-center justify-center font-semibold border-2 text-white transition-colors overflow-hidden ${table.round
                         ? 'rounded-full border-transparent bg-transparent'
                         : 'rounded-md border-transparent bg-transparent'
-                        } ${setTablesSelectedTableId === table.id && selectedSetBoardIndex == null && selectedSetFlowerPotIndex == null ? 'ring-4 ring-yellow-400' : ''} ${setTablesDraggingId === table.id ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        } ${setTablesSelectedTableId === table.id && selectedSetBoardIndex == null && selectedSetFlowerPotIndex == null ? 'ring-4 ring-yellow-400' : ''} ${setTablesDraggingId === table.id ? 'cursor-grabbing' : 'cursor-grab'} active:bg-green-500`}
                       style={{
                         left: `${Math.max(0, table.x)}px`,
                         top: `${Math.max(0, table.y)}px`,
@@ -7782,7 +7907,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <button
                         key={board.id || `board-${table.id}-${idx}`}
                         type="button"
-                        className={`absolute border-2 ${isSelected ? 'border-yellow-300' : 'border-transparent'} ${isDraggingBoard ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        className={`absolute border-2 ${isSelected ? 'border-yellow-300' : 'border-transparent'} ${isDraggingBoard ? 'cursor-grabbing' : 'cursor-grab'} active:bg-green-500`}
                         style={{
                           left: `${Math.max(0, Number(board.x) || 0)}px`,
                           top: `${Math.max(0, Number(board.y) || 0)}px`,
@@ -7812,7 +7937,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <button
                         key={fp.id || `flowerpot-${table.id}-${idx}`}
                         type="button"
-                        className={`absolute border-2 ${isSelected ? 'border-yellow-300' : 'border-transparent'} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        className={`absolute border-2 ${isSelected ? 'border-yellow-300' : 'border-transparent'} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} active:bg-green-500`}
                         style={{
                           left: `${Math.max(0, Number(fp.x) || 0)}px`,
                           top: `${Math.max(0, Number(fp.y) || 0)}px`,
@@ -7838,7 +7963,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-pos-border bg-pos-panel p-1 shadow-lg">
                   <button
                     type="button"
-                    className="w-9 h-9 rounded-md border border-pos-border bg-pos-bg hover:bg-pos-rowHover text-pos-text text-xl font-bold flex items-center justify-center"
+                    className="w-9 h-9 rounded-md border border-pos-border bg-pos-bg active:bg-green-500 text-pos-text text-xl font-bold flex items-center justify-center"
                     onClick={() => setSetTablesCanvasZoom((z) => Math.max(SET_TABLES_ZOOM_MIN, z - SET_TABLES_ZOOM_STEP))}
                     aria-label="Zoom out"
                   >
@@ -7847,7 +7972,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <span className="min-w-[3ch] text-center text-sm text-pos-text px-1">{setTablesCanvasZoom}%</span>
                   <button
                     type="button"
-                    className="w-9 h-9 rounded-md border border-pos-border bg-pos-bg hover:bg-pos-rowHover text-pos-text text-xl font-bold flex items-center justify-center"
+                    className="w-9 h-9 rounded-md border border-pos-border bg-pos-bg active:bg-green-500 text-pos-text text-xl font-bold flex items-center justify-center"
                     onClick={() => setSetTablesCanvasZoom((z) => Math.min(SET_TABLES_ZOOM_MAX, z + SET_TABLES_ZOOM_STEP))}
                     aria-label="Zoom in"
                   >
@@ -7868,7 +7993,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <button
                   key={template.id}
                   type="button"
-                  className="rounded-xl border border-pos-border bg-pos-panel hover:bg-pos-bg p-5 flex flex-col items-center gap-4"
+                  className="rounded-xl border border-pos-border bg-pos-panel active:bg-green-500 p-5 flex flex-col items-center gap-4"
                   onClick={() => addSetTableWithTemplate(template.id)}
                 >
                   <img src={template.src} alt={template.id} className="w-[170px] h-[170px] object-contain" />
@@ -7878,7 +8003,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center mt-6">
               <button
                 type="button"
-                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm"
+                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm"
                 onClick={() => setShowSetTableTypeModal(false)}
               >
                 {tr('cancel', 'Cancel')}
@@ -7899,7 +8024,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <button
                   key={color}
                   type="button"
-                  className="h-16 rounded-lg border-2 border-pos-border"
+                  className="h-16 rounded-lg border-2 border-pos-border active:bg-green-500"
                   style={{ backgroundColor: color }}
                   onClick={() => handleSelectBoardColor(color)}
                   aria-label={`Board color ${color}`}
@@ -7909,7 +8034,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center mt-6 gap-3">
               <button
                 type="button"
-                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm"
+                className="px-6 py-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm"
                 onClick={() => setShowSetBoardColorModal(false)}
               >
                 {tr('cancel', 'Cancel')}
@@ -7923,7 +8048,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showDeviceSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative text-sm bg-pos-bg rounded-xl shadow-2xl max-w-[1430px] h-[1000px] w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowDeviceSettingsModal(false)} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => setShowDeviceSettingsModal(false)} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex mt-16 mb-4 px-6 w-full justify-around text-sm shrink-0 overflow-x-auto">
@@ -7931,7 +8056,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <button
                   key={tab}
                   type="button"
-                  className={`px-4 py-2 font-medium whitespace-nowrap border-b-2 transition-colors ${deviceSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                  className={`px-4 py-2 font-medium whitespace-nowrap border-b-2 transition-colors ${deviceSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted active:text-pos-text'} active:bg-green-500`}
                   onClick={() => {
                     setDeviceSettingsTab(tab);
                     setSelectedOptionButtonPoolItemId(null);
@@ -7991,9 +8116,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text min-w-[270px] max-w-[270px] shrink-0">{tr('control.device.general.timeoutLogout', 'Timeout log out:')}</span>
                       <div className="flex items-center gap-2">
-                        <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => Math.max(0, n - 1))}>−</button>
+                        <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => Math.max(0, n - 1))}>−</button>
                         <input type="number" min={0} value={deviceTimeoutLogout} onChange={(e) => setDeviceTimeoutLogout(Number(e.target.value) || 0)} className="w-16 px-2 py-2 bg-pos-panel border border-gray-300 rounded text-pos-text text-sm text-center h-[40px]" />
-                        <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => n + 1)}>+</button>
+                        <button type="button" className="p-2 px-3 rounded bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-sm font-medium" onClick={() => setDeviceTimeoutLogout((n) => n + 1)}>+</button>
                       </div>
                     </div>
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -8198,7 +8323,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               onDragOver={(event) => event.preventDefault()}
                               onDrop={(event) => handleOptionButtonDropOnSlot(event, slotIndex)}
                               className={`h-[74px] max-w-[70px] min-w-[70px] border px-2 text-center text-[12px] leading-[1.2] whitespace-pre-line transition-colors ${assignedId ? 'bg-[#b7b9c2] text-[#31353d]' : 'bg-[#dde0e7] text-transparent'
-                                } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} hover:brightness-95`}
+                                } ${isSelected ? 'border-blue-500' : 'border-[#bcc0ca]'} active:brightness-95`}
                             >
                               {assignedLabel || ' '}
                             </button>
@@ -8211,9 +8336,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           onClick={handleRemoveOptionButtonFromSlot}
                           disabled={!hasSelectedRemovableOptionButton}
                           className={`text-[20px] ${hasSelectedRemovableOptionButton
-                            ? 'text-[#858d99] hover:text-[#5c6370]'
+                            ? 'text-[#858d99] active:text-[#5c6370]'
                             : 'text-[#9ca3af] opacity-60 cursor-not-allowed'
-                            }`}
+                            } active:bg-green-500`}
                         >
                           {tr('control.optionButtons.removeFromPlace', 'Remove from place')}
                         </button>
@@ -8231,7 +8356,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               setSelectedOptionButtonPoolItemId(item.id);
                               setSelectedOptionButtonSlotIndex(null);
                             }}
-                            className={`w-full text-[14px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] hover:text-[#2e333c] cursor-grab active:cursor-grabbing ${selectedOptionButtonPoolItemId === item.id ? 'text-rose-500' : ''}`}
+                            className={`w-full text-[14px] min-w-[250px] leading-[1.15] whitespace-pre-line text-[#4a505c] active:text-[#2e333c] cursor-grab active:cursor-grabbing ${selectedOptionButtonPoolItemId === item.id ? 'text-rose-500' : ''}`}
                           >
                             {tr(item.labelKey, item.fallbackLabel)}
                           </button>
@@ -8264,7 +8389,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => handleFunctionButtonDropOnSlot(event, slotIndex)}
                             className={`h-[62px] border bg-transparent text-xl text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
-                              } hover:bg-white/10`}
+                              } active:bg-green-500`}
                           >
                             {assignedLabel}
                           </button>
@@ -8279,9 +8404,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         onClick={handleRemoveFunctionButtonFromSlot}
                         disabled={!hasSelectedFunctionButton}
                         className={`text-xl ${hasSelectedFunctionButton
-                          ? 'text-[#8e959d] hover:text-[#b2b8be]'
+                          ? 'text-[#8e959d] active:text-[#b2b8be]'
                           : 'text-[#646d76] opacity-50 cursor-not-allowed'
-                          }`}
+                          } active:bg-green-500`}
                       >
                         {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
                       </button>
@@ -8297,7 +8422,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             setSelectedFunctionButtonPoolItemId(item.id);
                             setSelectedFunctionButtonSlotIndex(null);
                           }}
-                          className={`text-xl text-gray hover:text-[#4b5d68] cursor-grab active:cursor-grabbing ${selectedFunctionButtonPoolItemId === item.id ? 'text-rose-500' : ''}`}
+                          className={`text-xl text-gray active:text-[#4b5d68] cursor-grab active:cursor-grabbing ${selectedFunctionButtonPoolItemId === item.id ? 'text-rose-500' : ''}`}
                         >
                           {tr(item.labelKey, item.fallbackLabel)}
                         </button>
@@ -8316,7 +8441,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="w-full flex items-center px-4 pt-5 pb-5 justify-center shrink-0">
               <button
                 type="button"
-                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                 disabled={savingDeviceSettings}
                 onClick={handleSaveDeviceSettings}
               >
@@ -8332,7 +8457,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showSystemSettingsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative px-10 text-xl bg-pos-bg rounded-xl shadow-2xl w-full mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowSystemSettingsModal(false)} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => setShowSystemSettingsModal(false)} aria-label="Close">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex mt-10 mb-2 px-10 w-full justify-around text-xl shrink-0 overflow-x-auto">
@@ -8340,7 +8465,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <button
                   key={tab}
                   type="button"
-                  className={`px-4 pb-2 font-medium whitespace-nowrap border-b-2 transition-colors ${systemSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted hover:text-pos-text'}`}
+                  className={`px-4 pb-2 font-medium whitespace-nowrap border-b-2 transition-colors ${systemSettingsTab === tab ? 'border-blue-500 text-pos-text' : 'border-transparent text-pos-muted active:text-pos-text'} active:bg-green-500`}
                   onClick={() => setSystemSettingsTab(tab)}
                 >
                   {tr(SYSTEM_SETTINGS_TAB_LABEL_KEYS[tab], tab)}
@@ -8478,17 +8603,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.pointsPerEuro', 'Points / euro:')}</span>
                       <div className="flex items-center gap-2">
-                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setSysSavingsPointsPerEuro((n) => Math.max(0, n - 1))}>−</button>
+                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-3xl" onClick={() => setSysSavingsPointsPerEuro((n) => Math.max(0, n - 1))}>−</button>
                         <input type="number" min={0} value={sysSavingsPointsPerEuro} onChange={(e) => setSysSavingsPointsPerEuro(Number(e.target.value) || 0)} className="w-20 px-3 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
-                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setSysSavingsPointsPerEuro((n) => n + 1)}>+</button>
+                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-3xl" onClick={() => setSysSavingsPointsPerEuro((n) => n + 1)}>+</button>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-pos-text min-w-[150px] max-w-[150px] shrink-0">{tr('control.sys.prices.pointsPerDiscount', 'Points / discount:')}</span>
                       <div className="flex items-center gap-2">
-                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setSysSavingsPointsPerDiscount((n) => Math.max(0, n - 1))}>−</button>
+                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-3xl" onClick={() => setSysSavingsPointsPerDiscount((n) => Math.max(0, n - 1))}>−</button>
                         <input type="number" min={0} value={sysSavingsPointsPerDiscount} onChange={(e) => setSysSavingsPointsPerDiscount(Number(e.target.value) || 0)} className="w-20 px-3 py-2 bg-pos-panel border border-pos-border rounded text-pos-text text-xl text-center" />
-                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg text-3xl" onClick={() => setSysSavingsPointsPerDiscount((n) => n + 1)}>+</button>
+                        <button type="button" className="p-1 px-3 rounded bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 text-3xl" onClick={() => setSysSavingsPointsPerDiscount((n) => n + 1)}>+</button>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -8549,7 +8674,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="w-full flex items-center px-6 py-8 justify-center shrink-0">
               <button
                 type="button"
-                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-xl"
+                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-xl"
                 disabled={savingSystemSettings}
                 onClick={handleSaveSystemSettings}
               >
@@ -8565,7 +8690,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showPaymentTypeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative flex flex-col bg-pos-bg justify-between items-center rounded-xl border border-pos-border shadow-2xl max-w-[90%] w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePaymentTypeModal} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closePaymentTypeModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-6 flex flex-col gap-4 pt-14 text-sm">
@@ -8598,7 +8723,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               <div className="flex justify-center pt-5 pb-5">
                 <button
                   type="button"
-                  className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                  className="flex items-center text-lg gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                   disabled={savingPaymentType || !(paymentTypeName || '').trim()}
                   onClick={handleSavePaymentType}
                 >
@@ -8639,7 +8764,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showLabelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeLabelModal} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeLabelModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-6 flex w-full pt-14 overflow-auto text-sm">
@@ -8683,7 +8808,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               </div>
             </div>
             <div className="flex justify-center pt-5 pb-5">
-              <button type="button" className="flex items-center text-md gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={!(labelName || '').trim()} onClick={handleSaveLabel}>
+              <button type="button" className="flex items-center text-md gap-4 px-6 py-3 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={!(labelName || '').trim()} onClick={handleSaveLabel}>
                 <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                 {tr('control.save', 'Save')}
               </button>
@@ -8697,7 +8822,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showProductionMessagesModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-5xl justify-center items-center w-full mx-4 overflow-hidden flex flex-col h-[700px]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowProductionMessagesModal(false); setProductionMessagesPage(0); cancelEditProductionMessage(); }} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => { setShowProductionMessagesModal(false); setProductionMessagesPage(0); cancelEditProductionMessage(); }} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="w-full flex items-center justify-center mt-[30px] px-6 gap-4 py-4 shrink-0 pr-14">
@@ -8711,7 +8836,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 />
                 <button
                   type="button"
-                  className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 text-sm shrink-0"
+                  className="px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 text-sm shrink-0"
                   disabled={!(productionMessageInput || '').trim()}
                   onClick={handleAddOrUpdateProductionMessage}
                 >
@@ -8724,7 +8849,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 const sorted = [...productionMessages].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
                 const scrollProductionMessages = (dir) => {
                   if (productionMessagesListRef.current) {
-                    productionMessagesListRef.current.scrollTop += dir * 120;
+                    productionMessagesListRef.current.scrollBy({ top: dir * 120, behavior: 'smooth' });
                   }
                 };
                 return (
@@ -8732,14 +8857,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <ul
                       ref={productionMessagesListRef}
                       className="overflow-auto min-h-[300px] mx-10 border border-pos-border rounded-xl relative p-2"
+                      onScroll={updateProductionMessagesScrollState}
                     >
                       {sorted.map((m) => (
                         <li key={m.id} className="flex items-center px-4 py-1 border-b border-pos-border last:border-b-0 gap-2">
                           <span className="flex-1 text-pos-text text-sm break-words min-w-0">{m.text || ''}</span>
-                          <button type="button" className="p-2 shrink-0 rounded text-pos-text hover:bg-pos-bg" onClick={() => startEditProductionMessage(m)} aria-label="Edit">
+                          <button type="button" className="p-2 shrink-0 rounded text-pos-text active:bg-green-500" onClick={() => startEditProductionMessage(m)} aria-label="Edit">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                           </button>
-                          <button type="button" className="p-2 shrink-0 rounded text-pos-text hover:bg-pos-bg" onClick={() => setDeleteConfirmProductionMessageId(m.id)} aria-label="Delete">
+                          <button type="button" className="p-2 shrink-0 rounded text-pos-text active:bg-green-500" onClick={() => setDeleteConfirmProductionMessageId(m.id)} aria-label="Delete">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </li>
@@ -8748,7 +8874,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex items-center justify-center gap-10 py-3">
                       <button
                         type="button"
-                        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg transition-colors"
+                        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                        disabled={!canProductionMessagesScrollUp}
                         onClick={() => scrollProductionMessages(-1)}
                         aria-label={tr('scrollUp', 'Scroll up')}
                       >
@@ -8758,7 +8885,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </button>
                       <button
                         type="button"
-                        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg transition-colors"
+                        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                        disabled={!canProductionMessagesScrollDown}
                         onClick={() => scrollProductionMessages(1)}
                         aria-label={tr('scrollDown', 'Scroll down')}
                       >
@@ -8782,7 +8910,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showPriceGroupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closePriceGroupModal} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closePriceGroupModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-6 flex flex-col space-y-6 w-full justify-center items-center pt-20">
@@ -8794,7 +8922,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     value={priceGroupName}
                     onChange={(e) => setPriceGroupName(e.target.value)}
                     placeholder={tr('control.enterName', 'Enter name')}
-                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200"
+                    className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200 focus:outline-none focus:border-green-500"
                   />
                 </div>
                 <div className="flex gap-2 w-full items-center justify-center">
@@ -8812,7 +8940,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center py-10">
               <button
                 type="button"
-                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                 disabled={savingPriceGroup}
                 onClick={handleSavePriceGroup}
               >
@@ -8831,7 +8959,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showCategoryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeCategoryModal} aria-label="Close">
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeCategoryModal} aria-label="Close">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-6 flex flex-col space-y-6 w-full justify-center text-sm items-center pt-20">
@@ -8885,7 +9013,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center pt-5 pb-5">
               <button
                 type="button"
-                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                 disabled={savingCategory}
                 onClick={handleSaveCategory}
               >
@@ -8907,7 +9035,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showProductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductModal} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeProductModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex gap-1 w-full justify-around px-10 pt-5 shrink-0 pr-14">
@@ -8925,7 +9053,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     key={tab.id}
                     type="button"
                     disabled={isLocked}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white hover:text-pos-text'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${productTab === tab.id ? 'bg-green-600 text-white border border-b-0 border-pos-border' : isLocked ? 'text-pos-muted opacity-50 cursor-not-allowed' : 'text-white active:text-pos-text'} active:bg-green-500`}
                     onClick={() => !isLocked && setProductTab(tab.id)}
                   >
                     {tab.label}
@@ -9032,7 +9160,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         <label className="min-w-[80px] font-medium text-md text-gray-200">{tr('control.productModal.barcode', 'Barcode')}:</label>
                         <div className="flex gap-2 items-center w-full">
                           <input type="text" value={productBarcode} onChange={(e) => setProductBarcode(e.target.value)} className="min-w-[150px] max-w-[150px] px-4 h-[40px] py-3 bg-pos-panel border border-pos-border rounded-lg text-pos-text text-md" onFocus={() => setProductActiveField('barcode')} onClick={() => setProductActiveField('barcode')} />
-                          <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
+                          <button type="button" className="p-2 rounded-full bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 disabled:opacity-70" aria-label="Generate barcode" onClick={handleGenerateBarcode}>
                             <svg className={`w-5 h-5 ${barcodeButtonSpinning ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                           </button>
                         </div>
@@ -9067,7 +9195,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex w-full justify-center gap-4">
-                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium hover:bg-pos-bg" onClick={async () => {
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-pos-panel border border-pos-border text-pos-text font-medium active:bg-green-500" onClick={async () => {
                       if (!validateProductRequired()) return;
                       setProductTabsUnlocked(true);
                       if (!editingProductId) {
@@ -9081,7 +9209,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       {tr('control.productModal.completeFurther', 'Complete further')}
                     </button>
-                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" disabled={savingProduct} onClick={handleSaveProduct}>
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" disabled={savingProduct} onClick={handleSaveProduct}>
                       <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.productModal.addAndClose', 'Add and close')}
                     </button>
@@ -9132,11 +9260,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         <label className="block min-w-[150px] text-pos-text mb-1">{tr('control.productModal.advanced.cashRegisterPhoto', 'Cash register photo')}:</label>
                         <div className="flex items-center gap-3">
                           {!advancedKassaPhotoPreview ? (
-                            <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0 text-md">
+                            <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text active:bg-green-500 cursor-pointer shrink-0 text-md">
                               {tr('control.productModal.chooseFileSimple', 'Select')}
                               <input
                                 type="file"
-                                className="hidden"
+                                className="hidden focus:border-green-500 focus:outline-none"
                                 accept="image/*"
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
@@ -9158,7 +9286,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               <img src={advancedKassaPhotoPreview} alt="Cash register" className="w-16 h-16 object-cover rounded-lg border border-pos-border shrink-0" />
                               <button
                                 type="button"
-                                className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-rose-500/30 shrink-0"
+                                className="px-4 py-2 border border-pos-border rounded-lg text-pos-text active:bg-green-500 shrink-0"
                                 onClick={() => {
                                   setAdvancedKassaPhotoPreview(null);
                                 }}
@@ -9184,7 +9312,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex justify-center">
-                    <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                    <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -9242,11 +9370,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </table>
                   </div>
                   <div className="flex items-center justify-around px-[200px]">
-                    <button type="button" className="p-2 px-4 bg-pos-panel rounded-lg text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
-                    <button type="button" className="p-2 px-4 rounded-lg bg-pos-panel text-white hover:bg-pos-panel disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
+                    <button type="button" className="p-2 px-4 bg-pos-panel rounded-lg text-white active:bg-green-500 disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex <= 0} onClick={() => { if (extraPricesSelectedIndex > 0) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex - 1]; next[extraPricesSelectedIndex - 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i - 1); } }} aria-label="Move up">↑</button>
+                    <button type="button" className="p-2 px-4 rounded-lg bg-pos-panel text-white active:bg-green-500 disabled:opacity-50 text-lg font-medium" disabled={extraPricesSelectedIndex >= extraPricesRows.length - 1} onClick={() => { if (extraPricesSelectedIndex < extraPricesRows.length - 1) { setExtraPricesRows((prev) => { const next = [...prev]; const t = next[extraPricesSelectedIndex]; next[extraPricesSelectedIndex] = next[extraPricesSelectedIndex + 1]; next[extraPricesSelectedIndex + 1] = t; return next; }); setExtraPricesSelectedIndex((i) => i + 1); } }} aria-label="Move down">↓</button>
                   </div>
                   <div className="flex justify-center text-md">
-                    <button type="button" className="flex text-md items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                    <button type="button" className="flex text-md items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -9324,7 +9452,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex justify-center">
-                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -9360,9 +9488,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className='flex items-center'>
                         <label className="block text-pos-text min-w-[150px]">{tr('control.productModal.webshop.websitePhoto', 'Website photo')}:</label>
                         <div className="flex gap-3 items-center">
-                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0">
+                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text active:bg-green-500 cursor-pointer shrink-0">
                             {tr('control.productModal.chooseFile', 'Choose File')}
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setWebsitePhotoFileName(e.target.files?.[0]?.name ?? '')} />
+                            <input type="file" className="hidden focus:border-green-500 focus:outline-none" accept="image/*" onChange={(e) => setWebsitePhotoFileName(e.target.files?.[0]?.name ?? '')} />
                           </label>
                           <span className="text-pos-muted">{websitePhotoFileName || tr('control.productModal.noFileChosen', 'No file chosen')}</span>
                         </div>
@@ -9370,7 +9498,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex justify-center pt-20">
-                    <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                    <button type="button" className="flex items-center gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -9412,9 +9540,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <div className='flex items-center'>
                         <label className="block text-pos-text pr-10">{tr('control.productModal.kiosk.kioskPicture', 'Kiosk picture')}:</label>
                         <div className="flex items-center gap-2">
-                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text hover:bg-pos-panel cursor-pointer shrink-0">
+                          <label className="px-4 py-2 border border-pos-border rounded-lg text-pos-text active:bg-green-500 cursor-pointer shrink-0">
                             {tr('control.productModal.chooseFile', 'Choose File')}
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => setKioskPictureFileName(e.target.files?.[0]?.name ?? '')} />
+                            <input type="file" className="hidden focus:border-green-500 focus:outline-none" accept="image/*" onChange={(e) => setKioskPictureFileName(e.target.files?.[0]?.name ?? '')} />
                           </label>
                           <span className="text-pos-muted pl-5">{kioskPictureFileName || tr('control.productModal.noFileChosen', 'No file chosen')}</span>
                         </div>
@@ -9423,7 +9551,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </div>
                   </div>
                   <div className="flex justify-center">
-                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
+                    <button type="button" className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50" onClick={handleSaveProduct} disabled={savingProduct}>
                       <svg fill="#ffffff" width="14px" height="14px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M-5.732,2.97-7.97.732a2.474,2.474,0,0,0-1.483-.7A.491.491,0,0,0-9.591,0H-18.5A2.5,2.5,0,0,0-21,2.5v11A2.5,2.5,0,0,0-18.5,16h11A2.5,2.5,0,0,0-5,13.5V4.737A2.483,2.483,0,0,0-5.732,2.97ZM-13,1V5.455h-3.591V1Zm-4.272,14V10.545h8.544V15ZM-6,13.5A1.5,1.5,0,0,1-7.5,15h-.228V10.045a.5.5,0,0,0-.5-.5h-9.544a.5.5,0,0,0-.5.5V15H-18.5A1.5,1.5,0,0,1-20,13.5V2.5A1.5,1.5,0,0,1-18.5,1h.909V5.955a.5.5,0,0,0,.5.5h7.5a.5.5,0,0,0,.5-.5v-4.8a1.492,1.492,0,0,1,.414.285l2.238,2.238A1.511,1.511,0,0,1-6,4.737Z" transform="translate(21)" /></svg>
                       {tr('control.save', 'Save')}
                     </button>
@@ -9629,7 +9757,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
               <button
                 type="button"
-                className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel"
+                className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500"
                 onClick={closeProductPositioningModal}
                 aria-label="Close positioning modal"
               >
@@ -9640,7 +9768,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                 <div className="flex items-center gap-2 mb-4 shrink-0">
                   <button
                     type="button"
-                    className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel disabled:opacity-40 shrink-0"
+                    className="p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500 disabled:opacity-40 shrink-0"
                     disabled={!canPrevCategory}
                     onClick={() => {
                       if (!canPrevCategory) return;
@@ -9652,14 +9780,15 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                   </button>
-                  <div className="flex-1 overflow-x-auto min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  <div ref={positioningCategoryTabsRef} className="flex-1 overflow-x-auto min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <div className="flex min-w-max border-b border-gray-300">
                       {categories.map((c) => (
                         <button
                           key={c.id}
+                          data-category-id={String(c.id)}
                           type="button"
                           onClick={() => { setPositioningCategoryId(c.id); setPositioningSelectedProductId(null); setPositioningSelectedCellIndex(null); setPositioningSelectedPoolItemId(null); }}
-                          className={`px-4 py-2 text-sm font-medium border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-green-600 text-white' : 'bg-pos-panel text-gray-200 hover:bg-pos-bg'
+                          className={`px-4 py-2 text-sm font-medium border-r border-gray-300 ${c.id === positionCategoryId ? 'bg-green-600 text-white' : 'bg-pos-panel text-gray-200 active:bg-green-500'
                             }`}
                         >
                           {(c.name || '').toUpperCase()}
@@ -9669,7 +9798,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                   <button
                     type="button"
-                    className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel disabled:opacity-40 shrink-0"
+                    className="p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500 disabled:opacity-40 shrink-0"
                     disabled={!canNextCategory}
                     onClick={() => {
                       if (!canNextCategory) return;
@@ -9757,7 +9886,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="px-6 py-2 rounded-lg border border-gray-300 text-md font-medium text-gray-200 bg-pos-panel hover:bg-pos-bg disabled:opacity-50"
+                      className="px-6 py-2 rounded-lg border border-gray-300 text-md font-medium text-gray-200 bg-pos-panel active:bg-green-500 disabled:opacity-50 disabled:pointer-events-none"
                       disabled={!Number.isInteger(positioningSelectedCellIndex)}
                       onClick={removeFromPlace}
                     >
@@ -9782,7 +9911,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   </div>
                   <button
                     type="button"
-                    className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                    className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                     disabled={savingPositioningLayout}
                     onClick={saveProductPositioningLayout}
                   >
@@ -9800,7 +9929,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showProductSearchKeyboard && subNavId === 'Products' && (
         <div className="fixed inset-0 z-10 flex items-end justify-center">
           <div className="relative bg-pos-bg rounded-t-xl shadow-2xl w-[90%] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-1 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
+            <button type="button" className="absolute top-1 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => setShowProductSearchKeyboard(false)} aria-label="Close">
               <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="p-2 shrink-0 pt-10 flex w-full justify-center">
@@ -9814,11 +9943,22 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showProductSubproductsModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-pos-bg rounded-xl min-w-[600px] border border-pos-border shadow-2xl p-6 text-sm max-h-[90vh] overflow-auto [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-2 right-4 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeProductSubproductsModal} aria-label="Close">
+            <button type="button" className="absolute top-2 right-4 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeProductSubproductsModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
 
             <div className="space-y-4 mt-6">
+              {loadingProductSubproductsLinked && (
+                <div className="w-full flex items-center justify-center py-8">
+                  <div className="flex items-center gap-3 text-pos-text">
+                    <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.35" strokeWidth="3" />
+                      <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-sm">{tr('control.productSubproducts.loading', 'Loading...')}</span>
+                  </div>
+                </div>
+              )}
               <Dropdown
                 options={[
                   { value: '', label: tr('control.productSubproducts.withoutGroup', 'Without group') },
@@ -9834,7 +9974,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="px-3 py-2 border-b border-pos-border bg-pos-panel/50 font-medium text-pos-text shrink-0">
                     {tr('control.productSubproducts.available', 'Available in group')}
                   </div>
-                  <label className="flex items-center gap-2 px-3 py-2 border-b border-pos-border text-pos-text shrink-0 cursor-pointer hover:bg-pos-panel/50">
+                  <label className="flex items-center gap-2 px-3 py-2 border-b border-pos-border text-pos-text shrink-0 cursor-pointer active:bg-green-500">
                     <input
                       type="checkbox"
                       checked={productSubproductsAvailable.length > 0 && productSubproductsAvailable.every((sp) => productSubproductsLeftSelectedIds.has(sp.id))}
@@ -9861,7 +10001,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <ul className="space-y-1">
                         {productSubproductsAvailable.map((sp) => (
                           <li key={sp.id}>
-                            <label className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-pos-panel/50 text-pos-text">
+                            <label className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer active:bg-green-500 text-pos-text">
                               <input
                                 type="checkbox"
                                 checked={productSubproductsLeftSelectedIds.has(sp.id)}
@@ -9885,7 +10025,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="px-3 py-2 border-t border-pos-border shrink-0">
                     <button
                       type="button"
-                      className="w-full inline-flex items-center justify-center gap-2 py-2 rounded bg-green-600/80 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2 rounded bg-green-600/80 active:bg-green-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleAddProductSubproductLinks}
                       disabled={!productSubproductsLeftSelectedIds.size}
                     >
@@ -9905,7 +10045,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="px-3 py-2 border-b border-pos-border bg-pos-panel/50 font-medium text-pos-text shrink-0">
                     {tr('control.productSubproducts.linked', 'Linked to product')}
                   </div>
-                  <label className={`flex items-center gap-2 px-3 py-2 border-b border-pos-border text-pos-text shrink-0 cursor-pointer hover:bg-pos-panel/50 ${!productSubproductsLinked.length ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <label className={`flex items-center gap-2 px-3 py-2 border-b border-pos-border text-pos-text shrink-0 cursor-pointer active:bg-green-500 ${!productSubproductsLinked.length ? 'opacity-50 pointer-events-none' : ''}`}>
                     <input
                       type="checkbox"
                       checked={productSubproductsLinked.length > 0 && productSubproductsLinked.every((l) => productSubproductsRightSelectedIds.has(l.subproductId))}
@@ -9932,7 +10072,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       <ul className="space-y-1">
                         {productSubproductsLinked.map((link) => (
                           <li key={link.subproductId}>
-                            <label className="flex items-center justify-between gap-2 px-3 py-2 rounded cursor-pointer hover:bg-pos-panel/50 text-pos-text group">
+                            <label className="flex items-center justify-between gap-2 px-3 py-2 rounded cursor-pointer active:bg-green-500 text-pos-text group">
                               <div className="flex items-center gap-2 min-w-0">
                                 <input
                                   type="checkbox"
@@ -9952,7 +10092,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </div>
                               <button
                                 type="button"
-                                className="p-1 rounded hover:bg-red-500/20 text-pos-muted hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="p-1 rounded active:bg-green-500 text-pos-muted active:text-red-400 shrink-0 opacity-0 group-active:opacity-100 transition-opacity"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   removeProductSubproductLink(link.subproductId);
@@ -9970,7 +10110,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                   <div className="px-3 py-2 border-t border-pos-border shrink-0">
                     <button
                       type="button"
-                      className="w-full inline-flex items-center justify-center gap-2 py-2 rounded bg-red-600/80 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full inline-flex items-center justify-center gap-2 py-2 rounded bg-red-600/80 active:bg-green-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={handleRemoveProductSubproductLinks}
                       disabled={!productSubproductsRightSelectedIds.size}
                     >
@@ -9985,7 +10125,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="mt-6 flex justify-center shrink-0">
               <button
                 type="button"
-                className="px-6 py-3 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                className="px-6 py-3 rounded-lg bg-green-600 text-white text-sm font-medium active:bg-green-500 disabled:opacity-50"
                 onClick={handleSaveProductSubproducts}
                 disabled={savingProductSubproducts || !productSubproductsProduct}
               >
@@ -10000,7 +10140,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
       {showSubproductModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="relative bg-pos-bg rounded-xl border border-pos-border shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh] text-sm" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={closeSubproductModal} aria-label="Close">
+            <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={closeSubproductModal} aria-label="Close">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             <div className="flex-1 min-h-0 overflow-auto w-full">
@@ -10074,11 +10214,11 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <label className="block min-w-[100px] text-md font-medium text-gray-200 mb-2">{tr('control.subproductModal.kioskPicture', 'Kiosk picture :')} </label>
                     <div className="w-[200px] flex items-center justify-start flex-wrap gap-2">
                       {!subproductKioskPicture ? (
-                        <label className="px-4 py-2 border border-gray-300 rounded-lg text-gray-200 hover:bg-pos-panel cursor-pointer shrink-0 text-md">
+                        <label className="px-4 py-2 border border-gray-300 rounded-lg text-gray-200 active:bg-green-500 cursor-pointer shrink-0 text-md">
                           {tr('control.subproductModal.select', 'Select')}
                           <input
                             type="file"
-                            className="hidden"
+                            className="hidden focus:border-green-500 focus:outline-none"
                             accept="image/*"
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
@@ -10100,7 +10240,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           <img src={subproductKioskPicture} alt="Kiosk" className="w-16 h-16 object-cover rounded-lg border border-gray-300 shrink-0" />
                           <button
                             type="button"
-                            className="px-3 py-2 border border-gray-300 rounded-lg text-gray-200 hover:bg-rose-500/30 text-md shrink-0"
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-gray-200 active:bg-green-500 text-md shrink-0"
                             onClick={() => setSubproductKioskPicture('')}
                           >
                             {tr('control.subproductModal.remove', 'Remove')}
@@ -10125,7 +10265,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               key={c.id}
                               role="button"
                               tabIndex={0}
-                              className={`text-md py-1.5 px-2 flex items-center gap-2 cursor-pointer rounded select-none ${attached ? 'text-gray-200 font-medium bg-pos-panel' : 'text-pos-muted'} hover:bg-pos-panel/70`}
+                              className={`text-md py-1.5 px-2 flex items-center gap-2 cursor-pointer rounded select-none ${attached ? 'text-gray-200 font-medium bg-pos-panel' : 'text-pos-muted'} active:bg-green-500`}
                               onClick={toggle}
                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
                               aria-label={attached ? tr('control.subproductModal.attachedToHint', 'Attached to {name}. Click to detach.').replace('{name}', c.name || '') : tr('control.subproductModal.attachToHint', 'Click to attach to {name}').replace('{name}', c.name || '')}
@@ -10146,10 +10286,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     </ul>
                   </div>
                   <div className="flex w-full justify-around gap-2 items-center pt-2">
-                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Scroll attach list up" onClick={() => scrollSubproductAttachToByPage('up')}>
+                    <button type="button" className="p-2 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 border border-gray-300" aria-label="Scroll attach list up" onClick={() => scrollSubproductAttachToByPage('up')}>
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
                     </button>
-                    <button type="button" className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300" aria-label="Scroll attach list down" onClick={() => scrollSubproductAttachToByPage('down')}>
+                    <button type="button" className="p-2 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 border border-gray-300" aria-label="Scroll attach list down" onClick={() => scrollSubproductAttachToByPage('down')}>
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                     </button>
                   </div>
@@ -10159,7 +10299,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             <div className="flex justify-center shrink-0">
               <button
                 type="button"
-                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50"
                 disabled={savingSubproduct}
                 onClick={handleSaveSubproduct}
               >
@@ -10182,7 +10322,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div className="relative bg-pos-bg rounded-xl shadow-2xl max-w-[90%] w-full justify-center items-center mx-4 overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-              <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel" onClick={() => { setShowManageGroupsModal(false); setSelectedManageGroupId(null); }} aria-label="Close">
+              <button type="button" className="absolute top-4 right-4 z-10 p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500" onClick={() => { setShowManageGroupsModal(false); setSelectedManageGroupId(null); }} aria-label="Close">
                 <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
               <div className="flex-1 min-h-0 overflow-auto w-full">
@@ -10197,7 +10337,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         placeholder={tr('control.subproducts.manageGroups.newGroupPlaceholder', 'New group name')}
                         className="px-4 w-[200px] bg-pos-panel h-[40px] py-3 text-md border border-gray-300 rounded-lg text-gray-200 placeholder:text-gray-500"
                       />
-                      <button type="button" className="flex ml-20 items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={handleAddGroup}>
+                      <button type="button" className="flex ml-20 items-center text-md gap-4 px-6 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={handleAddGroup}>
                         {tr('control.subproducts.manageGroups.add', 'Add')}
                       </button>
                     </div>
@@ -10245,7 +10385,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           {sortedGroups.map((grp) => (
                             <tr
                               key={grp.id}
-                              className={`border-b border-gray-300 w-full items-center min-h-[40px] flex justify-between ${selectedManageGroupId === grp.id ? 'bg-pos-panel/70' : ''} hover:bg-pos-panel/50`}
+                              className={`border-b border-gray-300 w-full items-center min-h-[40px] flex justify-between ${selectedManageGroupId === grp.id ? 'bg-pos-panel/70' : ''} active:bg-green-500`}
                               onClick={(e) => { if (!e.target.closest('button')) setSelectedManageGroupId(grp.id); }}
                             >
                               <td className="w-full py-2 px-3">
@@ -10260,8 +10400,8 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                                       onClick={(e) => e.stopPropagation()}
                                     />
                                     <div className="flex items-center gap-2 shrink-0">
-                                      <button type="button" className="flex items-center text-md gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={(e) => { e.stopPropagation(); handleSaveEditGroup(); }}>{tr('control.save', 'Save')}</button>
-                                      <button type="button" className="flex items-center text-md gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 font-medium hover:bg-pos-bg shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroupId(null); setEditingGroupName(''); }}>{tr('cancel', 'Cancel')}</button>
+                                      <button type="button" className="flex items-center text-md gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-medium active:bg-green-500 disabled:opacity-50 shrink-0" disabled={savingGroup} onClick={(e) => { e.stopPropagation(); handleSaveEditGroup(); }}>{tr('control.save', 'Save')}</button>
+                                      <button type="button" className="flex items-center text-md gap-2 px-4 py-2 rounded-lg bg-pos-panel border border-gray-300 text-gray-200 font-medium active:bg-green-500 shrink-0" onClick={(e) => { e.stopPropagation(); setEditingGroupId(null); setEditingGroupName(''); }}>{tr('cancel', 'Cancel')}</button>
                                     </div>
                                   </div>
                                 ) : (
@@ -10270,10 +10410,10 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                               </td>
                               {editingGroupId !== grp.id && (
                                 <td className="py-2 px-3 text-right flex items-center gap-1 shrink-0">
-                                  <button type="button" className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); setEditingGroupName(grp.name || ''); }} aria-label={tr('control.edit', 'Edit')}>
+                                  <button type="button" className="p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500 inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setEditingGroupId(grp.id); setEditingGroupName(grp.name || ''); }} aria-label={tr('control.edit', 'Edit')}>
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                   </button>
-                                  <button type="button" className="p-2 rounded text-pos-muted hover:text-pos-text hover:bg-pos-panel inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setDeleteConfirmGroupId(grp.id); }} aria-label={tr('delete', 'Delete')}>
+                                  <button type="button" className="p-2 rounded text-pos-muted active:text-pos-text active:bg-green-500 inline-flex align-middle" onClick={(e) => { e.stopPropagation(); setDeleteConfirmGroupId(grp.id); }} aria-label={tr('delete', 'Delete')}>
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                   </button>
                                 </td>
@@ -10286,7 +10426,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                     <div className="flex w-full justify-around gap-4 items-center pt-2">
                       <button
                         type="button"
-                        className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                        className="p-2 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
                         disabled={savingGroup || !canManageGroupsPageUp}
                         onClick={() => pageManageGroups('up')}
                         aria-label="Previous page"
@@ -10295,7 +10435,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       </button>
                       <button
                         type="button"
-                        className="p-2 rounded-lg text-pos-muted hover:text-pos-text hover:bg-pos-panel border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
+                        className="p-2 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 border border-gray-300 disabled:opacity-40 disabled:pointer-events-none"
                         disabled={savingGroup || !canManageGroupsPageDown}
                         onClick={() => pageManageGroups('down')}
                         aria-label="Next page"

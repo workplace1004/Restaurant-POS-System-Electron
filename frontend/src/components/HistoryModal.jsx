@@ -69,7 +69,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
                 historyOrders.map((order, index) => (
                   <tr
                     key={order.id}
-                    className={`border-t text-md bg-pos-bg border-pos-border ${selectedId === order.id ? 'bg-pos-bg/50' : 'hover:bg-pos-bg/70'}`}
+                    className={`border-t text-md bg-pos-bg border-pos-border ${selectedId === order.id ? 'bg-pos-bg/50' : 'active:bg-green-500'}`}
                     onClick={() => setSelectedId(selectedId === order.id ? null : order.id)}
                   >
                     <td className="p-2 font-medium">
@@ -92,7 +92,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
         <div className="flex justify-around text-2xl gap-2 py-1 border-b border-pos-border bg-pos-bg">
           <button
             type="button"
-            className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
+            className="p-2 text-pos-text active:bg-green-500 rounded"
             onClick={() => scroll(-1)}
             aria-label={t('scrollUp')}
           >
@@ -102,7 +102,7 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
           </button>
           <button
             type="button"
-            className="p-2 text-pos-text hover:bg-pos-panel/70 rounded"
+            className="p-2 text-pos-text active:bg-green-500 rounded"
             onClick={() => scroll(1)}
             aria-label={t('scrollDown')}
           >
@@ -115,35 +115,35 @@ export function HistoryModal({ open, onClose, historyOrders = [], onFetchHistory
         <div className="flex flex-wrap gap-2 p-4 text-md py-1 justify-around bg-pos-bg">
           <button
             type="button"
-            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium active:bg-green-500"
             onClick={onClose}
           >
             {t('backName')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium active:bg-green-500"
             onClick={() => {}}
           >
             {t('historyView')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium active:bg-green-500"
             onClick={() => {}}
           >
             {t('historyTakeBack')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium active:bg-green-500"
             onClick={() => {}}
           >
             {t('historyTakeBackAgain')}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium hover:bg-pos-panel/70"
+            className="px-4 py-2 rounded bg-pos-panel text-pos-text font-medium active:bg-green-500"
             onClick={() => {}}
           >
             {t('historyReprintTicket')}

@@ -7,7 +7,7 @@ const ROW1_KEYS = 'a z e r t y u i o p'.split(' ');
 const ROW2_KEYS = 'q s d f g h j k l m'.split(' ');
 const ROW3_KEYS = 'w x c v b n , €'.split(' ');
 const NUMPAD_KEYS = [['7', '8', '9'], ['4', '5', '6'], ['1', '2', '3'], ['-', '0', '.']];
-const KEY_STYLE = 'w-[100px] h-[60px] bg-pos-panel rounded text-white text-4xl hover:bg-pos-panel/80 border border-transparent transition-colors';
+const KEY_STYLE = 'w-[100px] h-[60px] bg-pos-panel rounded text-white text-4xl active:bg-green-500 border border-transparent transition-colors';
 const INPUT_STYLE = 'w-full py-3 px-3 bg-pos-bg min-w-[175px] border border-pos-panel text-pos-text outline-none';
 const DISABLED_PRICE_GROUP = { value: 'disabled', labelKey: 'control.productModal.disabled' };
 const EMPTY_NEW_CUSTOMER = {
@@ -291,7 +291,7 @@ export function CustomersView({
                                   setNewCustomerForm((prev) => ({ ...prev, priceGroup: option.value }));
                                   setIsPriceGroupOpen(false);
                                 }}
-                                className={`w-full text-left px-3 py-2 transition-colors ${isSelected ? 'bg-pos-surface text-white' : 'bg-pos-panel text-pos-text hover:bg-pos-surface'
+                                className={`w-full text-left px-3 py-2 transition-colors ${isSelected ? 'bg-pos-surface text-white' : 'bg-pos-panel text-pos-text active:bg-green-500'
                                   }`}
                               >
                                 {option.label}
@@ -329,7 +329,7 @@ export function CustomersView({
                         <label className="block text-sm font-semibold w-full flex min-w-[160px] max-w-[160px]">{t('customersCreditTag')}:</label>
                     <div className="grid grid-cols-[1fr_auto] gap-2">
                       <input name="loyaltyTag" value={newCustomerForm.loyaltyTag} onFocus={setActiveInput} onChange={(e) => setNewCustomerForm((s) => ({ ...s, loyaltyTag: e.target.value }))} className={INPUT_STYLE} />
-                      {/* <button type="button" className="py-3 px-6 bg-pos-surface rounded-md text-2xl hover:bg-pos-surface-hover">
+                      {/* <button type="button" className="py-3 px-6 bg-pos-surface rounded-md text-2xl active:bg-green-500">
                         {t('customersExtraTags')}
                       </button> */}
                     </div>
@@ -337,10 +337,10 @@ export function CustomersView({
                 </div>
 
                 <div className="flex flex-col gap-6 min-w-[200px] h-full justify-around py-20">
-                  <button type="button" onClick={saveCustomer} disabled={isSavingCustomer} className="py-3 px-5 bg-pos-surface rounded-md text-md hover:bg-pos-surface-hover disabled:opacity-60">
+                  <button type="button" onClick={saveCustomer} disabled={isSavingCustomer} className="py-3 px-5 bg-pos-surface rounded-md text-md active:bg-green-500 disabled:opacity-60">
                     {t('control.save')}
                   </button>
-                  <button type="button" onClick={closeCustomerForm} className="py-3 px-5 bg-pos-surface rounded-md text-md hover:bg-pos-surface-hover">
+                  <button type="button" onClick={closeCustomerForm} className="py-3 px-5 bg-pos-surface rounded-md text-md active:bg-green-500">
                     {t('cancel')}
                   </button>
                 </div>
@@ -375,8 +375,8 @@ export function CustomersView({
                 </table>
               </div>
               <div className="flex justify-center gap-40 py-2 text-xl">
-                <button type="button" className="text-pos-text hover:text-white" onClick={() => scrollList(-1)}>↑</button>
-                <button type="button" className="text-pos-text hover:text-white" onClick={() => scrollList(1)}>↓</button>
+                <button type="button" className="text-pos-text active:text-white active:bg-green-500" onClick={() => scrollList(-1)}>↑</button>
+                <button type="button" className="text-pos-text active:text-white active:bg-green-500" onClick={() => scrollList(1)}>↓</button>
               </div>
             </>
           )}
@@ -392,22 +392,22 @@ export function CustomersView({
               placeholder={t('customersSearchPlaceholder')}
               className="py-3 px-3 bg-pos-surface border border-pos-border rounded-md text-pos-text outline-none"
             />
-            <button type="button" onClick={openNewCustomerMode} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+            <button type="button" onClick={openNewCustomerMode} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left active:bg-green-500">
               {t('customersNewCustomer')}
             </button>
-            <button type="button" onClick={openEditCustomerMode} disabled={!selectedCustomer} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="button" onClick={openEditCustomerMode} disabled={!selectedCustomer} className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left active:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
               {t('customersEditCustomer')}
             </button>
-            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left active:bg-green-500">
               {t('history')}
             </button>
-            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left active:bg-green-500">
               {t('customersPickup')}
             </button>
-            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left active:bg-green-500">
               {t('customersDeliver')}
             </button>
-            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left hover:bg-pos-surface-hover">
+            <button type="button" className="py-3 px-3 bg-pos-surface border-none rounded-md text-pos-text text-left active:bg-green-500">
               {t('customersNone')}
             </button>
           </aside>
@@ -416,16 +416,16 @@ export function CustomersView({
 
       {!isCustomerFormOpen && (
         <div className="grid grid-cols-4 gap-3 text-sm shrink-0">
-          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface" onClick={onBack}>
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text active:bg-green-500" onClick={onBack}>
             {t('backName')}
           </button>
-          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface">
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text active:bg-green-500">
             {t('customersNewReservation')}
           </button>
-          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface">
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text active:bg-green-500">
             {t('customersNoCustomer')}
           </button>
-          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text hover:bg-pos-surface">
+          <button type="button" className="py-3 px-4 bg-pos-panel border-none rounded text-pos-text active:bg-green-500">
             {t('customersSelectCustomer')}
           </button>
         </div>
@@ -437,3 +437,4 @@ export function CustomersView({
     </div>
   );
 }
+

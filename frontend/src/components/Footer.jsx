@@ -206,7 +206,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                   ? 'bg-pos-panel text-pos-text opacity-60 cursor-not-allowed'
                   : active
                     ? 'bg-pos-surface text-white'
-                    : 'bg-pos-panel text-pos-text hover:bg-pos-surface'
+                    : 'bg-pos-panel text-pos-text active:bg-green-500'
               }`}
               onClick={() => handleFooterButtonClick(slotId)}
             >
@@ -227,7 +227,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                   <button
                     key={`more-grid-${id}-${idx}`}
                     type="button"
-                    className="px-2 rounded bg-pos-bg text-pos-text hover:bg-pos-surface text-center min-h-[46px]"
+                    className="px-2 rounded bg-pos-bg text-pos-text active:bg-green-500 text-center min-h-[46px]"
                     onClick={() => handleFooterButtonClick(id)}
                   >
                     <span
@@ -267,7 +267,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                     <button
                       key={`bc-key-${key}`}
                       type="button"
-                      className={`h-[58px] rounded bg-transparent text-5xl hover:bg-white/30 ${
+                      className={`h-[58px] rounded bg-transparent text-5xl active:bg-green-500 ${
                         activeExtraBcButtonId === `keypad-${key}` ? 'text-rose-500' : 'text-[#3f5478]'
                       }`}
                       onClick={() => {
@@ -284,7 +284,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
             <div className="mt-8 grid grid-cols-3 gap-8">
               <button
                 type="button"
-                className={`h-[56px] rounded bg-white/45 text-3xl hover:bg-white/70 ${
+                className={`h-[56px] rounded bg-white/45 text-3xl active:bg-green-500 ${
                   activeExtraBcButtonId === 'action-cancel' ? 'text-rose-500' : 'text-[#3f5478]'
                 }`}
                 onClick={() => {
@@ -296,7 +296,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
               </button>
               <button
                 type="button"
-                className={`h-[56px] rounded bg-white/45 text-3xl hover:bg-white/70 ${
+                className={`h-[56px] rounded bg-white/45 text-3xl active:bg-green-500 ${
                   activeExtraBcButtonId === 'action-reset' ? 'text-rose-500' : 'text-[#3f5478]'
                 }`}
                 onClick={() => {
@@ -311,7 +311,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                 disabled={!extraBcInput}
                 className={`h-[56px] rounded text-3xl ${
                   extraBcInput
-                    ? `${activeExtraBcButtonId === 'action-ok' ? 'text-rose-500' : 'text-[#3f5478]'} bg-white/45 hover:bg-white/70`
+                    ? `${activeExtraBcButtonId === 'action-ok' ? 'text-rose-500' : 'text-[#3f5478]'} bg-white/45 active:bg-green-500`
                     : 'bg-white/30 text-[#9aa7bd] cursor-not-allowed'
                 }`}
                 onClick={() => {
@@ -351,7 +351,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                       <button
                         key={group.id}
                         type="button"
-                        className="h-[54px] px-6 rounded bg-white/45 text-3xl text-green-400 hover:bg-white/70"
+                        className="h-[54px] px-6 rounded bg-white/45 text-3xl text-green-400 active:bg-green-500"
                       >
                         {group.name || group.id}
                       </button>
@@ -362,7 +362,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
             <div className="flex items-center justify-center">
               <button
                 type="button"
-                className="h-[62px] min-w-[190px] rounded bg-white/45 px-8 text-3xl hover:bg-white/70"
+                className="h-[62px] min-w-[190px] rounded bg-white/45 px-8 text-3xl active:bg-green-500"
                 onClick={() => setShowPriceGroupModal(false)}
               >
                 {t('cancel')}

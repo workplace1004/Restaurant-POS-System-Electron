@@ -83,11 +83,7 @@ export function TimePickerModal({ open, onClose, value, onChange }) {
               <button
                 key={h}
                 type="button"
-                className={`py-3 px-2 rounded-lg text-center font-mono text-lg ${
-                  hour === h
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-                }`}
+                className={`py-3 px-2 rounded-lg text-center font-mono text-lg ${ hour === h ? 'bg-blue-600 text-white active:bg-green-500' : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 active:bg-green-500 dark:active:bg-green-500 border border-gray-200 dark:border-gray-600' }`}
                 onClick={() => setHour(h)}
               >
                 {String(h).padStart(2, '0')}:{String(minute).padStart(2, '0')}
@@ -99,11 +95,7 @@ export function TimePickerModal({ open, onClose, value, onChange }) {
               <button
                 key={m}
                 type="button"
-                className={`py-3 px-6 rounded-lg font-mono text-lg ${
-                  minute === m
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-                }`}
+                className={`py-3 px-6 rounded-lg font-mono text-lg ${ minute === m ? 'bg-green-500 text-white active:bg-green-500' : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 active:bg-green-500 dark:active:bg-green-500 border border-gray-200 dark:border-gray-600' }`}
                 onClick={() => setMinute(m)}
               >
                 {String(m).padStart(2, '0')}
@@ -113,7 +105,7 @@ export function TimePickerModal({ open, onClose, value, onChange }) {
           <div className="bg-pos-bg px-4 py-3 rounded-lg flex items-center justify-between">
             <button
               type="button"
-              className="text-white p-1 hover:opacity-80"
+              className="text-white p-1 active:opacity-80 active:bg-green-500"
               onClick={goPrevTime}
               aria-label="Previous time"
             >
@@ -124,7 +116,7 @@ export function TimePickerModal({ open, onClose, value, onChange }) {
             <span className="text-white text-2xl font-mono">
               {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
             </span>
-            <button type="button" className="text-white p-1 hover:opacity-80" onClick={goNextTime} aria-label="Next time">
+            <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={goNextTime} aria-label="Next time">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 18l6-6-6-6" />
               </svg>
@@ -134,20 +126,20 @@ export function TimePickerModal({ open, onClose, value, onChange }) {
         <div className="flex gap-3 p-4 border-t border-pos-border">
           <button
             type="button"
-            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
             onClick={onClose}
           >
             {t('cancel')}
           </button>
           <button
             type="button"
-            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
           >
             {t('remark')}
           </button>
           <button
             type="button"
-            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
             onClick={handleSave}
           >
             {t('save')}

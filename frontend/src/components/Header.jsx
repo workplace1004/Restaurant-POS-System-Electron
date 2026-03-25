@@ -120,7 +120,7 @@ export function Header({
                 key={`header-empty-slot-${idx}`}
                 type="button"
                 disabled
-                className="rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text/30 text-xl flex items-center justify-center"
+                className="rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text/30 text-xl flex items-center justify-center active:bg-green-500"
               />
             );
           }
@@ -133,7 +133,7 @@ export function Header({
               onClick={cfg.onClick || undefined}
               disabled={!cfg.onClick}
               className={`rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-md px-2 flex items-center gap-3 min-w-0 ${
-                cfg.onClick ? 'hover:bg-pos-rowHover' : 'opacity-80 cursor-default'
+                cfg.onClick ? 'active:bg-green-500' : 'opacity-80 cursor-default'
               }`}
             >
               <span className="opacity-90 shrink-0">{cfg.icon}</span>

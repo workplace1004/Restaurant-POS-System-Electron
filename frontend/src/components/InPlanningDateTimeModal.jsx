@@ -149,13 +149,13 @@ export function InPlanningDateTimeModal({ open, onClose, onSave, initialValue, z
           {formatDisplay()}
         </div>
         <div className="bg-pos-bg px-4 py-3 flex items-center justify-between">
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={goPrevMonth} aria-label="Previous month">
+          <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={goPrevMonth} aria-label="Previous month">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </button>
           <span className="text-white text-2xl font-medium capitalize">{monthName}</span>
-          <button type="button" className="text-white p-1 hover:opacity-80" onClick={goNextMonth} aria-label="Next month">
+          <button type="button" className="text-white p-1 active:opacity-80 active:bg-green-500" onClick={goNextMonth} aria-label="Next month">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 18l6-6-6-6" />
             </svg>
@@ -179,11 +179,7 @@ export function InPlanningDateTimeModal({ open, onClose, onSave, initialValue, z
                 <button
                   key={i}
                   type="button"
-                  className={`py-4 rounded flex flex-col items-center justify-center text-xl relative ${
-                    grey ? 'text-gray-500 hover:bg-pos-surface/50' : 'text-pos-text hover:bg-pos-surface/50'
-                  } ${todayCell ? 'bg-pos-bg text-white hover:bg-pos-bg hover:opacity-90' : ''} ${
-                    selectedCell && !todayCell ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
-                  } ${selectedCell && todayCell ? 'ring-2 ring-blue-400 ring-offset-2' : ''}`}
+                  className={`py-4 rounded flex flex-col items-center justify-center text-xl relative ${ grey ? 'text-gray-500 active:bg-green-500' : 'text-pos-text active:bg-green-500' } ${todayCell ? 'bg-pos-bg text-white active:bg-green-500 active:opacity-90' : ''} ${ selectedCell && !todayCell ? 'bg-blue-600 text-white active:bg-green-500' : '' } ${selectedCell && todayCell ? 'ring-2 ring-blue-400 ring-offset-2' : ''}`}
                   onClick={() => handleSelectDate(cell)}
                 >
                   {todayCell && (
@@ -199,7 +195,7 @@ export function InPlanningDateTimeModal({ open, onClose, onSave, initialValue, z
         </div>
         <button
           type="button"
-          className="w-full bg-pos-bg px-4 py-3 flex items-center justify-between hover:opacity-90 cursor-pointer"
+          className="w-full bg-pos-bg px-4 py-3 flex items-center justify-between active:opacity-90 cursor-pointer active:bg-green-500"
           onClick={() => setShowTimePickerModal(true)}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white shrink-0">
@@ -221,21 +217,21 @@ export function InPlanningDateTimeModal({ open, onClose, onSave, initialValue, z
         <div className="flex gap-3 p-4 border-t border-pos-border">
           <button
             type="button"
-            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
             onClick={onClose}
           >
             {t('cancel')}
           </button>
           <button
             type="button"
-            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
             onClick={() => {}}
           >
             {t('remark')}
           </button>
           <button
             type="button"
-            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+            className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
             onClick={handleSave}
           >
             {t('save')}

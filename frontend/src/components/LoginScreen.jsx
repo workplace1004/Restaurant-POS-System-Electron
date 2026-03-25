@@ -92,7 +92,7 @@ export function LoginScreen({ time, onLogin }) {
           <button
             type="button"
             onClick={() => scrollRoles('left')}
-            className="flex-shrink-0 w-10 h-[170px] rounded-xl bg-pos-panel border-2 border-pos-border text-white hover:border-white/50 transition-all flex items-center justify-center"
+            className="flex-shrink-0 w-10 h-[170px] rounded-xl bg-pos-panel border-2 border-pos-border text-white active:border-white/50 transition-all flex items-center justify-center"
             aria-label={t('previousUsers')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -111,7 +111,7 @@ export function LoginScreen({ time, onLogin }) {
                     type="button"
                     className={`flex min-w-[150px] h-[170px] flex-col items-center p-6 rounded-xl border-2 transition-all ${selectedUser?.id === user.id
                       ? `${color} border-white text-white`
-                      : 'bg-pos-panel border-pos-border text-pos-text hover:border-white/50'
+                      : 'bg-pos-panel border-pos-border text-pos-text active:border-white/50'
                       }`}
                     onClick={() => {
                       setSelectedUser(user);
@@ -141,7 +141,7 @@ export function LoginScreen({ time, onLogin }) {
           <button
             type="button"
             onClick={() => scrollRoles('right')}
-            className="flex-shrink-0 w-10 h-[170px] rounded-xl bg-pos-panel border-2 border-pos-border text-white hover:border-white/50 transition-all flex items-center justify-center"
+            className="flex-shrink-0 w-10 h-[170px] rounded-xl bg-pos-panel border-2 border-pos-border text-white active:border-white/50 transition-all flex items-center justify-center"
             aria-label={t('nextUsers')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -161,9 +161,9 @@ export function LoginScreen({ time, onLogin }) {
                   key={key}
                   type="button"
                   className={`col-span-1 py-2 rounded-lg font-semibold transition-colors border border-transparent ${key === 'Again'
-                    ? 'col-span-2 text-xl bg-pos-bg text-white hover:border-white'
-                    : 'bg-pos-bg text-xl text-white hover:border-white'
-                    }`}
+                    ? 'col-span-2 text-xl bg-pos-bg text-white active:border-white'
+                    : 'bg-pos-bg text-xl text-white active:border-white'
+                    } active:bg-green-500`}
                   onClick={() => {
                     if (key === 'Again') handlePadKey('Again');
                     else handlePadKey(key);
@@ -176,7 +176,7 @@ export function LoginScreen({ time, onLogin }) {
           </div>
           <button
             type="button"
-            className="w-full mt-4 py-2 bg-green-600 text-white rounded-lg text-xl font-semibold hover:bg-green-700"
+            className="w-full mt-4 py-2 bg-green-600 text-white rounded-lg text-xl font-semibold active:bg-green-500"
             onClick={handleSubmit}
           >
             {t('loginButton')}

@@ -80,7 +80,7 @@ export function WebordersModal({
             className={`pb-3 px-4 text-xl font-medium -mb-px ${activeTab === 'new'
               ? 'text-green-400'
               : 'text-white'
-              }`}
+              } active:bg-green-500`}
             onClick={() => setActiveTab('new')}
           >
             {t('webordersNewOrders')}
@@ -90,7 +90,7 @@ export function WebordersModal({
             className={`pb-3 px-4 text-xl font-medium-mb-px ${activeTab === 'onHold'
               ? 'text-green-400'
               : 'text-white'
-              }`}
+              } active:bg-green-500`}
             onClick={() => setActiveTab('onHold')}
           >
             {t('webordersOnHold')}
@@ -125,7 +125,7 @@ export function WebordersModal({
                 {list.map((order) => (
                   <tr
                     key={order.id}
-                    className={`border-b text-sm w-full border-gray-200 cursor-pointer ${selectedOrderId === order.id ? 'bg-gray-500' : 'hover:bg-gray-100'
+                    className={`border-b text-sm w-full border-gray-200 cursor-pointer ${selectedOrderId === order.id ? 'bg-gray-500' : 'active:bg-green-500'
                       }`}
                     onClick={() => setSelectedOrderId(order.id)}
                   >
@@ -204,21 +204,21 @@ export function WebordersModal({
         <div className="flex items-center justify-around gap-4 py-2 w-full">
           <button
             type="button"
-            className="group p-2 rounded transition-colors hover:bg-white/10 rounded-full"
+            className="group p-2 rounded transition-colors active:bg-green-500 rounded-full"
             onClick={() => scroll(-1)}
             aria-label={t('scrollUp')}
           >
-            <svg width="24" height="24" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" className="text-white group-hover:text-amber-300 transition-colors">
+            <svg width="24" height="24" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" className="text-white group-active:text-amber-300 transition-colors">
               <path d="M11 17V5.414l3.293 3.293a.999.999 0 101.414-1.414l-5-5a.999.999 0 00-1.414 0l-5 5a.997.997 0 000 1.414.999.999 0 001.414 0L9 5.414V17a1 1 0 102 0z" fill="currentColor" />
             </svg>
           </button>
           <button
             type="button"
-            className="group p-2 rounded transition-colors hover:bg-white/10 rounded-full"
+            className="group p-2 rounded transition-colors active:bg-green-500 rounded-full"
             onClick={() => scroll(1)}
             aria-label={t('scrollDown')}
           >
-            <svg width="24" height="24" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" className="text-white group-hover:text-amber-300 transition-colors">
+            <svg width="24" height="24" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" className="text-white group-active:text-amber-300 transition-colors">
               <path d="M10.707 17.707l5-5a.999.999 0 10-1.414-1.414L11 14.586V3a1 1 0 10-2 0v11.586l-3.293-3.293a.999.999 0 10-1.414 1.414l5 5a.999.999 0 001.414 0z" fill="currentColor" />
             </svg>
           </button>
@@ -228,7 +228,7 @@ export function WebordersModal({
         <div className="flex gap-3 justify-around p-4">
           <button
             type="button"
-            className="py-3 px-10 rounded bg-gray-300 text-gray-700 text-md font-medium hover:bg-gray-500"
+            className="py-3 px-10 rounded bg-gray-300 text-gray-700 text-md font-medium active:bg-green-500"
             onClick={onClose}
           >
             {t('webordersClose')}
@@ -236,7 +236,7 @@ export function WebordersModal({
           {activeTab === 'onHold' && (
             <button
               type="button"
-              className="py-2 px-10 rounded bg-gray-300 text-gray-700 text-md font-medium hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2 px-10 rounded bg-gray-300 text-gray-700 text-md font-medium active:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleCancelOrder}
               disabled={!selectedOrderId}
             >
@@ -245,7 +245,7 @@ export function WebordersModal({
           )}
           <button
             type="button"
-            className="py-2 px-10 rounded bg-gray-300 text-gray-700 text-md font-medium hover:bg-gray-300 disabled:opacity-70"
+            className="py-2 px-10 rounded bg-gray-300 text-gray-700 text-md font-medium active:bg-green-500 disabled:opacity-70"
             onClick={() => { onConfirm?.(); onClose?.(); }}
             disabled={loading}
           >

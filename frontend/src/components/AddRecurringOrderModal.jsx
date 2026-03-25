@@ -65,7 +65,7 @@ export function AddRecurringOrderModal({ open, onClose, onAdd, initialDate }) {
                 <button
                   type="button"
                   onClick={() => setShowDatePicker(true)}
-                  className="w-full px-4 py-2 bg-pos-surface text-pos-text rounded border border-pos-border hover:bg-pos-surface-hover text-left"
+                  className="w-full px-4 py-2 bg-pos-surface text-pos-text rounded border border-pos-border active:bg-green-500 text-left"
                 >
                   {formatStartDate()}
                 </button>
@@ -107,14 +107,14 @@ export function AddRecurringOrderModal({ open, onClose, onAdd, initialDate }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+                className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
               >
                 {t('cancel')}
               </button>
               <button
                 type="button"
                 onClick={handleAdd}
-                className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg hover:bg-pos-surface-hover font-medium"
+                className="flex-1 py-3 px-4 bg-pos-surface text-pos-text rounded-lg active:bg-green-500 font-medium"
               >
                 {tr('recurringAdd', 'Add')}
               </button>

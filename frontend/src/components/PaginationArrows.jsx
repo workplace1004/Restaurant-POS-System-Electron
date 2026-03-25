@@ -18,7 +18,7 @@ export function PaginationArrows({ canPrev, canNext, onPrev, onNext, className =
     >
       <button
         type="button"
-        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-40 disabled:pointer-events-none transition-colors"
+        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 disabled:opacity-40 disabled:pointer-events-none transition-colors"
         disabled={!canPrev}
         onClick={onPrev}
         aria-label="Previous page"
@@ -29,7 +29,7 @@ export function PaginationArrows({ canPrev, canNext, onPrev, onNext, className =
       </button>
       <button
         type="button"
-        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text hover:bg-pos-bg disabled:opacity-40 disabled:pointer-events-none transition-colors"
+        className="p-3 rounded-lg bg-pos-panel border border-pos-border text-pos-text active:bg-green-500 disabled:opacity-40 disabled:pointer-events-none transition-colors"
         disabled={!canNext}
         onClick={onNext}
         aria-label="Next page"

@@ -21,7 +21,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
           <button
             type="button"
             key={cat.id}
-            className={`flex items-center gap-2 text-left px-4 py-2 rounded-lg hover:bg-pos-panel ${selectedCategoryId === cat.id ? 'bg-pos-panel font-medium text-green-500 border border-green-500' : 'bg-pos-panel/50 text-pos-text'
+            className={`flex items-center gap-2 text-left px-4 py-2 rounded-lg ${selectedCategoryId === cat.id ? 'bg-pos-panel font-medium text-green-500 border border-green-500' : 'bg-pos-panel/50 text-pos-text'
               }`}
             onClick={() => onSelectCategory(cat.id)}
           >
@@ -38,7 +38,7 @@ export function LeftSidebar({ categories, selectedCategoryId, onSelectCategory, 
         <div className="px-10 py-1">
           <button
             type="button"
-            className="bg-transparent border-none text-pos-muted text-md p-0 hover:text-pos-text"
+            className="bg-transparent border-none text-pos-muted text-md p-0 active:text-pos-text active:text-green-500"
             onClick={() => onControlClick?.()}
           >
             {t('control')}

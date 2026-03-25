@@ -60,21 +60,21 @@ export function InWaitingNameModal({ open, onClose, onConfirm }) {
           <button
             type="button"
             onClick={handleCancel}
-            className="px-6 py-2.5 bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text rounded-md font-medium"
+            className="px-6 py-2.5 bg-pos-panel border border-pos-border active:bg-green-500 text-pos-text rounded-md font-medium"
           >
             {t('cancel')}
           </button>
           <button
             type="button"
             onClick={handleWithoutName}
-            className="px-6 py-2.5 bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text rounded-md font-medium"
+            className="px-6 py-2.5 bg-pos-panel border border-pos-border active:bg-green-500 text-pos-text rounded-md font-medium"
           >
             {tr('orderPanel.inWaitingModal.withoutName', 'Without name')}
           </button>
           <button
             type="button"
             onClick={handleContinue}
-            className="px-6 py-2.5 bg-pos-panel border border-pos-border hover:bg-pos-rowHover text-pos-text rounded-md font-medium"
+            className="px-6 py-2.5 bg-pos-panel border border-pos-border active:bg-green-500 text-pos-text rounded-md font-medium"
           >
             {tr('orderPanel.inWaitingModal.continue', 'Continue')}
           </button>

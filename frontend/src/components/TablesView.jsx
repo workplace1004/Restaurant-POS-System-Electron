@@ -212,7 +212,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="w-10 h-10 rounded-lg border border-pos-border bg-pos-panel hover:bg-pos-rowHover text-xl font-bold"
+            className="w-10 h-10 rounded-lg border border-pos-border bg-pos-panel active:bg-green-500 text-xl font-bold"
             onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
             aria-label="Zoom out"
           >
@@ -221,7 +221,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
           <span className="min-w-[3ch] text-center text-lg">{zoom}%</span>
           <button
             type="button"
-            className="w-10 h-10 rounded-lg border border-pos-border bg-pos-panel hover:bg-pos-rowHover text-xl font-bold"
+            className="w-10 h-10 rounded-lg border border-pos-border bg-pos-panel active:bg-green-500 text-xl font-bold"
             onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
             aria-label="Zoom in"
           >
@@ -376,19 +376,19 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
       </div>
 
       <div className="flex items-center justify-around text-md px-4 py-2 bg-pos-panel">
-        <button type="button" className="py-2 px-3 hover:bg-pos-rowHover" onClick={onBack}>
+        <button type="button" className="py-2 px-3 active:bg-green-500" onClick={onBack}>
           {t('backName')}
         </button>
-        <button type="button" className="py-2 px-3 hover:bg-pos-rowHover" onClick={handleNextRoom}>
+        <button type="button" className="py-2 px-3 active:bg-green-500" onClick={handleNextRoom}>
           {t('nextCourse')}
         </button>
-        <button type="button" className="py-2 px-3 hover:bg-pos-rowHover">
+        <button type="button" className="py-2 px-3 active:bg-green-500">
           {t('name')}
         </button>
-        <button type="button" className="py-2 px-3 hover:bg-pos-rowHover" onClick={() => setShowRoomsModal(true)}>
+        <button type="button" className="py-2 px-3 active:bg-green-500" onClick={() => setShowRoomsModal(true)}>
           {currentRoom?.name ?? t('room1')}
         </button>
-        <button type="button" className="py-2 px-3 hover:bg-pos-rowHover" onClick={() => handleSelectAndClose(null)}>
+        <button type="button" className="py-2 px-3 active:bg-green-500" onClick={() => handleSelectAndClose(null)}>
           {t('noTable')}
         </button>
       </div>
@@ -410,7 +410,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
                     setShowRoomsModal(false);
                   }}
                   className={`w-full py-3 px-4 rounded-lg text-left text-sm ${
-                    selectedRoomIndex === idx ? 'bg-pos-rowHover border-2 border-pos-border' : 'bg-pos-panel hover:bg-pos-rowHover border border-transparent'
+                    selectedRoomIndex === idx ? 'bg-pos-rowHover border-2 border-pos-border' : 'bg-pos-panel active:bg-green-500 border border-transparent'
                   }`}
                 >
                   {room?.name ?? `Room ${idx + 1}`}
@@ -423,7 +423,7 @@ export function TablesView({ tables = [], tableLayouts = {}, fetchTableLayouts, 
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                className="px-4 py-2 rounded-lg bg-pos-panel border border-pos-border hover:bg-pos-bg"
+                className="px-4 py-2 rounded-lg bg-pos-panel border border-pos-border active:bg-green-500"
                 onClick={() => setShowRoomsModal(false)}
               >
                 {t('backName')}
