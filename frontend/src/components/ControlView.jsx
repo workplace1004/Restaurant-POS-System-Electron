@@ -5283,14 +5283,14 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
           <div className="flex flex-col">
             <button
               type="button"
-              className="px-3 py-1 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 text-xl"
+              className="px-3 py-1 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 text-2xl"
               onClick={() => onBack?.()}
             >
               {tr('backName', 'Back')}
             </button>
             <button
               type="button"
-              className="px-3 py-1 rounded-lg text-pos-muted active:text-pos-text active:bg-green-500 text-xl"
+              className="px-3 py-2 rounded-lg text-rose-500 active:text-pos-text active:bg-green-500 text-2xl font-medium"
               onClick={() => setShowLogoutModal(true)}
             >
               {tr('logOut', 'Log out')}
@@ -8375,7 +8375,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
               )}
               {deviceSettingsTab === 'Function buttons' && (
                 <div className="px-8 py-2">
-                  <div className="mx-auto max-w-[1300px] rounded-sm bg-[#7f7f84] p-6">
+                  <div className="mx-auto rounded-sm bg-[#7f7f84] p-3">
                     <div className="grid grid-cols-4 gap-6">
                       {Array.from({ length: FUNCTION_BUTTON_SLOT_COUNT }).map((_, slotIndex) => {
                         const assignedId = functionButtonSlots[slotIndex];
@@ -8388,7 +8388,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                             onClick={() => handleFunctionButtonSlotClick(slotIndex)}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => handleFunctionButtonDropOnSlot(event, slotIndex)}
-                            className={`h-[62px] border bg-transparent text-xl text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
+                            className={`h-[40px] border bg-transparent text-md text-white transition-colors ${isSelected ? 'border-blue-400' : 'border-[#a8a8ad]'
                               } active:bg-green-500`}
                           >
                             {assignedLabel}
@@ -8397,7 +8397,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                       })}
                     </div>
                   </div>
-                  <div className="mx-auto mt-8 max-w-[1030px] border border-[#9d9da3] bg-transparent py-6">
+                  <div className="mx-auto mt-5 max-w-[1030px] border border-[#9d9da3] bg-transparent py-3">
                     <div className="text-center">
                       <button
                         type="button"
@@ -8411,7 +8411,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                         {tr('control.functionButtons.removeFromPlace', 'Remove from place')}
                       </button>
                     </div>
-                    <div className="mt-4 space-y-8 text-center flex flex-col">
+                    <div className="mt-4 space-y-5 text-center flex flex-col">
                       {FUNCTION_BUTTON_ITEMS.filter((item) => !assignedFunctionButtonIds.has(item.id)).map((item) => (
                         <button
                           key={item.id}
@@ -9595,17 +9595,17 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
         const canPrevCategory = categoryIndex > 0;
         const canNextCategory = categoryIndex >= 0 && categoryIndex < categories.length - 1;
         const COLOR_OPTIONS = [
-          { id: 'green', className: 'bg-green-500 text-white' },
-          { id: 'blue', className: 'bg-blue-700 text-white' },
-          { id: 'pink', className: 'bg-pink-300 text-white' },
-          { id: 'orange', className: 'bg-orange-300 text-white' },
-          { id: 'yellow', className: 'bg-yellow-300 text-white' },
-          { id: 'gray', className: 'bg-gray-400 text-white' },
+          { id: 'green', className: 'bg-[#83c664] text-white' },
+          { id: 'blue', className: 'bg-[#0000ff] text-white' },
+          { id: 'pink', className: 'bg-[#e97c64] text-white' },
+          { id: 'orange', className: 'bg-[#f0961c] text-white' },
+          { id: 'yellow', className: 'bg-[#ff2d3d] text-white' },
+          { id: 'gray', className: 'bg-[#4ab3ff] text-white' },
         ];
         const tileClassByColorId = (colorId, fallbackType) => {
           const found = COLOR_OPTIONS.find((c) => c.id === colorId);
           if (found) return found.className;
-          return fallbackType === 'subproduct' ? 'bg-amber-500 text-white' : 'bg-green-500 text-white';
+          return fallbackType === 'subproduct' ? 'bg-amber-500 text-white' : 'bg-[#83c664] text-white';
         };
         const updateLayout = (nextCells) => {
           if (!positionCategoryId) return;
@@ -9645,6 +9645,9 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             byCategory[String(positioningSelectedCellIndex)] = colorId;
             return { ...prev, [positionCategoryId]: byCategory };
           });
+          // After applying a color, require explicit re-selection for another change.
+          setPositioningSelectedProductId(null);
+          setPositioningSelectedCellIndex(null);
         };
         const handleDragStartFromPool = (event, itemId) => {
           event.dataTransfer.setData('text/plain', JSON.stringify({ itemId, source: 'pool' }));
@@ -9746,6 +9749,12 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
             return;
           }
           if (itemAtCell) {
+            if (positioningSelectedCellIndex === idx && positioningSelectedProductId === itemAtCell.id) {
+              setPositioningSelectedProductId(null);
+              setPositioningSelectedCellIndex(null);
+              setPositioningSelectedPoolItemId(null);
+              return;
+            }
             setPositioningSelectedProductId(itemAtCell.id);
             setPositioningSelectedCellIndex(idx);
             setPositioningSelectedPoolItemId(null);
@@ -9861,7 +9870,7 @@ export function ControlView({ currentUser, onLogout, onBack, fetchTableLayouts, 
                           role="button"
                           tabIndex={0}
                           className={`h-[55px] border border-gray-300 px-2 text-center text-md cursor-pointer ${tileClass} ${selected ? 'ring-2 ring-gray-300' : ''}`}
-                          style={selected ? { boxShadow: 'inset 0 0 0 2px #9ca3af' } : undefined}
+                          style={selected ? { boxShadow: 'inset 0 0 0 2px #000000' } : undefined}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDropOnCell(e, idx)}
                           onClick={() => handleCellClick(idx)}

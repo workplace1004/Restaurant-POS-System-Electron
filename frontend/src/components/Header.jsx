@@ -1,8 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
-const HEADER_FUNCTION_SLOT_COUNT = 4;
-
 function IconTable() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 44.999 44.999" fill="currentColor" aria-hidden="true" className="shrink-0">
@@ -65,7 +63,17 @@ export function Header({
   functionButtonSlots = []
 }) {
   const { t } = useLanguage();
-  const slots = Array.from({ length: HEADER_FUNCTION_SLOT_COUNT }, (_, idx) => String(functionButtonSlots?.[idx] || '').trim());
+  const slots = Array.isArray(functionButtonSlots)
+    ? functionButtonSlots.map((slot) => String(slot || '').trim()).filter(Boolean)
+    : [];
+  const slotCount = Math.min(4, Math.max(1, slots.length));
+  const navGridClassByCount = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+    4: 'grid-cols-4'
+  };
+  const navGridClass = navGridClassByCount[slotCount] || 'grid-cols-1';
 
   const tablesButtonLabel = (() => {
     if (selectedTable?.name != null && String(selectedTable.name).trim()) return String(selectedTable.name).trim();
@@ -111,19 +119,10 @@ export function Header({
 
   return (
     <header className="flex items-center w-full bg-pos-bg py-2 px-2 shrink-0">
-      <nav className="flex-1 grid grid-cols-4 items-center gap-1 min-w-0">
+      <nav className={`flex-1 grid ${navGridClass} items-center gap-1 min-w-0`}>
         {slots.map((slotId, idx) => {
           const cfg = getButtonConfig(slotId);
-          if (!cfg) {
-            return (
-              <button
-                key={`header-empty-slot-${idx}`}
-                type="button"
-                disabled
-                className="rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text/30 text-xl flex items-center justify-center active:bg-green-500"
-              />
-            );
-          }
+          if (!cfg) return null;
           const isTablesSlot = cfg.isTablesSlot === true;
           const showRoomAndTableLines = isTablesSlot && showRoomNameInHeader;
           return (
@@ -132,7 +131,7 @@ export function Header({
               type="button"
               onClick={cfg.onClick || undefined}
               disabled={!cfg.onClick}
-              className={`rounded-md min-h-[46px] max-h-[46px] bg-pos-panel text-pos-text text-md px-2 flex items-center gap-3 min-w-0 ${
+              className={`rounded-md min-h-[46px] max-h-[46px] bg-pos-panel w-full justify-center text-pos-text text-md px-2 flex items-center gap-3 min-w-0 ${
                 cfg.onClick ? 'active:bg-green-500' : 'opacity-80 cursor-default'
               }`}
             >

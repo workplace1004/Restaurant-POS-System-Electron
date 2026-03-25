@@ -181,12 +181,12 @@ export function ProductArea({
   }, [subproducts]);
 
   const colorStyleById = {
-    green: { backgroundColor: '#22c55e', color: '#ffffff' },
-    blue: { backgroundColor: '#1d4ed8', color: '#ffffff' },
-    pink: { backgroundColor: '#f9a8d4', color: '#ffffff' },
-    orange: { backgroundColor: '#fdba74', color: '#ffffff' },
-    yellow: { backgroundColor: '#fde047', color: '#ffffff' },
-    gray: { backgroundColor: '#9ca3af', color: '#ffffff' }
+    green: { backgroundColor: '#83c664', color: '#ffffff' },
+    blue: { backgroundColor: '#0000ff', color: '#ffffff' },
+    pink: { backgroundColor: '#e97c64', color: '#ffffff' },
+    orange: { backgroundColor: '#f0961c', color: '#ffffff' },
+    yellow: { backgroundColor: '#ff2d3d', color: '#ffffff' },
+    gray: { backgroundColor: '#4ab3ff', color: '#ffffff' }
   };
 
   return (

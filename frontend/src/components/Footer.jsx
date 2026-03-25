@@ -179,6 +179,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
       setActiveExtraBcButtonId((prev) => (prev === id ? '' : prev));
     }, 180);
   };
+  const functionButtonBaseClass = 'bg-[#4ab3ff] text-pos-text active:bg-[#4ab3ff]/45';
 
   return (
     <footer className="flex items-center pb-2 px-2 bg-pos-bg shrink-0">
@@ -203,10 +204,10 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
               disabled={disabled}
               className={`py-3 border-none rounded overflow-hidden ${
                 disabled
-                  ? 'bg-pos-panel text-pos-text opacity-60 cursor-not-allowed'
+                  ? 'bg-[#4ab3ff]/40 text-pos-text opacity-60 cursor-not-allowed'
                   : active
                     ? 'bg-pos-surface text-white'
-                    : 'bg-pos-panel text-pos-text active:bg-green-500'
+                    : functionButtonBaseClass
               }`}
               onClick={() => handleFooterButtonClick(slotId)}
             >
@@ -227,7 +228,7 @@ export function Footer({ customersActive = false, onCustomersClick, showSubtotal
                   <button
                     key={`more-grid-${id}-${idx}`}
                     type="button"
-                    className="px-2 rounded bg-pos-bg text-pos-text active:bg-green-500 text-center min-h-[46px]"
+                    className={`px-2 rounded text-center min-h-[46px] ${functionButtonBaseClass}`}
                     onClick={() => handleFooterButtonClick(id)}
                   >
                     <span

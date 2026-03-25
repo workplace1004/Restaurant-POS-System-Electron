@@ -332,6 +332,7 @@ const [time, setTime] = useState(() => new Date().toLocaleTimeString('en-GB', { 
         onSelectCategory={setSelectedCategoryId}
         currentUser={user}
         onControlClick={() => setViewAndPersist('control')}
+        onLogout={handleLogout}
         time={time}
       />
       <div className="flex flex-col flex-1 min-h-0 w-2/4">

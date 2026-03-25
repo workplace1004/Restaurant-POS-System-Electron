@@ -1327,8 +1327,8 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
             type="button"
             disabled={payableTotalForPaymentModal <= 0.009 && !((isViewedFromInWaiting || isViewedFromInPlanning) && hasOrderItems) && !(hasOrderItems && order?.id)}
             className={`flex-1 py-1 border-none rounded-md min-h-[53px] max-h-[53px] ${payableTotalForPaymentModal <= 0.009 && !((isViewedFromInWaiting || isViewedFromInPlanning) && hasOrderItems) && !(hasOrderItems && order?.id)
-              ? 'bg-pos-surface text-gray-400 cursor-not-allowed opacity-70'
-              : 'bg-pos-surface text-pos-text active:bg-green-500'
+              ? 'bg-green-600/50 text-gray-400 cursor-not-allowed opacity-70'
+              : 'bg-green-600 text-white active:bg-green-500'
               }`}
             onClick={() => openPayDifferentlyModal()}
           >
@@ -1336,7 +1336,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           </button>
           <button
             type="button"
-            className="px-4 bg-pos-surface border-none rounded-md text-pos-text text-2xl active:bg-green-500"
+            className="px-4 bg-[#f0961c]/90 border-none rounded-md text-pos-bg text-2xl active:bg-[#c6a97f]"
           >
             €
           </button>
@@ -1357,15 +1357,15 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
           >
             {/* Left: Total + payment methods */}
             <div className="flex items-center justify-center">
-              <div className="p-6 min-w-[46%] w-full h-full flex flex-col">
+              <div className="p-6 min-w-[56%] w-full h-full flex flex-col">
                 <div className="text-lg font-semibold mb-3 flex w-full justify-center items-center">{t('total')}: €{payModalTargetTotal.toFixed(2)}</div>
-                <div className="grid grid-cols-2 gap-4 w-full mb-4 h-full items-start justify-center">
+                <div className="grid grid-cols-4 gap-4 w-full mb-4 h-full items-start justify-center">
                   {paymentMethodsLoading ? (
-                    <div className="text-sm text-gray-600 py-6">
+                    <div className="col-span-full text-sm text-gray-600 py-6 text-center">
                       {tr('orderPanel.loadingPaymentMethods', 'Loading payment methods...')}
                     </div>
                   ) : activePaymentMethods.length === 0 ? (
-                    <div className="text-sm text-amber-900 py-6 text-center max-w-lg px-4">
+                    <div className="col-span-full text-sm text-amber-900 py-6 text-center max-w-lg px-4">
                       {tr(
                         'orderPanel.noPaymentMethods',
                         'No active payment methods. Configure them under Control → Payment types.',
@@ -1393,9 +1393,9 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                             ) : integ === 'payworld' ? (
                               <img src="/payworld.png" alt={m.name} className="max-h-[70px] w-auto object-contain" />
                             ) : integ === 'generic' ? (
-                              <img src="/card.svg" alt={m.name} className="max-h-[70px] w-[105px] w-auto object-contain" />
+                              <img src="/card.svg" alt={m.name} className="max-h-[70px] min-w-[105px] w-auto object-contain" />
                             ) : (
-                              <span className="flex items-center justify-center w-[70px] min-h-[70px] px-2 py-3 text-base font-semibold text-center text-blue-900 bg-blue-50/80 rounded leading-tight">
+                              <span className="flex items-center justify-center w-[105px] min-h-[70px] px-2 py-3 text-base font-semibold text-center text-blue-900 bg-blue-50/80 rounded leading-tight">
                                 {m.name}
                               </span>
                             )}
@@ -1411,7 +1411,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                 </div>
               </div>
               {/* Right: Assigned + input + keypad */}
-              <div className="min-w-[30%] p-6">
+              <div className="min-w-[26%] p-6">
                 <div className="text-lg font-semibold mb-2 flex justify-center">{t('assigned')}: €{payModalTotalAssigned.toFixed(2)}</div>
                 <div className="flex justify-center mt-2">
                   <input
@@ -1441,7 +1441,7 @@ export function OrderPanel({ order, orders, onRemoveItem, onUpdateItemQuantity, 
                   </div>
                 </div>
               </div>
-              <div className="min-w-[24%] flex flex-col items-center justify-center gap-4 p-6">
+              <div className="min-w-[18%] flex flex-col items-center justify-center gap-4 p-6">
                 <button
                   type="button"
                   disabled={payModalSplitComplete}
